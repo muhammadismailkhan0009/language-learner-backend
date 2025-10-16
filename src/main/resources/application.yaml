@@ -1,0 +1,11 @@
+scalar:
+  path: /scalar
+  url: /v3/api-docs
+  enabled: true
+  hide-models: true
+
+springdoc:
+  swagger-ui:
+    enabled: false
+
+
