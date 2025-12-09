@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    open-in-view: false #using it is bad idea bcz it initializes proxy
+    hibernate.ddl-auto: create-drop
+    generate-ddl: true # creates tables for @Entity marked classes at startup
+    show-sql: true
+
+
+llm:
+  model: gemini-2.5-flash
+  base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+  completions-path: /chat/completions
+  api-keys: >
+    ${API_KEY1},
+    ${API_KEY2},
+    ${API_KEY3}

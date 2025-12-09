@@ -1,11 +1,28 @@
-scalar:
-  path: /scalar
-  url: /v3/api-docs
-  enabled: true
-  hide-models: true
+#scalar:
+#  path: /scalar
+#  url: /v3/api-docs
+#  enabled: true
+#  hide-models: true
 
 springdoc:
   swagger-ui:
     enabled: false
+
+
+
+llm:
+  model: gemini-2.5-flash
+  base-url: https://generativelanguage.googleapis.com/v1beta/openai/
+  completions-path: /chat/completions
+  api-keys: >
+    ${API_KEY1},
+    ${API_KEY2},
+    ${API_KEY3}
+    
+
+spring:
+  config:
+    import: optional:classpath:.env.local[.properties]
+
 
 

@@ -1,0 +1,12 @@
+# _________________Geminin flash free from google ai studio
+spring:
+  jpa:
+    open-in-view: false #using it is bad idea bcz it initializes proxy
+    hibernate.ddl-auto: update
+    generate-ddl: true # creates tables for @Entity marked classes at startup
+    show-sql: false
+
+  datasource:
+    url: jdbc:postgresql://${DATABASE_LOCALHOST_DOCKER}:${DATABASE_PORT_DOCKER}/${DATABASE_NAME_DOCKER}
+    username: ${DATABASE_USERNAME_DOCKER}
+    password: ${DATABASE_PASSWORD_DOCKER}
