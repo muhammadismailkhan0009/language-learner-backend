@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanBlitz;
 import com.myriadcode.languagelearner.language_content.domain.repo.LanguageContentRepo;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -20,7 +21,7 @@ public class LLMSchedulerService {
 
 
     //    TODO: later when we add chunks and vocabs, we can query generated sentences and simply add them separately.
-//    @Scheduled(fixedDelay = 5 * 60 * 1000)
+    @Scheduled(initialDelay = 2 * 60 * 1000, fixedDelay = 24*60*60*1000)
     public void generateSentences() {
 
         var blitzLessonsAlreadyGenerated = languageContentRepo.getBlitzLessonsForWhichSentencesAreGenerated();

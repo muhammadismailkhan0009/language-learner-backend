@@ -34,3 +34,4 @@ build/
 /src/test/resources/.env.test
 /src/main/resources/application-local.yaml
 /src/main/resources/.env.local
+/logs/app.log
