@@ -1,0 +1,68 @@
+when:
+  - event: push
+    branch: main
+steps:
+  - name: build the docker image from latest commit
+    image: docker:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      - docker build -t language_learner_backend:${CI_COMMIT_SHA} .
+
+  - name: stop and remove old docker image
+    image: docker:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    commands:
+      # Stop and remove the old application container
+      - docker stop language_learner_backend || true
+      - docker rm language_learner_backend || true
+
+  - name: deploy the latest build
+    image: docker:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    when:
+      status:
+        - success
+    environment:
+      API_KEY:
+        from_secret: api_key
+      API_KEY1:
+        from_secret: API_KEY1
+      API_KEY2:
+        from_secret: API_KEY2
+      API_KEY3:
+        from_secret: API_KEY3
+
+      DATABASE_LOCALHOST_DOCKER:
+        from_secret: DATABASE_LOCALHOST_DOCKER
+      DATABASE_PORT_DOCKER:
+        from_secret: DATABASE_PORT_DOCKER
+      DATABASE_NAME_DOCKER:
+        from_secret: DATABASE_NAME_DOCKER
+      DATABASE_USERNAME_DOCKER:
+        from_secret: DATABASE_USERNAME_DOCKER
+      DATABASE_PASSWORD_DOCKER:
+        from_secret: DATABASE_PASSWORD_DOCKER
+
+    commands:
+      # Deploy the new container
+      - docker run --network=host -d --name language_learner_backend
+        -e "API_KEY=$${API_KEY}"
+        -e "API_KEY1=$${API_KEY1}"
+        -e "API_KEY2=$${API_KEY2}"
+        -e "API_KEY3=$${API_KEY3}"
+        -e "DATABASE_LOCALHOST_DOCKER=$${DATABASE_LOCALHOST_DOCKER}"
+        -e "DATABASE_PORT_DOCKER=$${DATABASE_PORT_DOCKER}"
+        -e "DATABASE_NAME_DOCKER=$${DATABASE_NAME_DOCKER}"
+        -e "DATABASE_USERNAME_DOCKER=$${DATABASE_USERNAME_DOCKER}"
+        -e "DATABASE_PASSWORD_DOCKER=$${DATABASE_PASSWORD_DOCKER}"
+        language_learner_backend:${CI_COMMIT_SHA}
+
+      # Delete all old language_learner_backend images except the current one
+      - |
+        docker images --format "{{.Repository}}:{{.Tag}}" \
+        | grep "^language_learner_backend:" \
+        | grep -v "language_learner_backend:${CI_COMMIT_SHA}" \
+        | xargs -r docker rmi -f

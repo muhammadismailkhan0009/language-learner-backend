@@ -48,6 +48,18 @@
             </properties>
         </profile>
 
+        <!-- local -->
+        <profile>
+            <id>prod</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <spring.profiles.active>prod</spring.profiles.active>
+                <custom.port>1478</custom.port>
+            </properties>
+        </profile>
+
     </profiles>
 
     <dependencyManagement>
