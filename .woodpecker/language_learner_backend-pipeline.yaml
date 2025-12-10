@@ -26,8 +26,6 @@ steps:
       status:
         - success
     environment:
-      API_KEY:
-        from_secret: api_key
       API_KEY1:
         from_secret: API_KEY1
       API_KEY2:
@@ -49,7 +47,6 @@ steps:
     commands:
       # Deploy the new container
       - docker run --network=host -d --name language_learner_backend
-        -e "API_KEY=$${API_KEY}"
         -e "API_KEY1=$${API_KEY1}"
         -e "API_KEY2=$${API_KEY2}"
         -e "API_KEY3=$${API_KEY3}"
