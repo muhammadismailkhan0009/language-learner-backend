@@ -21,7 +21,19 @@ public class DecksController {
     ) {
 
         var deck = List.of(
-                new DeckView(DeckInfo.SENTENCES.getId(), "Sentences", 1));
+                new DeckView(DeckInfo.SENTENCES, "Sentences", 1));
+
+        return ResponseEntity.ok(new ApiResponse<>(deck));
+    }
+
+    @GetMapping("/revision/v1")
+    public ResponseEntity<ApiResponse<List<DeckView>>> getRevisionList(
+            @RequestParam(name = "mode") FlashCardMode mode,
+            @RequestParam(name="userId") String userId
+    ) {
+
+        var deck = List.of(
+                new DeckView(DeckInfo.SENTENCES_REVISION, "Sentences", 1));
 
         return ResponseEntity.ok(new ApiResponse<>(deck));
     }
@@ -29,7 +41,7 @@ public class DecksController {
     //    data for endpoints
     public enum FlashCardMode {
         FRESH,
-        REVIEW
+        REVISION
     }
 
 }

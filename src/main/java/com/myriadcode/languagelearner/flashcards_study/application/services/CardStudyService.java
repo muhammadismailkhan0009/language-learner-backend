@@ -4,8 +4,11 @@ import com.myriadcode.fsrs.api.FsrsEngine;
 import com.myriadcode.fsrs.api.enums.Rating;
 import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
+import com.myriadcode.languagelearner.common.enums.DeckInfo;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
+import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.FlashCardAlgorithmService;
+import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.RevisionSession;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.ids.DeckId;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
@@ -24,17 +27,17 @@ public class CardStudyService {
     private final FsrsEngine scheduler = FsrsEngine.createDefault();
 
     private final FlashCardRepo flashCardRepo;
-
     private final FetchLanguageContentApi fetchLanguageContentApi;
 
+    private final RevisionSession revisionSession = new  RevisionSession();
+
     //    TODO: refactor it such as its tests can be written properly
-    public Optional<FlashCardView> getNextCardToStudy(String deckId, String userId) {
+    public Optional<FlashCardView> getNextCardToStudy(DeckInfo deckId, String userId) {
 
         Vals.runIo(() -> fetchLanguageContentApi.generateCardsForUser(new UserId(userId)));
 
-        System.out.println(userId);
 //        move the logic to repo like repo.fetchNextCardToStudy
-        var cards = Vals.io(() -> flashCardRepo.findFlashCardsByDeckAndUser(new DeckId(deckId), userId));
+        var cards = Vals.io(() -> flashCardRepo.findFlashCardsByDeckAndUser(new DeckId(deckId.getId()), userId));
         if (cards.value().isEmpty()) return Optional.empty();
 
         // pick first due or new card
@@ -91,4 +94,48 @@ public class CardStudyService {
         flashCardRepo.saveFlashCardState(updatedReview);
 
     }
+
+
+    public Optional<FlashCardView> getNextCardForRevision(
+            DeckInfo deckId,
+            String userId
+    ) {
+        var cards = Vals.io(() ->
+                flashCardRepo.findFlashCardsByDeckAndUser(
+                        new DeckId(deckId.getId()), userId));
+
+        if (cards.value().isEmpty()) return Optional.empty();
+
+        var nextOpt =
+                FlashCardAlgorithmService.getNextCardForRevision(cards.value(), revisionSession);
+
+        if (nextOpt.isEmpty()) return Optional.empty();
+
+        var next = nextOpt.get();
+        revisionSession.markShown(next.id().id());
+
+        // reuse your existing content mapping logic
+        if (next.contentType().equals(ContentRefType.CHUNK)) {
+            System.out.println("id::" + next.contentId().id());
+            var data = Vals.io(() -> fetchLanguageContentApi.getChunkRecord(next.contentId().id()));
+            return Optional.of(new FlashCardView(
+                    next.id().id(),
+                    new FlashCardView.Front(data.value().original()),
+                    new FlashCardView.Back(data.value().translation()),
+                    data.value().note(),
+                    true
+            ));
+        } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
+            var data = Vals.io(() -> fetchLanguageContentApi.getSentenceRecord(next.contentId().id()));
+            return Optional.of(new FlashCardView(
+                    next.id().id(),
+                    new FlashCardView.Front(next.isReversed()?data.value().translation():data.value().original()),
+                    new FlashCardView.Back(next.isReversed()?data.value().original():data.value().translation()),
+                    null,
+                    next.isReversed()
+            ));
+        }
+        return Optional.empty();
+    }
+
 }

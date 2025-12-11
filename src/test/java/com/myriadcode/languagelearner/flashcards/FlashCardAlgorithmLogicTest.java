@@ -78,7 +78,7 @@ public class FlashCardAlgorithmLogicTest {
         contentPublisher.createSentencesCards(sentences, userId,false);
         assertThat(flashCardReviewJpaRepo.count()).isEqualTo(sentences.size());
 //        now, we see that our next card to study is not empty
-        var cardToStudy = cardStudyService.getNextCardToStudy(DeckInfo.SENTENCES.getId(), userId);
+        var cardToStudy = cardStudyService.getNextCardToStudy(DeckInfo.SENTENCES, userId);
         assertThat(cardToStudy).isPresent();
     }
 }

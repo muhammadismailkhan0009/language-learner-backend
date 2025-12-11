@@ -2,7 +2,9 @@ package com.myriadcode.languagelearner.common.enums;
 
 public enum DeckInfo {
     CHUNKS("chunks"),
-    SENTENCES("sentences");
+
+    SENTENCES("sentences"),
+    SENTENCES_REVISION("sentences");
 
     private final String id;
 

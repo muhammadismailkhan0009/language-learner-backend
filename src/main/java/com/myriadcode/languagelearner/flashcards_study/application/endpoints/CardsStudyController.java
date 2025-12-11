@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.application.endpoints;
 
 import com.myriadcode.fsrs.api.enums.Rating;
+import com.myriadcode.languagelearner.common.enums.DeckInfo;
 import com.myriadcode.languagelearner.flashcards_study.application.endpoints.dtos.ApiRequest;
 import com.myriadcode.languagelearner.flashcards_study.application.endpoints.dtos.ApiResponse;
 import com.myriadcode.languagelearner.flashcards_study.application.services.CardStudyService;
@@ -21,13 +22,29 @@ public class CardsStudyController {
 
     @GetMapping("next/v1")
     public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToStudy(
-            @PathVariable String deckId,
+            @PathVariable DeckInfo deckId,
             @RequestParam String userId) {
 
-        var card = flashCardsService.getNextCardToStudy(deckId, userId);
+        Optional<FlashCardView> card = Optional.empty();
+        if(DeckInfo.SENTENCES.equals(deckId)) {
+             card = flashCardsService.getNextCardToStudy(deckId, userId);
+        }
+        else if(DeckInfo.SENTENCES_REVISION.equals(deckId)) {
+            card = flashCardsService.getNextCardForRevision(deckId, userId);
+        }
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
+    @GetMapping("/revision/next/v1")
+    public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToRevise(
+            @PathVariable DeckInfo deckId,
+            @RequestParam String userId) {
+
+        var card = flashCardsService.getNextCardForRevision(deckId, userId);
+        return ResponseEntity.ok(new ApiResponse<>(card));
+    }
+
+//    FIXME: we are not using it currently. may be later. but not right now.
     @PostMapping("{cardId}/review/v1")
     public ResponseEntity<Void> reviewStudiedCard(@PathVariable String cardId,
                                                   @RequestBody ApiRequest<CardRating, Void> rating) {

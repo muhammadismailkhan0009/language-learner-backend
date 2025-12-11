@@ -1,4 +1,6 @@
 package com.myriadcode.languagelearner.flashcards_study.domain.views;
 
-public record DeckView(String id,String name, Integer totalCards) {
+import com.myriadcode.languagelearner.common.enums.DeckInfo;
+
+public record DeckView(DeckInfo id, String name, Integer totalCards) {
 }
