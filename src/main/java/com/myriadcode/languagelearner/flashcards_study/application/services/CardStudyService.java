@@ -57,7 +57,8 @@ public class CardStudyService {
                     new FlashCardView.Front(data.value().original()),
                     new FlashCardView.Back(data.value().translation()),
                     data.value().note(),
-                    true
+                    true,
+                    false
             ));
         } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
             var data = Vals.io(() -> fetchLanguageContentApi.getSentenceRecord(next.contentId().id()));
@@ -66,7 +67,8 @@ public class CardStudyService {
                     new FlashCardView.Front(next.isReversed()?data.value().translation():data.value().original()),
                     new FlashCardView.Back(next.isReversed()?data.value().original():data.value().translation()),
                     null,
-                    next.isReversed()
+                    next.isReversed(),
+                    false
             ));
         }
 
@@ -123,6 +125,7 @@ public class CardStudyService {
                     new FlashCardView.Front(data.value().original()),
                     new FlashCardView.Back(data.value().translation()),
                     data.value().note(),
+                    true,
                     true
             ));
         } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
@@ -132,7 +135,8 @@ public class CardStudyService {
                     new FlashCardView.Front(next.isReversed()?data.value().translation():data.value().original()),
                     new FlashCardView.Back(next.isReversed()?data.value().original():data.value().translation()),
                     null,
-                    next.isReversed()
+                    next.isReversed(),
+                    true
             ));
         }
         return Optional.empty();

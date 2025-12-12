@@ -21,7 +21,9 @@ public class LLMSchedulerService {
 
 
     //    TODO: later when we add chunks and vocabs, we can query generated sentences and simply add them separately.
-    @Scheduled(cron = "0 0 0 * * *", zone = "UTC")
+//    @Scheduled(cron = "0 0 0 * * *", zone = "UTC")
+    @Scheduled(initialDelay = 1*60*1000, fixedDelay = 100*60*1000)
+
     public void generateSentences() {
 
         var blitzLessonsAlreadyGenerated = languageContentRepo.getBlitzLessonsForWhichSentencesAreGenerated();

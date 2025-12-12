@@ -5,7 +5,8 @@ public record FlashCardView(String id,
                             Front front,
                             Back back,
                             String note,
-                            boolean isReverse) {
+                            boolean isReverse,
+                            boolean isRevision) {
     public record Front(String text) {
     }
 
