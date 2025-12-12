@@ -26,4 +26,5 @@ public interface SentenceEntityJpaRepo extends JpaRepository<SentenceEntity, Str
             GermanAdaptive.CommunicativeFunctionEnum communicationFunction
     );
 
+    List<SentenceEntity> findAllByScenario(GermanAdaptive.ScenarioEnum scenario);
 }

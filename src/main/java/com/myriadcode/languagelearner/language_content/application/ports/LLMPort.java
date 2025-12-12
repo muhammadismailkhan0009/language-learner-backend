@@ -16,6 +16,7 @@ public interface LLMPort {
                                                        List<Chunk.ChunkData> chunks,
                                                        List<Sentence.SentenceData> sentences);
 
-    List<Sentence.SentenceData> generateSentences(LangConfigsAdaptive languageConfigs);
+    List<Sentence.SentenceData> generateSentences(LangConfigsAdaptive languageConfigs,
+                                                  List<Sentence.SentenceData> previousSentences);
 
 }

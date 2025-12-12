@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_content.infra.jpa;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.UserStatsForContent;
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.ContentGenerationQuantity;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
 import com.myriadcode.languagelearner.language_content.domain.repo.LanguageContentRepo;
@@ -93,6 +94,12 @@ public class JpaRepoImpl implements LanguageContentRepo, UserStatsRepo {
         );
 
         return entities.parallelStream().map(LanguageContentMapper.INSTANCE::toSentenceDomain).toList();
+    }
+
+    @Override
+    public List<Sentence.SentenceData> getSentencesForScenario(GermanAdaptive.ScenarioEnum scenario) {
+        var entities = sentenceEntityJpaRepo.findAllByScenario(scenario);
+        return entities.parallelStream().map(LanguageContentMapper.INSTANCE::toSentenceData).toList();
     }
 
     @Override

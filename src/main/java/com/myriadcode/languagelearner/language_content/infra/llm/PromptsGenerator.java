@@ -223,7 +223,8 @@ public final class PromptsGenerator {
 
 
     public static String sentenceGeneratorNew(
-            LangConfigsAdaptive config
+            LangConfigsAdaptive config,
+            List<Sentence.SentenceData> previousSentences
     ) {
 
         return """
@@ -251,6 +252,16 @@ public final class PromptsGenerator {
                 - Grammar rule: %s
                 - Target CEFR difficulty: (determine automatically; do not under-shoot)
                 
+                
+                ============================================================
+                            PREVIOUS CONVERSATION
+                ============================================================
+                The following sentences represent the conversation so far.
+                You MUST treat them as already spoken and continue from there.
+                
+                Previous sentences:
+                 %s
+                
                 ============================================================
                 CONVERSATION CONTINUITY
                 ============================================================
@@ -258,6 +269,7 @@ public final class PromptsGenerator {
                 - Maintain consistent tone, intent, and scenario context.
                 - Respond directly to the most recent utterance when appropriate.
                 - The conversation must feel like **two real speakers interacting**.
+                - If previous sentences are empty, start a natural conversation for the scenario.
                 
                 
                 ============================================================
@@ -308,6 +320,7 @@ public final class PromptsGenerator {
                 config.scenario().toString() + " (" + config.scenario().level().toString() + ")",
                 config.function().toString() + " (" + config.function().level().toString() + ")",
                 config.rule().toString() + " (" + config.rule().level().toString() + ")",
+                previousSentences,
                 config.quantity().sentenceCount()
         );
     }

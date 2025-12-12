@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_content.domain.repo;
 
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
 import jakarta.validation.constraints.NotNull;
 
@@ -24,5 +25,8 @@ public interface LanguageContentRepo {
     List<LangConfigsAdaptive> getBlitzLessonsForWhichSentencesAreGenerated();
 
     List<Sentence> getSentencesForLangConfig(@NotNull LangConfigsAdaptive langConfigsAdaptive);
+
+    List<Sentence.SentenceData> getSentencesForScenario(@NotNull GermanAdaptive.ScenarioEnum scenario);
+
 
 }

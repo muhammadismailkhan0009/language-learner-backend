@@ -42,8 +42,9 @@ public class LLMGenerator implements LLMPort {
     }
 
     @Override
-    public List<Sentence.SentenceData> generateSentences(LangConfigsAdaptive languageConfigs) {
-        var prompt = PromptsGenerator.sentenceGeneratorNew(languageConfigs);
+    public List<Sentence.SentenceData> generateSentences(LangConfigsAdaptive languageConfigs,
+                                                         List<Sentence.SentenceData> previousSentences) {
+        var prompt = PromptsGenerator.sentenceGeneratorNew(languageConfigs,previousSentences);
 
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         var result = runLLM(messages, new ParameterizedTypeReference<List<Sentence.SentenceData>>() {

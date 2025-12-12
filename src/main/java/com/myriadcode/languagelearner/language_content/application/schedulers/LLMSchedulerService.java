@@ -29,7 +29,8 @@ public class LLMSchedulerService {
         var languageConfigs = GermanBlitz.getNextLessonToGenerateContentFor(blitzLessonsAlreadyGenerated);
         if (languageConfigs.isPresent()) {
 
-            var sentenceData = llmPort.generateSentences(languageConfigs.get());
+            var previousSentences = languageContentRepo.getSentencesForScenario(languageConfigs.get().scenario());
+            var sentenceData = llmPort.generateSentences(languageConfigs.get(),previousSentences);
             var sentences = sentenceData.parallelStream().map(
                             sentence ->
                                     new Sentence(

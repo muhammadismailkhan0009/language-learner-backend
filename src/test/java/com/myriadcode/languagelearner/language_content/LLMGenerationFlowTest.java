@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.LLMPort
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -30,17 +31,19 @@ public class LLMGenerationFlowTest {
             new LangConfigsAdaptive.GenerationQuantity(8)
     );
 
-    //    @Test
+    @Test
     public void generateFullContent() {
-        var sentences = llmport.generateSentences(languageConfigs);
+        var sentences = llmport.generateSentences(languageConfigs,List.of());
         assertThat(sentences.size()).isEqualTo(languageConfigs.quantity().sentenceCount());
-        var chunks = llmport.generateChunks(languageConfigs, sentences, List.of());
-        assertThat(chunks.size()).isGreaterThan(0);
-        var vocab = llmport.generateVocabulary(languageConfigs, chunks, sentences);
-        assertThat(vocab.size()).isGreaterThan(0);
+//        var chunks = llmport.generateChunks(languageConfigs, sentences, List.of());
+//        assertThat(chunks.size()).isGreaterThan(0);
+//        var vocab = llmport.generateVocabulary(languageConfigs, chunks, sentences);
+//        assertThat(vocab.size()).isGreaterThan(0);
 
 //        generate chunks
 
+        var newSentences = llmport.generateSentences(languageConfigs,sentences);
+        assertThat(newSentences.size()).isEqualTo(languageConfigs.quantity().sentenceCount());
     }
 
 }

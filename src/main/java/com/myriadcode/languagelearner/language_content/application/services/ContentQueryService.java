@@ -12,11 +12,13 @@ import com.myriadcode.languagelearner.language_content.domain.repo.UserStatsRepo
 import com.myriadcode.languagelearner.language_content.domain.services.SyllabusPolicy;
 import com.myriadcode.languagelearner.user_management.application.externals.UserInformationApi;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 //FIXME: separate the fetch and data changing apis later into separate interfaces and services
 @Service
 @RequiredArgsConstructor
@@ -49,15 +51,24 @@ public class ContentQueryService implements FetchLanguageContentApi {
     public void generateCardsForUser(UserId userId) {
 
         var now = LocalDateTime.now();
+
+        /*
+        1- Vals.io,Vals.useio
+        2- Vals.cpu, Vals.useCpu
+        3- .value() - code becomes blocking
+         */
         var userStats = Vals.io(() -> userStatsRepo.getUserStatsForContent(List.of(userId.id())));
         var nextSyllabusOpt = userStats.mapCpu(stats -> syllabusPolicy.decideNext(stats, now));
+
         if (nextSyllabusOpt.value().isEmpty()) {
+            log.info("Next syllabus is empty for: {}", userId);
             return;
         }
 
         var nextSyllabus = nextSyllabusOpt.value().get();
         var sentences = Vals.io(() -> languageContentRepo.getSentencesForLangConfig(nextSyllabus));
         if (sentences.value().isEmpty()) {
+            log.info("sentences are empty for: {}", userId);
             return;
         }
 
