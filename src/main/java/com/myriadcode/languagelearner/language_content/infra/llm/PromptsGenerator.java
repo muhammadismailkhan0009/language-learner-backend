@@ -228,96 +228,180 @@ public final class PromptsGenerator {
     ) {
 
         return """
-                Generate **German sentences** that form a natural, coherent conversation.
+        Generate **German dialogue units** that form a natural, coherent
+        learning conversation.
+
+        ============================================================
+        ROLE & GOAL
+        ============================================================
+        You are generating the **next batch of dialogue units**
+        in an ongoing conversation.
+
+        A batch is a **continuation segment**, not a restart
+        and not a casual chat log.
+
+        Your goal is to:
+        - continue naturally from the previous dialogue,
+        - introduce **new, relevant information** driven by the inputs,
+        - avoid repetition, filler, and low-information turns,
+        - keep the dialogue realistic but optimized for learning.
+
+        ============================================================
+        CEFR & SYLLABUS CONTROL
+        ============================================================
+        - Scenario: %s
+        - Scenario Context (Group): %s
+        - Communicative function: %s
+        - Grammar rule: %s
+
+        - The CEFR difficulty is determined by the syllabus inputs:
+            • scenario
+            • communicative function
+            • grammar rule
+          → Use the HIGHEST CEFR level among these.
+
+        - Language output must match **exactly that CEFR level**:
+            • A1–A2: simple, concrete, everyday language.
+            • B1–B2: richer detail and variation.
+            • C1–C2: advanced, natural expression.
+
+        ============================================================
+        PREVIOUS CONVERSATION
+        ============================================================
+        The following dialogue units have **already been generated**.
+
+        Treat them as **fixed conversation history**, not inspiration.
+
+        Previous dialogue:
+        %s
+
+        ============================================================
+        INTERNAL GENERATION STAGES (MANDATORY)
+        ============================================================
+
+        ------------------------------------------------------------
+        STAGE 1 — Extract conversation state
+        ------------------------------------------------------------
+        Analyze the previous dialogue as **irreversible state**.
+
+        Identify:
+        - which information dimensions are already covered
+          (e.g. greeting, identity, origin, residence, work/study,
+           hobbies, daily life, preferences),
+        - which exchanges appear complete,
+        - which speakers are present.
+
+        Assume all stated information is known to all speakers.
+        Do NOT reintroduce completed dimensions unless required
+        by the communicative function.
+
+        ------------------------------------------------------------
+        STAGE 2 — Select next conversational focus
+        ------------------------------------------------------------
+        Select the next conversational focus strictly from
+        what is **NOT yet covered**.
+
+        The next focus must:
+        - follow logically from the previous dialogue,
+        - remain within the same scenario context,
+        - be appropriate for the communicative function.
+
+        Do NOT:
+        - re-ask questions whose answers already exist,
+        - reintroduce the same information dimension,
+        - repeat the same dimension for multiple speakers
+          without adding new meaning.
+
+        ------------------------------------------------------------
+        STAGE 3 — Plan dialogue progression
+        ------------------------------------------------------------
+        Plan a short sequence of dialogue units where:
+        - each unit depends on the previous one,
+        - questions introduce new information only,
+        - answers add concrete content,
+        - the dialogue moves forward conceptually.
+
+        Avoid:
+        - filler-only reactions,
+        - acknowledgement-only turns,
+        - mechanical back-and-forth symmetry,
+        - restarting earlier dialogue patterns.
+        
+        For any single information dimension:
+         - introduce it,
+         - optionally clarify or exemplify it,
+         - then move on.
+        
+        Do NOT exhaust the same dimension with repeated follow-up questions within the same batch.
+        
+
+        ------------------------------------------------------------
+        STAGE 4 — Generate dialogue units
+        ------------------------------------------------------------
+        Generate the dialogue units according to the plan.
+
+        ============================================================
+        DEFINITION — DIALOGUE UNIT
+        ============================================================
+        A dialogue unit is a meaning-bearing conversational turn.
+
+        A valid dialogue unit MUST:
+        - introduce at least one concrete piece of information
+          (fact, question, preference, action, habit, reason),
+        - NOT consist solely of greetings, acknowledgements,
+          confirmations, or emotional reactions,
+        - NOT be a single-word or formula-only utterance.
+
+        The following are NOT valid dialogue units on their own:
+        - greetings only (“Hallo!”, “Guten Tag!”),
+        - acknowledgements only (“Ah”, “Oh”, “Interessant”),
+        - politeness-only reactions (“Das ist gut”, “Schön”),
+        - mirrored confirmations without new information.
+
+        ============================================================
+        DIALOGUE UNIT CONSTRAINTS
+        ============================================================
+        Each dialogue unit must:
+        - be a complete German utterance,
+        - belong to a single speaker,
+        - be prefixed with the speaker name followed by a colon
+          (e.g. “Harry: …”, “Hermione: …”),
+        - contain ONE primary communicative intent,
+        - add new meaning or information,
+        - fit the CEFR level,
+        - obey the grammar rule,
+        - stay within the scenario context.
+
+        A dialogue unit that does not add new information
+        is considered invalid.
+
+        ============================================================
+        SPEAKER CONSTRAINTS
+        ============================================================
+        - A speaker can only be either "Harry" or "Hermione".
+        - Speaker name must not influence dialogue at all except the use of gender-based vocabulary and chunks.
+        - A speaker name is only there for identification and visualization.
+        - A speaker must not introduce personality or any other changes in dialogue.
+        
+        Prefer:
+        - information-dense utterances,
+        - natural phrasing,
+        - concise but meaningful dialogue units.
+        
+        Expressions that merely acknowledgeor positively evaluate previous information
+        without adding new content(e.g. “Das ist gut”, “Interessant”) 
+        are not valid dialogue units.
                 
-                ============================================================
-                ADAPTIVE SENTENCE GENERATION
-                ============================================================
-                - The CEFR difficulty is determined by the syllabus:
-                    • communicative function
-                    • scenario
-                    • grammar rule
-                  → Use the HIGHEST CEFR level among these three.
-                - Produce sentences that match **exactly that CEFR level**:
-                    • A1–A2: concrete, simple vocabulary; short, direct sentences.
-                    • B1–B2: richer details; subordinate clauses allowed; natural complexity.
-                    • C1–C2: advanced connectors, abstract phrasing, natural higher-level style.
-                - DO NOT artificially simplify or restrict language when the CEFR level is higher.
-                
-                ============================================================
-                CONTEXT
-                ============================================================
-                - Scenario: %s
-                - Communicative function: %s
-                - Grammar rule: %s
-                - Target CEFR difficulty: (determine automatically; do not under-shoot)
-                
-                
-                ============================================================
-                            PREVIOUS CONVERSATION
-                ============================================================
-                The following sentences represent the conversation so far.
-                You MUST treat them as already spoken and continue from there.
-                
-                Previous sentences:
-                 %s
-                
-                ============================================================
-                CONVERSATION CONTINUITY
-                ============================================================
-                - Continue the dialogue naturally and logically.
-                - Maintain consistent tone, intent, and scenario context.
-                - Respond directly to the most recent utterance when appropriate.
-                - The conversation must feel like **two real speakers interacting**.
-                - If previous sentences are empty, start a natural conversation for the scenario.
-                
-                
-                ============================================================
-                LANGUAGE GUIDELINES
-                ============================================================
-                1. Vocabulary:
-                   - Must match the CEFR target level.
-                   - Avoid overly rare or domain-specialized words unless CEFR ≥ C1.
-                   - Reuse earlier vocabulary **when natural**, but introducing NEW vocabulary is allowed.
-                   - New vocabulary MUST remain appropriate to CEFR level and scenario.
-                
-                2. Grammar:
-                   - Must comply with the selected grammar rule.
-                   - Use other grammar elements naturally **as long as CEFR level allows them**.
-                   - You MAY use:
-                        • subordinate clauses (B1+)
-                        • connectors (B1+)
-                        • advanced structures (C1+)
-                   - A1–A2 must stay simple and direct.
-                
-                3. Scenario relevance:
-                   - All sentences must fit *strictly* within the scenario domain.
-                   - No abrupt topic changes.
-                   - No unrelated domains (work emails, hobbies, etc.).
-                
-                ============================================================
-                SENTENCE QUALITY REQUIREMENTS
-                ============================================================
-                Each sentence must:
-                - be a single complete utterance,
-                - contain ONE main idea,
-                - fit naturally into the ongoing conversation,
-                - be meaningful and realistic for the scenario + function,
-                - reflect the CEFR level,
-                - obey the grammar rule when applicable.
-                
-                Style notes:
-                - Use natural, human German.
-                - Avoid robotic repetition.
-                - Avoid unnatural verbosity.
-                - Sentences may be 4–15 words depending on CEFR.
-                
-                ============================================================
-                TASK
-                ============================================================
-                Generate exactly %d German sentences as the **next part of the conversation**.
-                """.formatted(
+        ============================================================
+        OUTPUT RULES
+        ============================================================
+        - Generate exactly %d German dialogue units.
+        - Each unit must include an explicit speaker label.
+        - Do NOT include explanations, labels, or analysis.
+        - Output only the dialogue units, in order.
+        """.formatted(
                 config.scenario().toString() + " (" + config.scenario().level().toString() + ")",
+                config.scenario().group().toString(),
                 config.function().toString() + " (" + config.function().level().toString() + ")",
                 config.rule().toString() + " (" + config.rule().level().toString() + ")",
                 previousSentences,

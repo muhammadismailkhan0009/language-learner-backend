@@ -56,6 +56,7 @@ public class FlashCardAlgorithmLogicTest {
     @AfterEach
     public void tearDown() {
         chunkEntityJpaRepo.deleteAll();
+        sentenceEntityJpaRepo.deleteAll();
         flashCardReviewJpaRepo.deleteAll();
         System.out.println("clean up completed");
     }

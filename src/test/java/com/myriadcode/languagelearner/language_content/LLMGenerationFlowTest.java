@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -25,9 +26,23 @@ public class LLMGenerationFlowTest {
     private LLMPort llmport;
 
     LangConfigsAdaptive languageConfigs = new LangConfigsAdaptive(
-            GermanAdaptive.GrammarRuleEnum.BASIC_PREPOSITIONS,
+            GermanAdaptive.GrammarRuleEnum.PRESENT_TENSE,
+            GermanAdaptive.CommunicativeFunctionEnum.GREET,
+            GermanAdaptive.ScenarioEnum.SELF_INTRODUCTION,
+            new LangConfigsAdaptive.GenerationQuantity(8)
+    );
+
+    LangConfigsAdaptive languageConfigs2 = new LangConfigsAdaptive(
+            GermanAdaptive.GrammarRuleEnum.MAIN_CLAUSE_WORD_ORDER,
+            GermanAdaptive.CommunicativeFunctionEnum.INTRODUCE_SELF,
+            GermanAdaptive.ScenarioEnum.SELF_INTRODUCTION,
+            new LangConfigsAdaptive.GenerationQuantity(8)
+    );
+
+    LangConfigsAdaptive languageConfig3 = new LangConfigsAdaptive(
+            GermanAdaptive.GrammarRuleEnum.WH_QUESTIONS,
             GermanAdaptive.CommunicativeFunctionEnum.ASK_AND_ANSWER_SIMPLE_QUESTIONS,
-            GermanAdaptive.ScenarioEnum.DIRECTIONS_AND_LOCATIONS,
+            GermanAdaptive.ScenarioEnum.SELF_INTRODUCTION,
             new LangConfigsAdaptive.GenerationQuantity(8)
     );
 
@@ -42,8 +57,12 @@ public class LLMGenerationFlowTest {
 
 //        generate chunks
 
-        var newSentences = llmport.generateSentences(languageConfigs,sentences);
-        assertThat(newSentences.size()).isEqualTo(languageConfigs.quantity().sentenceCount());
+        var newSentences2 = llmport.generateSentences(languageConfigs2,sentences);
+        assertThat(newSentences2.size()).isEqualTo(languageConfigs.quantity().sentenceCount());
+
+        var previousCombined = Stream.concat(newSentences2.stream(), sentences.stream()).toList();
+        var newSentences3 = llmport.generateSentences(languageConfig3,previousCombined);
+        assertThat(newSentences3.size()).isEqualTo(languageConfigs.quantity().sentenceCount());
     }
 
 }
