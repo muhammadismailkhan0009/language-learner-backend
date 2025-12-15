@@ -78,7 +78,7 @@ public class LLMGenerator implements LLMPort {
         return messages;
     }
 
-    private <T> T runLLM(List<Message> llmPrompt, ParameterizedTypeReference<T> typeReference) {
+    private <T> T doRunLLM(List<Message> llmPrompt, ParameterizedTypeReference<T> typeReference) {
 
         var outputConverter = new BeanOutputConverter<>(typeReference);
 
@@ -93,4 +93,36 @@ public class LLMGenerator implements LLMPort {
         return outputConverter.convert(Objects.requireNonNull(response.getResult().getOutput().getText()));
 
     }
+
+    private static final int MAX_ATTEMPTS = 3;
+
+    private <T> T runLLM(
+            List<Message> llmPrompt,
+            ParameterizedTypeReference<T> typeReference
+    ) {
+        RuntimeException lastException = null;
+
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                return doRunLLM(llmPrompt, typeReference);
+            } catch (RuntimeException ex) {
+                lastException = ex;
+
+                if (attempt == MAX_ATTEMPTS) {
+                    break;
+                }
+
+                // optional: small backoff
+                try {
+                    Thread.sleep(200L * attempt);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw ex;
+                }
+            }
+        }
+
+        throw lastException;
+    }
+
 }

@@ -270,11 +270,11 @@ public final class PromptsGenerator {
         ============================================================
         The following dialogue units have **already been generated**.
 
-        Treat them as **fixed conversation history**, not inspiration.
+        Treat them as **progressive conversation history**, not inspiration.
 
         Previous dialogue:
         %s
-
+        
         ============================================================
         INTERNAL GENERATION STAGES (MANDATORY)
         ============================================================
@@ -326,6 +326,7 @@ public final class PromptsGenerator {
         - acknowledgement-only turns,
         - mechanical back-and-forth symmetry,
         - restarting earlier dialogue patterns.
+        - asking or repeating same dialogue unit for speakers.
         
         For any single information dimension:
          - introduce it,
@@ -365,7 +366,7 @@ public final class PromptsGenerator {
         - be a complete German utterance,
         - belong to a single speaker,
         - be prefixed with the speaker name followed by a colon
-          (e.g. “Harry: …”, “Hermione: …”),
+          (e.g. “Max: …”, “Anna: …”),
         - contain ONE primary communicative intent,
         - add new meaning or information,
         - fit the CEFR level,
@@ -376,9 +377,15 @@ public final class PromptsGenerator {
         is considered invalid.
 
         ============================================================
+        CONVERSATION CONSTRAINTS
+        ============================================================
+        - A conversation must not have same sentences back-and-forth. In other words, avoid "ping-pong" 
+        dialogue units.
+        
+        ============================================================
         SPEAKER CONSTRAINTS
         ============================================================
-        - A speaker can only be either "Harry" or "Hermione".
+        - A speaker can only be either "Max" or "Anna".
         - Speaker name must not influence dialogue at all except the use of gender-based vocabulary and chunks.
         - A speaker name is only there for identification and visualization.
         - A speaker must not introduce personality or any other changes in dialogue.
@@ -391,7 +398,7 @@ public final class PromptsGenerator {
         Expressions that merely acknowledgeor positively evaluate previous information
         without adding new content(e.g. “Das ist gut”, “Interessant”) 
         are not valid dialogue units.
-                
+        
         ============================================================
         OUTPUT RULES
         ============================================================
