@@ -40,13 +40,13 @@ class SyllabusPolicyTest {
     }
 
     @Test
-    void does_not_assign_when_24_hour_gate_is_active() {
+    void does_not_assign_when_content_was_already_assigned_today() {
         var now = LocalDateTime.of(2025, 1, 2, 10, 0);
 
         var stats = List.of(
                 new UserStatsForContent(
                         languageConfigs,
-                        now.minusHours(12),
+                        LocalDateTime.of(2025, 1, 2, 1, 30), // same calendar day
                         null
                 )
         );
@@ -56,6 +56,7 @@ class SyllabusPolicyTest {
 
         assertTrue(result.isEmpty());
     }
+
 
     @Test
     void assigns_next_syllabus_after_24_hours() {

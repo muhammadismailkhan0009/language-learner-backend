@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.schedulers;
 
+import com.myriadcode.languagelearner.code_generation_annotations.GenerateMethod;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanBlitz;
@@ -46,5 +47,8 @@ public class LLMSchedulerService {
 //    TODO: generate chunks and vocab separately for the generated sentences. need to check which sentences don't have them
 //    TODO: or, generate chunks together with sentence later once add exercise.
 
+    @GenerateMethod(goal = "a sample method",
+    deps = {LLMPort.class})
+    public void sampleMethod(String para1, Integer param2, boolean param3){}
 
 }
