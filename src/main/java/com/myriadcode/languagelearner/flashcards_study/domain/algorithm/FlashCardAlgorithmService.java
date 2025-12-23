@@ -3,7 +3,6 @@ package com.myriadcode.languagelearner.flashcards_study.domain.algorithm;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -12,16 +11,23 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class FlashCardAlgorithmService {
 
-    public static Optional<FlashCardReview> getNextCardToStudy(List<FlashCardReview> cards) {
-        Instant now = Instant.now();
-        Instant upperBound = now.plus(1, ChronoUnit.DAYS);
-
+    // Helper method to filter cards that are due for study
+    private static List<FlashCardReview> filterDueCards(List<FlashCardReview> cards, Instant now) {
         return cards.stream()
                 .filter(reviewData -> {
                     var due = reviewData.cardReviewData().due();
-                    // Include cards that are overdue or due within next 2 days
+                    // Include cards that are overdue or due now
                     return due != null && !due.isAfter(now);
                 })
+                .toList();
+    }
+
+    // this code gives us the next card to study based on the due date
+    public static Optional<FlashCardReview> getNextCardToStudy(List<FlashCardReview> cards) {
+        Instant now = Instant.now();
+        var dueCards = filterDueCards(cards, now);
+
+        return dueCards.stream()
                 .min(Comparator
                         // Prioritize overdue cards first
                         .comparing((FlashCardReview r) -> r.cardReviewData().due().isBefore(now) ? 0 : 1)
@@ -33,6 +39,19 @@ public class FlashCardAlgorithmService {
             List<FlashCardReview> cards,
             RevisionSession session
     ) {
+        var result = getCardsForRevision(cards, session, 1);
+        if (result.isEmpty()) return Optional.empty();
+        return Optional.of(result.get(0));
+    }
+
+    public static List<FlashCardReview> getCardsForRevision(
+            List<FlashCardReview> cards,
+            RevisionSession session,
+            int count
+    ) {
+        if (cards.isEmpty()) return List.of();
+
+        System.out.println("size................."+cards.size());
         Instant now = Instant.now();
 
         // 1️⃣ Eligible cards
@@ -45,7 +64,7 @@ public class FlashCardAlgorithmService {
                 })
                 .toList();
 
-        if (eligible.isEmpty()) return Optional.empty();
+        if (eligible.isEmpty()) return List.of();
 
         // 2️⃣ Bucket cards
         var weak = new ArrayList<FlashCardReview>();
@@ -82,14 +101,14 @@ public class FlashCardAlgorithmService {
             candidates = bucket; // fail-open
         }
 
-        // 5️⃣ Random pick
-        var picked = candidates.get(
-                java.util.concurrent.ThreadLocalRandom
-                        .current()
-                        .nextInt(candidates.size())
-        );
+        // 5️⃣ Random pick n cards
+        int actualCount = Math.min(count, candidates.size());
+        System.out.println("candidate_size="+candidates.size());
+        System.out.println("actualCount="+actualCount);
+        var shuffled = new ArrayList<>(candidates);
+        java.util.Collections.shuffle(shuffled, ThreadLocalRandom.current());
 
-        return Optional.of(picked);
+        return shuffled.subList(0, actualCount);
     }
 
     private static List<FlashCardReview> pickBucket(
@@ -109,5 +128,21 @@ public class FlashCardAlgorithmService {
         return strong;
     }
 
+    public static List<FlashCardReview> getRandomCards(List<FlashCardReview> cards, int count) {
+        if (cards.isEmpty()) return List.of();
+        
+        Instant now = Instant.now();
+        
+        // Filter to only include cards that are due for study (reusing the same logic as getNextCardToStudy)
+        var dueCards = filterDueCards(cards, now);
+        
+        if (dueCards.isEmpty()) return List.of();
+        
+        int actualCount = Math.min(count, dueCards.size());
+        var shuffled = new ArrayList<>(dueCards);
+        java.util.Collections.shuffle(shuffled, ThreadLocalRandom.current());
+        
+        return shuffled.subList(0, actualCount);
+    }
 
 }

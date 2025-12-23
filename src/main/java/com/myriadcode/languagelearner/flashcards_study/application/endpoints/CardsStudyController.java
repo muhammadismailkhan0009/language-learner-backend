@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @CrossOrigin("*")
@@ -21,16 +23,16 @@ public class CardsStudyController {
     private CardStudyService flashCardsService;
 
     @GetMapping("next/v1")
-    public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToStudy(
+    public ResponseEntity<ApiResponse<List<FlashCardView>>> getNextCardToStudy(
             @PathVariable DeckInfo deckId,
             @RequestParam String userId) {
 
-        Optional<FlashCardView> card = Optional.empty();
+        List<FlashCardView> card = new ArrayList<>();
         if(DeckInfo.SENTENCES.equals(deckId)) {
-             card = flashCardsService.getNextCardToStudy(deckId, userId);
+             card = flashCardsService.getNextCardsToStudy(deckId, userId,3);
         }
         else if(DeckInfo.SENTENCES_REVISION.equals(deckId)) {
-            card = flashCardsService.getNextCardForRevision(deckId, userId);
+            card = flashCardsService.getCardsForRevision(deckId, userId,3);
         }
         return ResponseEntity.ok(new ApiResponse<>(card));
     }

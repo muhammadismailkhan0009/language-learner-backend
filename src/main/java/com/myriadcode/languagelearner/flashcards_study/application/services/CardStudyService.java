@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.enums.DeckInfo;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
+import com.myriadcode.languagelearner.concurnas_like_library.Value;
 import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.FlashCardAlgorithmService;
 import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.RevisionSession;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
@@ -18,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -102,44 +105,117 @@ public class CardStudyService {
             DeckInfo deckId,
             String userId
     ) {
+        var cards = getCardsForRevision(deckId, userId, 1);
+        if (cards.isEmpty()) return Optional.empty();
+        return Optional.of(cards.get(0));
+    }
+
+    public List<FlashCardView> getCardsForRevision(
+            DeckInfo deckId,
+            String userId,
+            int count
+    ) {
         var cards = Vals.io(() ->
                 flashCardRepo.findFlashCardsByDeckAndUser(
                         new DeckId(deckId.getId()), userId));
 
-        if (cards.value().isEmpty()) return Optional.empty();
+        if (cards.value().isEmpty()) return List.of();
 
-        var nextOpt =
-                FlashCardAlgorithmService.getNextCardForRevision(cards.value(), revisionSession);
-
-        if (nextOpt.isEmpty()) return Optional.empty();
-
-        var next = nextOpt.get();
-        revisionSession.markShown(next.id().id());
-
-        // reuse your existing content mapping logic
-        if (next.contentType().equals(ContentRefType.CHUNK)) {
-            System.out.println("id::" + next.contentId().id());
-            var data = Vals.io(() -> fetchLanguageContentApi.getChunkRecord(next.contentId().id()));
-            return Optional.of(new FlashCardView(
-                    next.id().id(),
-                    new FlashCardView.Front(data.value().original()),
-                    new FlashCardView.Back(data.value().translation()),
-                    data.value().note(),
-                    true,
-                    true
-            ));
-        } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
-            var data = Vals.io(() -> fetchLanguageContentApi.getSentenceRecord(next.contentId().id()));
-            return Optional.of(new FlashCardView(
-                    next.id().id(),
-                    new FlashCardView.Front(next.isReversed()?data.value().translation():data.value().original()),
-                    new FlashCardView.Back(next.isReversed()?data.value().original():data.value().translation()),
-                    null,
-                    next.isReversed(),
-                    true
-            ));
+        // Apply algorithm to get revision cards (CPU operation)
+        var revisionCards = cards.mapCpu(cardList -> 
+                FlashCardAlgorithmService.getCardsForRevision(cardList, revisionSession, count));
+        
+        if (revisionCards.value().isEmpty()) return List.of();
+        System.out.println("cards for revision..............................");
+        // Mark all cards as shown in the session
+        for (var card : revisionCards.value()) {
+            revisionSession.markShown(card.id().id());
         }
-        return Optional.empty();
+
+        // Create parallel IO operations for fetching content for each card
+        // This allows all content fetches to run concurrently instead of sequentially
+        var contentFetches = new ArrayList<Value<FlashCardView>>();
+        
+        for (var next : revisionCards.value()) {
+            if (next.contentType().equals(ContentRefType.CHUNK)) {
+                System.out.println("id::" + next.contentId().id());
+                var data = Vals.io(() -> fetchLanguageContentApi.getChunkRecord(next.contentId().id()));
+                var flashCardView = data.map(content -> new FlashCardView(
+                        next.id().id(),
+                        new FlashCardView.Front(content.original()),
+                        new FlashCardView.Back(content.translation()),
+                        content.note(),
+                        true,
+                        true
+                ));
+                contentFetches.add(flashCardView);
+            } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
+                var data = Vals.io(() -> fetchLanguageContentApi.getSentenceRecord(next.contentId().id()));
+                var flashCardView = data.map(content -> new FlashCardView(
+                        next.id().id(),
+                        new FlashCardView.Front(next.isReversed() ? content.translation() : content.original()),
+                        new FlashCardView.Back(next.isReversed() ? content.original() : content.translation()),
+                        null,
+                        next.isReversed(),
+                        true
+                ));
+                contentFetches.add(flashCardView);
+            }
+        }
+
+        // Extract all results (this will wait for all parallel IO operations to complete)
+        return contentFetches.stream()
+                .map(Value::value)
+                .toList();
+    }
+
+    public List<FlashCardView> getNextCardsToStudy(DeckInfo deckId, String userId, int count) {
+        // Generate cards asynchronously (fire and forget, like getNextCardToStudy)
+        Vals.runIo(() -> fetchLanguageContentApi.generateCardsForUser(new UserId(userId)));
+
+        // Fetch cards from repository (IO operation)
+        var cards = Vals.io(() -> flashCardRepo.findFlashCardsByDeckAndUser(new DeckId(deckId.getId()), userId));
+        if (cards.value().isEmpty()) return List.of();
+
+        // Apply algorithm to get random due cards (CPU operation)
+        var randomCards = cards.mapCpu(cardList -> FlashCardAlgorithmService.getRandomCards(cardList, count));
+        if (randomCards.value().isEmpty()) return List.of();
+
+        // Create parallel IO operations for fetching content for each card
+        // This allows all content fetches to run concurrently instead of sequentially
+        var contentFetches = new ArrayList<Value<FlashCardView>>();
+        
+        for (var next : randomCards.value()) {
+            if (next.contentType().equals(ContentRefType.CHUNK)) {
+                System.out.println("id::" + next.contentId().id());
+                var data = Vals.io(() -> fetchLanguageContentApi.getChunkRecord(next.contentId().id()));
+                var flashCardView = data.map(content -> new FlashCardView(
+                        next.id().id(),
+                        new FlashCardView.Front(content.original()),
+                        new FlashCardView.Back(content.translation()),
+                        content.note(),
+                        true,
+                        false
+                ));
+                contentFetches.add(flashCardView);
+            } else if (next.contentType().equals(ContentRefType.SENTENCE)) {
+                var data = Vals.io(() -> fetchLanguageContentApi.getSentenceRecord(next.contentId().id()));
+                var flashCardView = data.map(content -> new FlashCardView(
+                        next.id().id(),
+                        new FlashCardView.Front(next.isReversed() ? content.translation() : content.original()),
+                        new FlashCardView.Back(next.isReversed() ? content.original() : content.translation()),
+                        null,
+                        next.isReversed(),
+                        false
+                ));
+                contentFetches.add(flashCardView);
+            }
+        }
+
+        // Extract all results (this will wait for all parallel IO operations to complete)
+        return contentFetches.stream()
+                .map(Value::value)
+                .toList();
     }
 
 }
