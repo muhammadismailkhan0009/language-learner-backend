@@ -32,7 +32,7 @@ public class CardsStudyController {
              card = flashCardsService.getNextCardsToStudy(deckId, userId,3);
         }
         else if(DeckInfo.SENTENCES_REVISION.equals(deckId)) {
-            card = flashCardsService.getCardsForRevision(deckId, userId,3);
+            card = flashCardsService.getCardsForRevision(deckId, userId,1);
         }
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
