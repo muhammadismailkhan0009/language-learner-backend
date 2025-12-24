@@ -17,7 +17,7 @@ public class FlashCardAlgorithmService {
                 .filter(reviewData -> {
                     var due = reviewData.cardReviewData().due();
                     // Include cards that are overdue or due now
-                    return due != null && !due.isAfter(now);
+                    return due != null && due.isBefore(now);
                 })
                 .toList();
     }
@@ -51,7 +51,7 @@ public class FlashCardAlgorithmService {
     ) {
         if (cards.isEmpty()) return List.of();
 
-        System.out.println("size................."+cards.size());
+        System.out.println("size................." + cards.size());
         Instant now = Instant.now();
 
         // 1️⃣ Eligible cards
@@ -103,8 +103,8 @@ public class FlashCardAlgorithmService {
 
         // 5️⃣ Random pick n cards
         int actualCount = Math.min(count, candidates.size());
-        System.out.println("candidate_size="+candidates.size());
-        System.out.println("actualCount="+actualCount);
+        System.out.println("candidate_size=" + candidates.size());
+        System.out.println("actualCount=" + actualCount);
         var shuffled = new ArrayList<>(candidates);
         java.util.Collections.shuffle(shuffled, ThreadLocalRandom.current());
 
@@ -128,21 +128,38 @@ public class FlashCardAlgorithmService {
         return strong;
     }
 
-    public static List<FlashCardReview> getRandomCards(List<FlashCardReview> cards, int count) {
+    public static List<FlashCardReview> getRandomCards(
+            List<FlashCardReview> cards,
+            int count
+    ) {
         if (cards.isEmpty()) return List.of();
-        
+
         Instant now = Instant.now();
-        
-        // Filter to only include cards that are due for study (reusing the same logic as getNextCardToStudy)
+
+        // 1️⃣ Reuse existing due-card logic (unchanged)
         var dueCards = filterDueCards(cards, now);
-        
         if (dueCards.isEmpty()) return List.of();
-        
-        int actualCount = Math.min(count, dueCards.size());
-        var shuffled = new ArrayList<>(dueCards);
-        java.util.Collections.shuffle(shuffled, ThreadLocalRandom.current());
-        
-        return shuffled.subList(0, actualCount);
+
+        // 2️⃣ Sort by how overdue the card is (most overdue first)
+        var sortedByOverdue = dueCards.stream()
+                .sorted(Comparator.comparing(
+                        (FlashCardReview r) -> java.time.Duration.between(
+                                r.cardReviewData().due(),
+                                now
+                        )
+                ).reversed())
+                .toList();
+
+        // 3️⃣ Take a limited window to keep randomness
+        int windowSize = Math.min(sortedByOverdue.size(), count * 2);
+        var window = new ArrayList<>(sortedByOverdue.subList(0, windowSize));
+
+        // 4️⃣ Shuffle inside the window
+        java.util.Collections.shuffle(window, ThreadLocalRandom.current());
+
+        // 5️⃣ Return up to `count` cards
+        return window.subList(0, Math.min(count, window.size()));
     }
+
 
 }
