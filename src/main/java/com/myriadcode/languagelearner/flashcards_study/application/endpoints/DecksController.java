@@ -1,7 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.application.endpoints;
 
 import com.myriadcode.languagelearner.common.enums.DeckInfo;
-import com.myriadcode.languagelearner.flashcards_study.application.endpoints.dtos.ApiResponse;
+import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.flashcards_study.domain.views.DeckView;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

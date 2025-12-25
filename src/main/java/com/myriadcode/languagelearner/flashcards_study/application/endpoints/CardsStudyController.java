@@ -2,8 +2,8 @@ package com.myriadcode.languagelearner.flashcards_study.application.endpoints;
 
 import com.myriadcode.fsrs.api.enums.Rating;
 import com.myriadcode.languagelearner.common.enums.DeckInfo;
-import com.myriadcode.languagelearner.flashcards_study.application.endpoints.dtos.ApiRequest;
-import com.myriadcode.languagelearner.flashcards_study.application.endpoints.dtos.ApiResponse;
+import com.myriadcode.languagelearner.common.dtos.ApiRequest;
+import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.flashcards_study.application.services.CardStudyService;
 import com.myriadcode.languagelearner.flashcards_study.domain.views.FlashCardView;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,7 +46,6 @@ public class CardsStudyController {
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
-//    FIXME: we are not using it currently. may be later. but not right now.
     @PostMapping("{cardId}/review/v1")
     public ResponseEntity<Void> reviewStudiedCard(@PathVariable String cardId,
                                                   @RequestBody ApiRequest<CardRating, Void> rating) {

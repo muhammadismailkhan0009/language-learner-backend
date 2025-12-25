@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.dao;
 
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
+import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardData;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
@@ -71,7 +72,7 @@ public class CommonRepoImpl implements FlashCardRepo {
     }
 
     @Override
-    public Optional<FlashCardReview> getCardAgainstContentAndUser(FlashCardReview.ContentId contentId,
+    public Optional<FlashCardReview> getCardAgainstContentAndUser(ContentId contentId,
                                                                   ContentRefType contentType,
                                                                   UserId userId) {
         var entity = flashCardReviewJpaRepo.findByLanguageContentIdAndContentTypeAndUserId(contentId.id(),

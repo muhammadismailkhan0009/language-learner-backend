@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.domain.repos;
 
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
+import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardData;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
@@ -22,7 +23,7 @@ public interface FlashCardRepo {
 
     void createFlashCard(FlashCardReview flashCardReview);
 
-    Optional<FlashCardReview> getCardAgainstContentAndUser(FlashCardReview.ContentId contentId,
+    Optional<FlashCardReview> getCardAgainstContentAndUser(ContentId contentId,
                                                            ContentRefType contentType,
                                                            UserId userId);
 }
