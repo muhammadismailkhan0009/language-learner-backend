@@ -22,7 +22,8 @@ public class CardBasedExerciseController {
     public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToStudy(
             @RequestParam String userId) {
 
-        var card = cardStudyService.getNextCardForRevision(DeckInfo.SENTENCES, userId);
+        var card = cardStudyService.getNextCardForRevision(DeckInfo.SENTENCES_REVISION, userId);
+        System.out.println("let's see if it runs");
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
