@@ -22,7 +22,7 @@ public class CardBasedExerciseController {
     public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToStudy(
             @RequestParam String userId) {
 
-        var card = cardStudyService.getNextCardToStudy(DeckInfo.SENTENCES, userId);
+        var card = cardStudyService.getNextCardForRevision(DeckInfo.SENTENCES, userId);
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
