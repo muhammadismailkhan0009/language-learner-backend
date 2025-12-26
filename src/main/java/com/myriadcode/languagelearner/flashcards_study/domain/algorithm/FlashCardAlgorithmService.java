@@ -51,10 +51,9 @@ public class FlashCardAlgorithmService {
     ) {
         if (cards.isEmpty()) return List.of();
 
-        System.out.println("size................." + cards.size());
         Instant now = Instant.now();
 
-        // 1️⃣ Eligible cards
+        // 1️⃣ Eligible cards (unchanged)
         var eligible = cards.stream()
                 .filter(r -> {
                     var c = r.cardReviewData();
@@ -66,7 +65,7 @@ public class FlashCardAlgorithmService {
 
         if (eligible.isEmpty()) return List.of();
 
-        // 2️⃣ Bucket cards
+        // 2️⃣ Build buckets (unchanged)
         var weak = new ArrayList<FlashCardReview>();
         var medium = new ArrayList<FlashCardReview>();
         var strong = new ArrayList<FlashCardReview>();
@@ -82,50 +81,67 @@ public class FlashCardAlgorithmService {
             }
         }
 
-        // 3️⃣ Pick bucket (50/30/20)
-        List<FlashCardReview> bucket =
-                pickBucket(weak, medium, strong);
+        // 3️⃣ Get ordered buckets (NEW)
+        var orderedBuckets = pickBucketsInOrder(weak, medium, strong);
 
-        // fallback if bucket empty
-        if (bucket.isEmpty()) {
-            bucket = eligible;
+        // 4️⃣ Try buckets sequentially (KEY FIX)
+        for (var bucket : orderedBuckets) {
+            if (bucket.isEmpty()) continue;
+
+            var candidates = bucket.stream()
+                    .filter(r -> !r.id().id().equals(session.lastShown()))
+                    .filter(r -> session.shownTimes(r.id().id()) <= 2)
+                    .toList();
+
+            if (!candidates.isEmpty()) {
+                return pickRandom(candidates, count);
+            }
         }
 
-        // 4️⃣ Apply soft repetition guards
-        var candidates = bucket.stream()
-                .filter(r -> !r.id().id().equals(session.lastShown()))
-                .filter(r -> session.shownTimes(r.id().id()) <= 2)
-                .toList();
+        // 5️⃣ Final fallback: ignore session guards, but keep eligibility
+        var fallback = eligible.stream().toList();
+        if (fallback.isEmpty()) return List.of();
 
-        if (candidates.isEmpty()) {
-            candidates = bucket; // fail-open
-        }
+        return pickRandom(fallback, count);
+    }
 
-        // 5️⃣ Random pick n cards
-        int actualCount = Math.min(count, candidates.size());
-        System.out.println("candidate_size=" + candidates.size());
-        System.out.println("actualCount=" + actualCount);
-        var shuffled = new ArrayList<>(candidates);
+    private static List<FlashCardReview> pickRandom(
+            List<FlashCardReview> source,
+            int count
+    ) {
+        int actualCount = Math.min(count, source.size());
+        if (actualCount <= 0) return List.of();
+
+        var shuffled = new ArrayList<>(source);
         java.util.Collections.shuffle(shuffled, ThreadLocalRandom.current());
 
         return shuffled.subList(0, actualCount);
     }
 
-    private static List<FlashCardReview> pickBucket(
+    private static List<List<FlashCardReview>> pickBucketsInOrder(
             List<FlashCardReview> weak,
             List<FlashCardReview> medium,
             List<FlashCardReview> strong
     ) {
         int r = ThreadLocalRandom.current().nextInt(100);
 
-        if (r < 50 && !weak.isEmpty()) return weak;
-        if (r < 80 && !medium.isEmpty()) return medium;
-        if (!strong.isEmpty()) return strong;
+        List<List<FlashCardReview>> order = new ArrayList<>(3);
 
-        // spillover
-        if (!weak.isEmpty()) return weak;
-        if (!medium.isEmpty()) return medium;
-        return strong;
+        if (r < 50) {
+            order.add(weak);
+            order.add(medium);
+            order.add(strong);
+        } else if (r < 80) {
+            order.add(medium);
+            order.add(weak);
+            order.add(strong);
+        } else {
+            order.add(strong);
+            order.add(medium);
+            order.add(weak);
+        }
+
+        return order;
     }
 
     public static List<FlashCardReview> getRandomCards(
