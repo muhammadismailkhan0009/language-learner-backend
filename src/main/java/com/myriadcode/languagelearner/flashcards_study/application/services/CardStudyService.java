@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -107,7 +108,7 @@ public class CardStudyService {
     ) {
         var cards = getCardsForRevision(deckId, userId, 1);
         if (cards.isEmpty()) return Optional.empty();
-        return Optional.of(cards.get(0));
+        return Optional.of(cards.get(ThreadLocalRandom.current().nextInt(0, cards.size() + 1)));
     }
 
     public List<FlashCardView> getCardsForRevision(
