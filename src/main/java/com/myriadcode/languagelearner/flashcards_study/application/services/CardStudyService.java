@@ -104,9 +104,10 @@ public class CardStudyService {
 
     public Optional<FlashCardView> getNextCardForRevision(
             DeckInfo deckId,
-            String userId
+            String userId,
+            Integer count
     ) {
-        var cards = getCardsForRevision(deckId, userId, 1);
+        var cards = getCardsForRevision(deckId, userId, count);
         if (cards.isEmpty()) return Optional.empty();
         return Optional.of(cards.get(ThreadLocalRandom.current().nextInt(0, cards.size() + 1)));
     }

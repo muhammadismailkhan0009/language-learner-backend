@@ -42,7 +42,7 @@ public class CardsStudyController {
             @PathVariable DeckInfo deckId,
             @RequestParam String userId) {
 
-        var card = flashCardsService.getNextCardForRevision(deckId, userId);
+        var card = flashCardsService.getNextCardForRevision(deckId, userId,1);
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
