@@ -28,5 +28,6 @@ public interface LanguageContentRepo {
 
     List<Sentence.SentenceData> getSentencesForScenario(@NotNull GermanAdaptive.ScenarioEnum scenario);
 
+    List<Sentence> getAllSentences();
 
 }

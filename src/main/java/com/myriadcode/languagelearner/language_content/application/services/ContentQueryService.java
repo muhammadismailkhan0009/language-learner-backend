@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_content.application.services;
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
+import com.myriadcode.languagelearner.language_content.application.controllers.sentences.response.SentenceDataResponse;
 import com.myriadcode.languagelearner.language_content.application.externals.ChunkRecord;
 import com.myriadcode.languagelearner.language_content.application.externals.FetchLanguageContentApi;
 import com.myriadcode.languagelearner.language_content.application.externals.SentenceRecord;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 //FIXME: separate the fetch and data changing apis later into separate interfaces and services
@@ -45,6 +47,38 @@ public class ContentQueryService implements FetchLanguageContentApi {
     public SentenceRecord getSentenceRecord(String sentenceId) {
         var sentence = languageContentRepo.getSentence(sentenceId);
         return new SentenceRecord(sentence.sentence(), sentence.translation());
+    }
+
+    public List<SentenceDataResponse> fetchAllSentences(){
+        var sentences = languageContentRepo.getAllSentences();
+
+        return sentences.stream()
+                .collect(Collectors.groupingBy(s -> s.langConfigsAdaptive().scenario()))
+                .entrySet().stream()
+                .map(scenarioEntry -> {
+                    var scenario = scenarioEntry.getKey();
+                    var sentencesInScenario = scenarioEntry.getValue();
+
+                    var functions = sentencesInScenario.stream()
+                            .collect(Collectors.groupingBy(s -> s.langConfigsAdaptive().function()))
+                            .entrySet().stream()
+                            .map(functionEntry -> {
+                                var function = functionEntry.getKey();
+                                var sentencesInFunction = functionEntry.getValue();
+
+                                var sentenceContents = sentencesInFunction.stream()
+                                        .map(s -> new SentenceDataResponse.SentenceContent(
+                                                s.data().sentence(),
+                                                s.data().translation()))
+                                        .toList();
+
+                                return new SentenceDataResponse.SentenceFunction(function, sentenceContents);
+                            })
+                            .toList();
+
+                    return new SentenceDataResponse(scenario, functions);
+                })
+                .toList();
     }
 
     @Override

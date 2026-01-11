@@ -103,6 +103,12 @@ public class JpaRepoImpl implements LanguageContentRepo, UserStatsRepo {
     }
 
     @Override
+    public List<Sentence> getAllSentences() {
+        var entities = sentenceEntityJpaRepo.findAll();
+        return entities.parallelStream().map(LanguageContentMapper.INSTANCE::toSentenceDomain).toList();
+    }
+
+    @Override
     public List<UserStatsForContent> getUserStatsForContent(List<String> userIds) {
         var entities = userStatsJpaRepo.findAllByUserIdIn(userIds);
         return entities.parallelStream().map(UserStatsMapper.INSTANCE::toDomain).toList();
