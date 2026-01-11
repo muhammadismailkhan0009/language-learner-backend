@@ -16,8 +16,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanBlitz;
+import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
+
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -52,33 +58,59 @@ public class ContentQueryService implements FetchLanguageContentApi {
     public List<SentenceDataResponse> fetchAllSentences(){
         var sentences = languageContentRepo.getAllSentences();
 
-        return sentences.stream()
-                .collect(Collectors.groupingBy(s -> s.langConfigsAdaptive().scenario()))
-                .entrySet().stream()
-                .map(scenarioEntry -> {
-                    var scenario = scenarioEntry.getKey();
-                    var sentencesInScenario = scenarioEntry.getValue();
+        // Create a map for quick lookup: (scenario, function) -> List<Sentence>
+        Map<String, List<Sentence>> sentenceMap = sentences.stream()
+                .collect(Collectors.groupingBy(s -> {
+                    var scenario = s.langConfigsAdaptive().scenario();
+                    var function = s.langConfigsAdaptive().function();
+                    return scenario.name() + "|" + function.name();
+                }));
 
-                    var functions = sentencesInScenario.stream()
-                            .collect(Collectors.groupingBy(s -> s.langConfigsAdaptive().function()))
-                            .entrySet().stream()
-                            .map(functionEntry -> {
-                                var function = functionEntry.getKey();
-                                var sentencesInFunction = functionEntry.getValue();
+        // Build response following GermanBlitz order
+        List<SentenceDataResponse> result = new ArrayList<>();
+        GermanAdaptive.ScenarioEnum currentScenario = null;
+        List<SentenceDataResponse.SentenceFunction> currentFunctions = new ArrayList<>();
 
-                                var sentenceContents = sentencesInFunction.stream()
-                                        .map(s -> new SentenceDataResponse.SentenceContent(
-                                                s.data().sentence(),
-                                                s.data().translation()))
-                                        .toList();
+        for (GermanBlitz lesson : GermanBlitz.values()) {
+            var scenario = lesson.getScenario();
+            var function = lesson.getFunction();
+            String key = scenario.name() + "|" + function.name();
 
-                                return new SentenceDataResponse.SentenceFunction(function, sentenceContents);
-                            })
+            // If scenario changed, save previous scenario and start new one
+            if (currentScenario != null && !currentScenario.equals(scenario)) {
+                if (!currentFunctions.isEmpty()) {
+                    result.add(new SentenceDataResponse(currentScenario, new ArrayList<>(currentFunctions)));
+                }
+                currentFunctions.clear();
+            }
+
+            // Check if we have sentences for this (scenario, function) combination
+            List<Sentence> sentencesForLesson = sentenceMap.get(key);
+            if (sentencesForLesson != null && !sentencesForLesson.isEmpty()) {
+                // Check if we already added this function for current scenario
+                boolean functionExists = currentFunctions.stream()
+                        .anyMatch(f -> f.function().equals(function));
+
+                if (!functionExists) {
+                    var sentenceContents = sentencesForLesson.stream()
+                            .map(s -> new SentenceDataResponse.SentenceContent(
+                                    s.data().sentence(),
+                                    s.data().translation()))
                             .toList();
 
-                    return new SentenceDataResponse(scenario, functions);
-                })
-                .toList();
+                    currentFunctions.add(new SentenceDataResponse.SentenceFunction(function, sentenceContents));
+                }
+            }
+
+            currentScenario = scenario;
+        }
+
+        // Add the last scenario if it has functions
+        if (currentScenario != null && !currentFunctions.isEmpty()) {
+            result.add(new SentenceDataResponse(currentScenario, currentFunctions));
+        }
+
+        return result;
     }
 
     @Override
