@@ -7,18 +7,16 @@ import com.myriadcode.languagelearner.language_content.application.externals.Chu
 import com.myriadcode.languagelearner.language_content.application.externals.FetchLanguageContentApi;
 import com.myriadcode.languagelearner.language_content.application.externals.SentenceRecord;
 import com.myriadcode.languagelearner.language_content.application.publishers.ContentPublisher;
+import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.UserStatsForContent;
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
+import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanBlitz;
 import com.myriadcode.languagelearner.language_content.domain.repo.LanguageContentRepo;
 import com.myriadcode.languagelearner.language_content.domain.repo.UserStatsRepo;
 import com.myriadcode.languagelearner.language_content.domain.services.SyllabusPolicy;
-import com.myriadcode.languagelearner.user_management.application.externals.UserInformationApi;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanAdaptive;
-import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.GermanBlitz;
-import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,8 +35,6 @@ public class ContentQueryService implements FetchLanguageContentApi {
     private final UserStatsRepo userStatsRepo;
 
     private final ContentPublisher contentPublisher;
-
-    private final UserInformationApi userInfoApi;
 
     private final SyllabusPolicy syllabusPolicy = new SyllabusPolicy();
 
