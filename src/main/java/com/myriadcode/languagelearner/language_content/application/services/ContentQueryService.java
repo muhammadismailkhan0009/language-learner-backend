@@ -90,6 +90,7 @@ public class ContentQueryService implements FetchLanguageContentApi {
                 if (!functionExists) {
                     var sentenceContents = sentencesForLesson.stream()
                             .map(s -> new SentenceDataResponse.SentenceContent(
+                                    s.id().id(),
                                     s.data().sentence(),
                                     s.data().translation()))
                             .toList();

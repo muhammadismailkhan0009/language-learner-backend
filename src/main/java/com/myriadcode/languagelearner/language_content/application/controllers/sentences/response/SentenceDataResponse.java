@@ -7,5 +7,5 @@ import java.util.List;
 public record SentenceDataResponse(GermanAdaptive.ScenarioEnum scenario, List<SentenceFunction> functions) {
 
     public record SentenceFunction(GermanAdaptive.CommunicativeFunctionEnum function, List<SentenceContent> sentence) {}
-    public record SentenceContent(String sentence, String translation){}
+    public record SentenceContent(String id,String sentence, String translation){}
 }
