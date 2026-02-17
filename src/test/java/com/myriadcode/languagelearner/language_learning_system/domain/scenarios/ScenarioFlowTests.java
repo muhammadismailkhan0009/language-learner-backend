@@ -1,10 +1,10 @@
 package com.myriadcode.languagelearner.language_learning_system.domain.scenarios;
 
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
-import com.myriadcode.languagelearner.language_learning_system.scenarios.application.controllers.request.CreateScenarioRequest;
-import com.myriadcode.languagelearner.language_learning_system.scenarios.application.controllers.request.EditScenarioRequest;
-import com.myriadcode.languagelearner.language_learning_system.scenarios.application.services.ScenarioOrchestrationService;
-import com.myriadcode.languagelearner.language_learning_system.scenarios.infra.jpa.repos.ScenarioEntityJpaRepo;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.scenarios.request.CreateScenarioRequest;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.scenarios.request.EditScenarioRequest;
+import com.myriadcode.languagelearner.language_learning_system.application.services.scenarios.ScenarioOrchestrationService;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.scenarios.repos.ScenarioEntityJpaRepo;
 import com.myriadcode.languagelearner.user_management.infra.jpa.entities.UserInfoEntity;
 import com.myriadcode.languagelearner.user_management.infra.jpa.repos.UserInfoJpaRepo;
 import org.junit.jupiter.api.AfterEach;

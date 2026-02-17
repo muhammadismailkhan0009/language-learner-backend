@@ -45,6 +45,44 @@ Tests are selected by risk and declared behavior, not by tooling style.
 
 ---
 
+## Dual-Axis Test Model
+
+Testing decisions use two independent axes:
+- **Behavioral scope**: what guarantee is asserted (unit, integration, contract, end-to-end, non-functional).
+- **Isolation scope**: how much runtime composition is required to validate that guarantee.
+
+These axes are orthogonal:
+- a behaviorally small test may run with broad runtime composition
+- a behaviorally small test may also be fully isolated
+
+LLMs must preserve both axes intentionally. Neither axis may be inferred from naming alone.
+
+---
+
+## Isolation Scope Rules (Framework-Agnostic)
+
+### Pure Logic Scope
+
+Use pure tests (no application/runtime context) for deterministic logic guarantees such as:
+- domain invariants
+- validation rules
+- pure transformations and conversions
+- static utilities
+- mappers and format translators
+- calculators/parsers without runtime dependencies
+
+These tests must be fast, deterministic, and independent of infrastructure semantics.
+
+### Boundary-Isolated Scope
+
+Use boundary-isolated tests when behavior depends on interaction with collaborators, while still avoiding full composition.
+
+### Composed Runtime Scope
+
+Use composed-runtime tests when behavior depends on real composition semantics (wiring, persistence semantics, transport semantics, lifecycle, transactions, or equivalent runtime behavior).
+
+---
+
 ## Core Principles
 
 ### 1. Tests Encode Intent, Not Structure
@@ -108,6 +146,18 @@ End-to-end/system tests:
 - must be deterministic and environment-stable
 
 End-to-end tests do not replace unit/integration/contract tests.
+
+### 6. Replacement Constraint
+
+Composed-runtime and end-to-end tests do **not** replace pure-logic tests for declared deterministic guarantees.
+
+If a deterministic rule exists, it must have at least one direct pure test at the rule boundary.
+
+### 7. Location and Naming Integrity
+
+Test location and naming must not claim stronger isolation than the test actually uses.
+
+If a test uses composed runtime, it must be identified as composition/flow/integration in naming and placement conventions used by the repository.
 
 ---
 
