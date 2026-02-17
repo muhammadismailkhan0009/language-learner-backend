@@ -1,9 +1,9 @@
 package com.myriadcode.languagelearner.language_learning_system.domain.reading_and_listening.listening;
 
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
-import com.myriadcode.languagelearner.language_learning_system.domain.reading_and_listening.application.services.ListeningStepOrchestrationService;
-import com.myriadcode.languagelearner.language_learning_system.domain.reading_and_listening.domain.listening.WordToListenTo;
-import com.myriadcode.languagelearner.language_learning_system.domain.reading_and_listening.infra.jpa.repos.WordToListenToEntityJpaRepo;
+import com.myriadcode.languagelearner.language_learning_system.reading_and_listening.application.services.ListeningStepOrchestrationService;
+import com.myriadcode.languagelearner.language_learning_system.reading_and_listening.domain.listening.WordToListenTo;
+import com.myriadcode.languagelearner.language_learning_system.reading_and_listening.infra.jpa.repos.WordToListenToEntityJpaRepo;
 import com.myriadcode.languagelearner.user_management.infra.jpa.entities.UserInfoEntity;
 import com.myriadcode.languagelearner.user_management.infra.jpa.repos.UserInfoJpaRepo;
 import org.junit.jupiter.api.AfterEach;
