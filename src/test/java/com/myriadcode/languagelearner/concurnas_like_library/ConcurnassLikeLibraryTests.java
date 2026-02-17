@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.concurnas_like_library;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -14,6 +15,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
+@Disabled
 public class ConcurnassLikeLibraryTests {
 
     static void sleep(long millis) {

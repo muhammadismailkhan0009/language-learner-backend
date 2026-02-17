@@ -12,6 +12,7 @@ import com.myriadcode.languagelearner.language_content.domain.repo.LanguageConte
 import com.myriadcode.languagelearner.language_content.infra.jpa.repos.ChunkEntityJpaRepo;
 import com.myriadcode.languagelearner.language_content.infra.jpa.repos.SentenceEntityJpaRepo;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +60,13 @@ public class FlashCardAlgorithmLogicTest {
         sentenceEntityJpaRepo.deleteAll();
         flashCardReviewJpaRepo.deleteAll();
         System.out.println("clean up completed");
+    }
+
+    @BeforeEach
+    public void setUp() {
+        chunkEntityJpaRepo.deleteAll();
+        sentenceEntityJpaRepo.deleteAll();
+        flashCardReviewJpaRepo.deleteAll();
     }
 
     @Test

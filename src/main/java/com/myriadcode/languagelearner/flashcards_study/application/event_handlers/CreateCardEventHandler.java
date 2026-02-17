@@ -6,7 +6,6 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
 import com.myriadcode.languagelearner.language_content.domain.events.CreateCardEvent;
-import jakarta.transaction.Transactional;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +24,6 @@ public class CreateCardEventHandler {
         this.fsrsEngine = FsrsEngine.createDefault();
     }
 
-    @Transactional
     @EventListener
     public void handle(CreateCardEvent event) {
         System.out.println("Storage received content: " + event.getContentId());

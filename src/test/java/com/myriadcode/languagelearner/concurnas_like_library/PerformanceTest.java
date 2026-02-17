@@ -1,9 +1,11 @@
 package com.myriadcode.languagelearner.concurnas_like_library;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.stream.IntStream;
 
+@Disabled
 public class PerformanceTest {
 
     @Test

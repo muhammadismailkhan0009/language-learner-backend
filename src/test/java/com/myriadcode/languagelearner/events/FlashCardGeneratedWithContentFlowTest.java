@@ -11,6 +11,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.infra.jpa.repos.ChunkEntityJpaRepo;
 import com.myriadcode.languagelearner.language_content.infra.jpa.repos.SentenceEntityJpaRepo;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,6 +56,13 @@ public class FlashCardGeneratedWithContentFlowTest {
         flashCardReviewJpaRepo.findAll().forEach(System.out::println);
 
 
+    }
+
+    @BeforeEach
+    public void setUp() {
+        chunkEntityJpaRepo.deleteAll();
+        sentenceEntityJpaRepo.deleteAll();
+        flashCardReviewJpaRepo.deleteAll();
     }
 
     @Test
