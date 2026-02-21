@@ -1,0 +1,43 @@
+@startuml
+
+title Public Vocabulary Domain Schema
+
+class PublicVocabulary {
+  +id : PublicVocabularyId
+  +sourceVocabularyId : VocabularyId
+  +publishedByUserId : UserId
+  +status : PublicVocabularyStatus
+  +publishedAt : Instant
+}
+
+class PublicVocabularyId {
+  +id : String
+}
+
+class VocabularyId {
+  +id : String
+}
+
+class UserId {
+  +id : String
+}
+
+enum PublicVocabularyStatus {
+  PUBLISHED
+  UNPUBLISHED
+}
+
+PublicVocabulary --> PublicVocabularyId
+PublicVocabulary --> VocabularyId : sourceVocabularyId
+PublicVocabulary --> UserId : publishedByUserId
+PublicVocabulary --> PublicVocabularyStatus
+
+note right of PublicVocabulary
+Invariants:
+- sourceVocabularyId must exist in private vocabulary
+- source vocabulary must belong to publishedByUserId
+- only one active public record per sourceVocabularyId
+- public content is read through source vocabulary (reference model)
+end note
+
+@enduml

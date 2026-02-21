@@ -177,5 +177,12 @@ public class VocabularyControllerTests {
                     .filter(vocabulary -> vocabulary.userId().id().equals(userId))
                     .toList();
         }
+
+        @Override
+        public List<Vocabulary> findByIds(List<String> vocabularyIds) {
+            return data.values().stream()
+                    .filter(vocabulary -> vocabularyIds.contains(vocabulary.id().id()))
+                    .toList();
+        }
     }
 }

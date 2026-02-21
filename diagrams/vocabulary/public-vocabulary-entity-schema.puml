@@ -1,0 +1,43 @@
+@startuml
+
+title Public Vocabulary Entity Schema
+
+entity "PublicVocabularyEntity\n(public_vocabularies)" as PublicVocabularyEntity {
+  * id : String
+  --
+  * source_vocabulary_id : String
+  * published_by_user_id : String
+  * status : String
+  * published_at : Instant
+  * created_at : Instant
+  * updated_at : Instant
+}
+
+entity "VocabularyEntity\n(vocabulary_entries)" as VocabularyEntity {
+  * id : String
+  --
+  * user_id : String
+  * surface : String
+  * translation : String
+  * entry_kind : String
+  * notes : String(5000) nullable
+  * schema_version : Integer
+  * created_at : Instant
+  * updated_at : Instant
+}
+
+PublicVocabularyEntity }o--|| VocabularyEntity : references(source_vocabulary_id)
+
+note right of PublicVocabularyEntity
+Constraints / Indexes:
+- unique(source_vocabulary_id)
+- index(status, published_at)
+- index(published_by_user_id)
+end note
+
+note right of PublicVocabularyEntity
+Public view joins to vocabulary_entries (+ example table)
+No content duplication for MVP reference model.
+end note
+
+@enduml

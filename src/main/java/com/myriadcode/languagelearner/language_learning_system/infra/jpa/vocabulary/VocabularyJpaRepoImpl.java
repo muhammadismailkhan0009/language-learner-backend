@@ -46,4 +46,15 @@ public class VocabularyJpaRepoImpl implements VocabularyRepo {
                 .map(VOCABULARY_JPA_MAPPER::toDomain)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Vocabulary> findByIds(List<String> vocabularyIds) {
+        if (vocabularyIds == null || vocabularyIds.isEmpty()) {
+            return List.of();
+        }
+        return vocabularyEntityJpaRepo.findAllByIdIn(vocabularyIds).stream()
+                .map(VOCABULARY_JPA_MAPPER::toDomain)
+                .toList();
+    }
 }

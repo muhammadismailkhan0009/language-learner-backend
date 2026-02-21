@@ -14,4 +14,7 @@ public interface VocabularyEntityJpaRepo extends JpaRepository<VocabularyEntity,
 
     @EntityGraph(attributePaths = "exampleSentences")
     List<VocabularyEntity> findAllByUserId(String userId);
+
+    @EntityGraph(attributePaths = "exampleSentences")
+    List<VocabularyEntity> findAllByIdIn(List<String> ids);
 }
