@@ -1,0 +1,41 @@
+@startuml
+
+title Vocabulary Entity Schema
+
+entity "VocabularyEntity\n(vocabulary_entries)" as VocabularyEntity {
+  * id : String
+  --
+  * user_id : String
+  * surface : String
+  * translation : String
+  * entryKind : String
+  * notes : String(5000) nullable
+  * schemaVersion : Integer
+  * createdAt : Instant
+  * updatedAt : Instant
+}
+
+entity "VocabularyExampleSentenceEntity" as VocabularyExampleSentenceEntity {
+  * id : String
+  --
+  * entryId : String
+  * sentence : String
+  * translation : String
+  * displayOrder : Integer
+}
+
+VocabularyEntity ||--|{ VocabularyExampleSentenceEntity : exampleSentences
+
+note right of VocabularyEntity
+- @Table(name = "vocabulary_entries")
+- @OneToMany(mappedBy = "vocabulary", cascade = ALL, orphanRemoval = true)
+- @OrderBy("displayOrder ASC")
+end note
+
+note right of VocabularyExampleSentenceEntity
+- @Table(name = "vocabulary_example_sentences")
+- @ManyToOne(fetch = LAZY)
+- @JoinColumn(name = "entry_id", nullable = false)
+end note
+
+@enduml

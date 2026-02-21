@@ -1,0 +1,87 @@
+@startuml
+!include <C4/C4_Dynamic>
+
+LAYOUT_TOP_DOWN()
+
+Person(learner, "Learner", "Selects grammar rules to study")
+Person(admin, "Content Admin", "Creates and updates grammar rules")
+
+System_Boundary(lms, "Language Learner System") {
+  Container(client_app, "Web/Mobile App", "Frontend", "Grammar rule UI")
+
+  Container_Boundary(grammar_support, "Grammar Support Backend") {
+    Component(grammar_controller, "GrammarRuleController", "API Component", "Grammar rule endpoints")
+    Component(grammar_service, "GrammarRuleOrchestrationService", "Application Service", "Handles grammar rule create/edit/fetch flows")
+    Component(grammar_rule_domain_service, "GrammarRuleDomainService", "Domain Service", "Validates and builds grammar rule aggregate")
+    Component(grammar_repo, "GrammarRuleRepo", "Domain Port", "Persistence boundary for grammar rules")
+    Component(grammar_repo_impl, "GrammarRuleJpaRepoImpl", "Infrastructure Adapter", "JPA repository implementation")
+  }
+
+  ContainerDb(grammar_store, "GrammarStore", "Database", "Stores grammar rules, explanation paragraphs, scenarios, and scenario sentences")
+}
+
+' Flow A: Retrieve and select grammar rules for view
+Rel($index=SetIndex(1), learner, client_app, "Open grammar rules")
+Rel($index=Index(), client_app, grammar_controller, "GET /grammar-rules/v1")
+Rel($index=Index(), grammar_controller, grammar_service, "fetchGrammarRules()")
+Rel($index=Index(), grammar_service, grammar_repo, "findAll()")
+Rel($index=Index(), grammar_repo, grammar_repo_impl, "findAll()")
+Rel($index=Index(), grammar_repo_impl, grammar_store, "Read grammar aggregates")
+Rel($index=Index(), grammar_store, grammar_repo_impl, "Return rules + scenario + sentences")
+Rel($index=Index(), grammar_repo_impl, grammar_repo, "Return domain rules")
+Rel($index=Index(), grammar_repo, grammar_service, "Return domain rules")
+Rel($index=Index(), grammar_service, grammar_controller, "Return rule list DTO")
+Rel($index=Index(), grammar_controller, client_app, "200 + grammar rules")
+Rel($index=Index(), learner, client_app, "Select one grammar rule")
+Rel($index=Index(), client_app, grammar_controller, "GET /grammar-rules/{id}/v1")
+Rel($index=Index(), grammar_controller, grammar_service, "fetchGrammarRule(id)")
+Rel($index=Index(), grammar_service, grammar_repo, "findById(id)")
+Rel($index=Index(), grammar_repo, grammar_repo_impl, "findById(id)")
+Rel($index=Index(), grammar_repo_impl, grammar_store, "Read selected grammar aggregate")
+Rel($index=Index(), grammar_store, grammar_repo_impl, "Return rule + explanation + scenario + sentences")
+Rel($index=Index(), grammar_repo_impl, grammar_repo, "Return domain rule")
+Rel($index=Index(), grammar_repo, grammar_service, "Return domain rule")
+Rel($index=Index(), grammar_service, grammar_controller, "Return selected rule DTO")
+Rel($index=Index(), grammar_controller, client_app, "200 + details")
+
+' Flow B: Add grammar rule
+Rel($index=SetIndex(1), admin, client_app, "Create grammar rule")
+Rel($index=Index(), client_app, grammar_controller, "POST /grammar-rules/v1 + admin_key")
+Rel($index=Index(), grammar_controller, grammar_service, "createGrammarRule(request)")
+Rel($index=Index(), grammar_service, grammar_service, "validate admin_key == 112233")
+Rel($index=Index(), grammar_service, grammar_rule_domain_service, "create(name, explanationParagraphs, scenario + sentences)")
+Rel($index=Index(), grammar_rule_domain_service, grammar_service, "Validate: name, 1+ explanation paragraph, fixed scenario, 1+ sentence")
+Rel($index=Index(), grammar_service, grammar_repo, "save(rule)")
+Rel($index=Index(), grammar_repo, grammar_repo_impl, "save(rule)")
+Rel($index=Index(), grammar_repo_impl, grammar_store, "Persist grammar aggregate")
+Rel($index=Index(), grammar_store, grammar_repo_impl, "Saved aggregate")
+Rel($index=Index(), grammar_repo_impl, grammar_repo, "Return saved domain rule")
+Rel($index=Index(), grammar_repo, grammar_service, "Return saved domain rule")
+Rel($index=Index(), grammar_service, grammar_controller, "Created result")
+Rel($index=Index(), grammar_controller, client_app, "201 Created")
+
+' Flow C: Update grammar rule
+Rel($index=SetIndex(1), admin, client_app, "Edit grammar rule")
+Rel($index=Index(), client_app, grammar_controller, "PUT /grammar-rules/{id}/v1 + admin_key")
+Rel($index=Index(), grammar_controller, grammar_service, "editGrammarRule(id, request)")
+Rel($index=Index(), grammar_service, grammar_service, "validate admin_key == 112233")
+Rel($index=Index(), grammar_service, grammar_repo, "findById(id)")
+Rel($index=Index(), grammar_repo, grammar_repo_impl, "findById(id)")
+Rel($index=Index(), grammar_repo_impl, grammar_store, "Load existing aggregate")
+Rel($index=Index(), grammar_store, grammar_repo_impl, "Return existing aggregate")
+Rel($index=Index(), grammar_repo_impl, grammar_repo, "Return existing domain rule")
+Rel($index=Index(), grammar_repo, grammar_service, "Return existing domain rule")
+Rel($index=Index(), grammar_service, grammar_rule_domain_service, "edit(existing, name?, explanation?, scenario?)")
+Rel($index=Index(), grammar_rule_domain_service, grammar_service, "Validate invariants (one fixed scenario with 1+ sentences)")
+Rel($index=Index(), grammar_service, grammar_repo, "save(updated rule)")
+Rel($index=Index(), grammar_repo, grammar_repo_impl, "save(updated rule)")
+Rel($index=Index(), grammar_repo_impl, grammar_store, "Persist updated aggregate")
+Rel($index=Index(), grammar_store, grammar_repo_impl, "Updated aggregate")
+Rel($index=Index(), grammar_repo_impl, grammar_repo, "Return updated domain rule")
+Rel($index=Index(), grammar_repo, grammar_service, "Return updated domain rule")
+Rel($index=Index(), grammar_service, grammar_controller, "Updated result")
+Rel($index=Index(), grammar_controller, client_app, "200 OK")
+
+SHOW_LEGEND()
+
+@enduml

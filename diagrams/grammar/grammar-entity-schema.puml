@@ -1,0 +1,66 @@
+@startuml
+
+title Grammar Entity Schema
+
+entity "GrammarRuleEntity" as GrammarRuleEntity {
+  * id : String
+  --
+  * name : String
+  * grammarScenarioId : String
+  * createdAt : Instant
+  * updatedAt : Instant
+}
+
+entity "GrammarRuleExplanationParagraphEntity" as GrammarRuleExplanationParagraphEntity {
+  * id : String
+  --
+  * grammarRuleId : String
+  * paragraphText : String
+  * displayOrder : Integer
+}
+
+entity "GrammarScenarioEntity" as GrammarScenarioEntity {
+  * id : String
+  --
+  * title : String
+  * description : String
+  * targetLanguage : String
+  * createdBy : String
+  * isFixed : Boolean
+  * createdAt : Instant
+  * updatedAt : Instant
+}
+
+entity "GrammarScenarioSentenceEntity" as GrammarScenarioSentenceEntity {
+  * id : String
+  --
+  * grammarScenarioId : String
+  * sentence : String
+  * translation : String
+  * displayOrder : Integer
+}
+
+GrammarRuleEntity ||--|{ GrammarRuleExplanationParagraphEntity : contains
+GrammarRuleEntity }o--|| GrammarScenarioEntity : references (grammarScenarioId)
+GrammarScenarioEntity ||--|{ GrammarScenarioSentenceEntity : contains
+
+note right of GrammarRuleEntity
+one grammar rule -> exactly one scenario
+end note
+
+note right of GrammarScenarioEntity
+system-managed shared scenario
+available to all users
+end note
+
+note right of GrammarScenarioSentenceEntity
+one grammar scenario must have one or more
+sentence-translation examples
+end note
+
+note right of GrammarRuleExplanationParagraphEntity
+one grammar rule must have one or more
+explanation paragraphs
+end note
+
+@enduml

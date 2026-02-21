@@ -37,4 +37,3 @@ build/
 /src/main/resources/.env.local
 /logs/app.log
 /logs/
-/diagrams

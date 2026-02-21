@@ -1,0 +1,54 @@
+@startuml
+
+title Vocabulary Domain Schema
+
+class Vocabulary {
+  +id : VocabularyId
+  +userId : UserId
+  +surface : String
+  +translation : String
+  +entryKind : EntryKind
+  +notes : String?
+  +exampleSentences : List<VocabularyExampleSentence>
+}
+
+class VocabularyId {
+  +id : String
+}
+
+class UserId {
+  +id : String
+}
+
+enum EntryKind {
+  WORD
+  CHUNK
+}
+
+class VocabularyExampleSentence {
+  +id : VocabularyExampleSentenceId
+  +sentence : String
+  +translation : String
+}
+
+class VocabularyExampleSentenceId {
+  +id : String
+}
+
+Vocabulary --> VocabularyId
+Vocabulary --> UserId
+Vocabulary --> EntryKind
+Vocabulary *-- "1..*" VocabularyExampleSentence : exampleSentences
+VocabularyExampleSentence --> VocabularyExampleSentenceId
+
+note right of Vocabulary
+Invariants:
+- userId is required
+- surface is required
+- translation is required
+- entryKind is required
+- exampleSentences has at least 1 item
+- notes is optional free text (blank normalizes to null)
+end note
+
+@enduml

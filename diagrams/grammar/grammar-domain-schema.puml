@@ -1,0 +1,81 @@
+@startuml
+
+title Grammar Domain Schema
+
+class GrammarRule {
+  +id : GrammarRuleId
+  +name : String
+  +explanationParagraphs : List<GrammarExplanationParagraph>
+  +grammarScenario : GrammarScenario
+  --
+  +create(...)
+  +edit(...)
+}
+
+class GrammarRuleId {
+  +value : String
+}
+
+class GrammarExplanationParagraph {
+  +id : GrammarExplanationParagraphId
+  +text : String
+  +displayOrder : Integer
+}
+
+class GrammarExplanationParagraphId {
+  +value : String
+}
+
+class GrammarScenarioId {
+  +value : String
+}
+
+class GrammarScenario {
+  +id : GrammarScenarioId
+  +title : String
+  +description : String
+  +targetLanguage : String
+  +createdBy : String
+  +isFixed : Boolean
+  +sentences : List<GrammarScenarioSentence>
+  --
+  +createBySystem(...)
+}
+
+class GrammarScenarioSentence {
+  +id : GrammarScenarioSentenceId
+  +sentence : String
+  +translation : String
+  +displayOrder : Integer
+}
+
+class GrammarScenarioSentenceId {
+  +value : String
+}
+
+GrammarRule --> GrammarRuleId
+GrammarRule *-- "1..*" GrammarExplanationParagraph : explanationParagraphs
+GrammarRule *-- "1" GrammarScenario : grammarScenario
+GrammarExplanationParagraph --> GrammarExplanationParagraphId
+GrammarScenario --> GrammarScenarioId
+GrammarScenario *-- "1..*" GrammarScenarioSentence : sentences
+GrammarScenarioSentence --> GrammarScenarioSentenceId
+
+note right of GrammarRule
+Invariants:
+- name is required
+- explanation has at least one paragraph
+- exactly one grammarScenario per grammar rule
+end note
+
+note right of GrammarScenario
+Grammar scenario is grammar-module owned.
+Created by system and shared across all users.
+Fixed scenarios are stable learning content.
+end note
+
+note right of GrammarScenarioSentence
+Each scenario sentence has exactly one translation.
+end note
+
+@enduml
