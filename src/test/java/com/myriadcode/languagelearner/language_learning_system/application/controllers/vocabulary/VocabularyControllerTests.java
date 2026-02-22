@@ -187,6 +187,11 @@ public class VocabularyControllerTests {
         }
 
         @Override
+        public Optional<Vocabulary> findById(String vocabularyId) {
+            return Optional.ofNullable(data.get(vocabularyId));
+        }
+
+        @Override
         public List<Vocabulary> findByUserId(String userId) {
             return data.values().stream()
                     .filter(vocabulary -> vocabulary.userId().id().equals(userId))

@@ -11,6 +11,8 @@ public interface VocabularyRepo {
 
     Optional<Vocabulary> findByIdAndUserId(String vocabularyId, String userId);
 
+    Optional<Vocabulary> findById(String vocabularyId);
+
     List<Vocabulary> findByUserId(String userId);
 
     List<Vocabulary> findByIds(List<String> vocabularyIds);

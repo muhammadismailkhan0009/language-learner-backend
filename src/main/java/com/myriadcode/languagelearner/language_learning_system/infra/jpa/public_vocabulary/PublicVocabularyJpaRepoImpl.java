@@ -38,6 +38,13 @@ public class PublicVocabularyJpaRepoImpl implements PublicVocabularyRepo {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<PublicVocabulary> findById(String publicVocabularyId) {
+        return publicVocabularyEntityJpaRepo.findById(publicVocabularyId)
+                .map(PUBLIC_VOCABULARY_JPA_MAPPER::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<PublicVocabulary> findAllByStatus(PublicVocabulary.PublicVocabularyStatus status) {
         return publicVocabularyEntityJpaRepo.findAllByStatusOrderByPublishedAtDesc(status.name()).stream()
                 .map(PUBLIC_VOCABULARY_JPA_MAPPER::toDomain)

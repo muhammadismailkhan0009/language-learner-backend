@@ -12,6 +12,10 @@ public interface VocabularyEntityJpaRepo extends JpaRepository<VocabularyEntity,
     @EntityGraph(attributePaths = "exampleSentences")
     Optional<VocabularyEntity> findByIdAndUserId(String id, String userId);
 
+    @Override
+    @EntityGraph(attributePaths = "exampleSentences")
+    Optional<VocabularyEntity> findById(String id);
+
     @EntityGraph(attributePaths = "exampleSentences")
     List<VocabularyEntity> findAllByUserId(String userId);
 

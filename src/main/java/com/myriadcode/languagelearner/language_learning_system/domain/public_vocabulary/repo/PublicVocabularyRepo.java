@@ -11,5 +11,7 @@ public interface PublicVocabularyRepo {
 
     Optional<PublicVocabulary> findBySourceVocabularyId(String sourceVocabularyId);
 
+    Optional<PublicVocabulary> findById(String publicVocabularyId);
+
     List<PublicVocabulary> findAllByStatus(PublicVocabulary.PublicVocabularyStatus status);
 }

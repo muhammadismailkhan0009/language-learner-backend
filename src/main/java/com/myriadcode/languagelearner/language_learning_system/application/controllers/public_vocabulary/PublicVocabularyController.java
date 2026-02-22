@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.public_vocabulary.request.PublishPublicVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.public_vocabulary.response.PublicVocabularyResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.public_vocabulary.PublicVocabularyOrchestrationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -34,6 +35,15 @@ public class PublicVocabularyController {
             @RequestBody PublishPublicVocabularyRequest request
     ) {
         var response = publicVocabularyOrchestrationService.publishVocabulary(userId, vocabularyId, request);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("{publicVocabularyId}/private/v1")
+    public ResponseEntity<ApiResponse<VocabularyResponse>> addPublicVocabularyToPrivate(
+            @RequestParam String userId,
+            @PathVariable String publicVocabularyId
+    ) {
+        var response = publicVocabularyOrchestrationService.addPublicVocabularyToPrivate(userId, publicVocabularyId);
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 

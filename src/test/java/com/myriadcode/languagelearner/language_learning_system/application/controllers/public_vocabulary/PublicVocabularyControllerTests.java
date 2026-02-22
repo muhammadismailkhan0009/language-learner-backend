@@ -74,6 +74,64 @@ public class PublicVocabularyControllerTests {
                 .andExpect(jsonPath("$.response[0].surface").value("gehen"));
     }
 
+    @Test
+    @DisplayName("Add public vocabulary to private: copies data without public reference")
+    public void addPublicVocabularyToPrivateCreatesCopy() throws Exception {
+        var vocabularyRepo = new FakeVocabularyRepo();
+        var publicRepo = new FakePublicVocabularyRepo();
+        vocabularyRepo.save(sampleVocabulary("vocab-7", "user-a"));
+        publicRepo.save(new PublicVocabulary(
+                new PublicVocabulary.PublicVocabularyId("pub-7"),
+                new Vocabulary.VocabularyId("vocab-7"),
+                new UserId("user-a"),
+                PublicVocabulary.PublicVocabularyStatus.PUBLISHED,
+                Instant.now()
+        ));
+
+        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var controller = new PublicVocabularyController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(post("/api/v1/public-vocabularies/{publicVocabularyId}/private/v1", "pub-7")
+                        .queryParam("userId", "user-b")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.userId").value("user-b"))
+                .andExpect(jsonPath("$.response.surface").value("gehen"))
+                .andExpect(jsonPath("$.response.translation").value("to go"))
+                .andExpect(jsonPath("$.response.id").isNotEmpty())
+                .andExpect(jsonPath("$.response.id").value(org.hamcrest.Matchers.not("vocab-7")));
+    }
+
+    @Test
+    @DisplayName("Add public vocabulary to private: skips when matching private vocab exists")
+    public void addPublicVocabularyToPrivateSkipsExisting() throws Exception {
+        var vocabularyRepo = new FakeVocabularyRepo();
+        var publicRepo = new FakePublicVocabularyRepo();
+        vocabularyRepo.save(sampleVocabulary("vocab-9", "user-a"));
+        vocabularyRepo.save(sampleVocabulary("private-9", "user-b"));
+        publicRepo.save(new PublicVocabulary(
+                new PublicVocabulary.PublicVocabularyId("pub-9"),
+                new Vocabulary.VocabularyId("vocab-9"),
+                new UserId("user-a"),
+                PublicVocabulary.PublicVocabularyStatus.PUBLISHED,
+                Instant.now()
+        ));
+
+        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var controller = new PublicVocabularyController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(post("/api/v1/public-vocabularies/{publicVocabularyId}/private/v1", "pub-9")
+                        .queryParam("userId", "user-b")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.id").value("private-9"))
+                .andExpect(jsonPath("$.response.userId").value("user-b"))
+                .andExpect(jsonPath("$.response.surface").value("gehen"))
+                .andExpect(jsonPath("$.response.translation").value("to go"));
+    }
+
     private Vocabulary sampleVocabulary(String id, String userId) {
         return new Vocabulary(
                 new Vocabulary.VocabularyId(id),
@@ -110,6 +168,11 @@ public class PublicVocabularyControllerTests {
         }
 
         @Override
+        public Optional<Vocabulary> findById(String vocabularyId) {
+            return Optional.ofNullable(data.get(vocabularyId));
+        }
+
+        @Override
         public List<Vocabulary> findByUserId(String userId) {
             return data.values().stream().filter(v -> v.userId().id().equals(userId)).toList();
         }
@@ -123,6 +186,7 @@ public class PublicVocabularyControllerTests {
     private static class FakePublicVocabularyRepo implements PublicVocabularyRepo {
 
         private final Map<String, PublicVocabulary> dataBySourceVocabularyId = new HashMap<>();
+        private final Map<String, PublicVocabulary> dataById = new HashMap<>();
 
         @Override
         public PublicVocabulary save(PublicVocabulary publicVocabulary) {
@@ -135,12 +199,18 @@ public class PublicVocabularyControllerTests {
                     publicVocabulary.publishedAt()
             ) : publicVocabulary;
             dataBySourceVocabularyId.put(toStore.sourceVocabularyId().id(), toStore);
+            dataById.put(toStore.id().id(), toStore);
             return toStore;
         }
 
         @Override
         public Optional<PublicVocabulary> findBySourceVocabularyId(String sourceVocabularyId) {
             return Optional.ofNullable(dataBySourceVocabularyId.get(sourceVocabularyId));
+        }
+
+        @Override
+        public Optional<PublicVocabulary> findById(String publicVocabularyId) {
+            return Optional.ofNullable(dataById.get(publicVocabularyId));
         }
 
         @Override

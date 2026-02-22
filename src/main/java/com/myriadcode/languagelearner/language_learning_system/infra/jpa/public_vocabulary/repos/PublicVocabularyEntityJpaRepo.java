@@ -10,5 +10,8 @@ public interface PublicVocabularyEntityJpaRepo extends JpaRepository<PublicVocab
 
     Optional<PublicVocabularyEntity> findBySourceVocabularyId(String sourceVocabularyId);
 
+    @Override
+    Optional<PublicVocabularyEntity> findById(String id);
+
     List<PublicVocabularyEntity> findAllByStatusOrderByPublishedAtDesc(String status);
 }

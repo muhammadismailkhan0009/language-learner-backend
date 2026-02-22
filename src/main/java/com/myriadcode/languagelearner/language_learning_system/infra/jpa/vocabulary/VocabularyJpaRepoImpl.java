@@ -41,6 +41,13 @@ public class VocabularyJpaRepoImpl implements VocabularyRepo {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<Vocabulary> findById(String vocabularyId) {
+        return vocabularyEntityJpaRepo.findById(vocabularyId)
+                .map(VOCABULARY_JPA_MAPPER::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<Vocabulary> findByUserId(String userId) {
         return vocabularyEntityJpaRepo.findAllByUserId(userId).stream()
                 .map(VOCABULARY_JPA_MAPPER::toDomain)
