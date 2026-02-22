@@ -181,12 +181,14 @@ public class CardStudyService {
         var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId);
         if (cards.isEmpty()) return List.of();
 
-        var randomCards = FlashCardAlgorithmService.getRandomCards(cards, count);
+        var randomCards = FlashCardAlgorithmService.getRandomCards(cards, 3);
         if (randomCards.isEmpty()) return List.of();
 
         return randomCards.stream()
+                .findAny()
                 .map(review -> toVocabularyFlashCardData(review, fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)))
                 .map(data -> toVocabularyFlashCardView(data, false))
+                .stream()
                 .toList();
     }
 
