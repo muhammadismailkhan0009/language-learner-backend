@@ -130,6 +130,21 @@ public class VocabularyControllerTests {
                 .andExpect(jsonPath("$.response[0].userId").value("user-a"));
     }
 
+    @Test
+    @DisplayName("Create flashcards API: explicit trigger endpoint is available")
+    public void createFlashCardsForVocabularyReturnsAccepted() throws Exception {
+        var repo = new FakeVocabularyRepo();
+        repo.save(sampleVocabulary("vocab-1", "user-a"));
+        VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
+        var controller = new VocabularyController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(post("/api/v1/vocabularies/{vocabularyId}/flashcards/v1", "vocab-1")
+                        .queryParam("userId", "user-a")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isAccepted());
+    }
+
     private Vocabulary sampleVocabulary(String id, String userId) {
         return new Vocabulary(
                 new Vocabulary.VocabularyId(id),

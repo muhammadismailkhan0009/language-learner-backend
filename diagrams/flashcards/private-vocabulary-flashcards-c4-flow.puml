@@ -1,0 +1,125 @@
+@startuml
+!include <C4/C4_Dynamic>
+
+LAYOUT_TOP_DOWN()
+
+Person(learner, "Learner", "Creates private vocabulary and studies flashcards")
+
+System_Boundary(lms, "Language Learner System") {
+  Container(client_app, "Web/Mobile App", "Frontend", "Vocabulary + flashcard UI")
+
+  Container_Boundary(vocabulary_module, "Vocabulary Module (language_learning_system)") {
+    Component(vocab_controller, "VocabularyController", "API Component", "Private vocabulary endpoints")
+    Component(vocab_service, "VocabularyOrchestrationService", "Application Service", "Orchestrates add/update/fetch for private vocabulary")
+    Component(vocab_domain_service, "VocabularyDomainService", "Domain Service", "Validates vocabulary invariants")
+    Component(vocab_repo_port, "VocabularyRepo", "Domain Port", "Vocabulary persistence boundary")
+    Component(vocab_repo_impl, "VocabularyJpaRepoImpl", "Infrastructure Adapter", "JPA adapter for vocabulary entries")
+    Component(vocab_event_publisher, "VocabularyFlashCardPublisher", "Application Publisher", "Publishes CreateFlashCardEvent for private vocabulary cards")
+    Component(vocab_cards_api, "FetchPrivateVocabularyApi", "Named Interface (language_learning_system_api)", "Exposes vocabulary data for flashcard rendering")
+    Component(vocab_cards_api_impl, "VocabularyFlashcardsAdapter", "Application Adapter", "Implements FetchPrivateVocabularyApi via VocabularyRepo")
+  }
+
+  Container_Boundary(flashcards_module, "Flashcards Module (flashcards_study)") {
+    Component(vocab_cards_controller, "VocabularyCardsStudyController", "API Component", "Vocabulary-only flashcard fetch/review endpoints")
+    Component(cards_controller, "CardsStudyController", "API Component (Deprecated)", "Legacy mixed-deck card endpoints; to be removed after stability")
+    Component(cards_service, "CardStudyService", "Application Service", "Selects due cards and builds card views (explicit vocabulary flow)")
+    Component(generic_flashcard_domain, "FlashCardReview", "Domain Model", "Shared flashcard reference + review shape")
+    Component(vocab_card_data, "VocabularyFlashCardData", "Domain Data Model", "Single data flow point before response mapping")
+    Component(vocab_card_handler, "CreateCardEventHandler", "Application Event Handler", "Creates/ensures flashcard refs by contentType + isReversed")
+    Component(vocab_card_repo_port, "FlashCardRepo", "Domain Port", "Flashcard reference + review persistence boundary")
+    Component(vocab_card_repo_impl, "CommonRepoImpl", "Infrastructure Adapter", "JPA adapter for flashcard review/reference rows")
+  }
+
+  ContainerDb(app_db, "App Database", "PostgreSQL", "vocabulary_entries, vocabulary_example_sentences, flashcard_review")
+  Component(event_bus, "In-Process Domain Event Bus", "Spring Events", "Cross-module event delivery")
+}
+
+' Flow A: vocabulary upsert only persists vocabulary
+Rel($index=SetIndex(1), learner, client_app, "Create or edit private vocabulary")
+Rel($index=Index(), client_app, vocab_controller, "POST/PUT /api/v1/vocabularies/*")
+Rel($index=Index(), vocab_controller, vocab_service, "addVocabulary()/updateVocabulary()")
+Rel($index=Index(), vocab_service, vocab_domain_service, "create()/edit() with invariants")
+Rel($index=Index(), vocab_domain_service, vocab_service, "Return validated aggregate")
+Rel($index=Index(), vocab_service, vocab_repo_port, "save(vocabulary)")
+Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "save(vocabulary)")
+Rel($index=Index(), vocab_repo_impl, app_db, "Persist vocabulary entry + German examples")
+Rel($index=Index(), app_db, vocab_repo_impl, "Saved")
+Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return saved vocabulary")
+Rel($index=Index(), vocab_repo_port, vocab_service, "Return saved vocabulary")
+Rel($index=Index(), vocab_service, vocab_controller, "Return vocabulary response")
+Rel($index=Index(), vocab_controller, client_app, "201/200")
+
+' Flow A2: explicit trigger creates two flashcard references
+Rel($index=SetIndex(1), learner, client_app, "Generate vocabulary flashcards explicitly")
+Rel($index=Index(), client_app, vocab_controller, "POST /api/v1/vocabularies/{vocabularyId}/flashcards/v1")
+Rel($index=Index(), vocab_controller, vocab_service, "createFlashCardsForVocabulary(userId, vocabularyId)")
+Rel($index=Index(), vocab_service, vocab_repo_port, "findByIdAndUserId(vocabularyId, userId)")
+Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "findByIdAndUserId(vocabularyId, userId)")
+Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary entry + examples")
+Rel($index=Index(), app_db, vocab_repo_impl, "Return vocabulary aggregate")
+Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return vocabulary")
+Rel($index=Index(), vocab_repo_port, vocab_service, "Return vocabulary")
+Rel($index=Index(), vocab_service, vocab_event_publisher, "createPrivateVocabularyCards(vocabulary)")
+Rel($index=Index(), vocab_event_publisher, event_bus, "publish(CreateFlashCardEvent(contentType=VOCABULARY, isReversed=true/false))")
+Rel($index=Index(), event_bus, vocab_card_handler, "Handle CreateFlashCardEvent")
+Rel($index=Index(), vocab_card_handler, vocab_card_repo_port, "ensureCards(vocabularyId, userId)")
+Rel($index=Index(), vocab_card_repo_port, vocab_card_repo_impl, "upsert two refs by is_reversed")
+Rel($index=Index(), vocab_card_repo_impl, app_db, "Persist rows in flashcard_review: is_reversed=false and is_reversed=true + fsrs state")
+Rel($index=Index(), app_db, vocab_card_repo_impl, "Saved/updated")
+Rel($index=Index(), vocab_card_repo_impl, vocab_card_repo_port, "Done")
+Rel($index=Index(), vocab_card_repo_port, vocab_card_handler, "Done")
+Rel($index=Index(), vocab_controller, client_app, "202 Accepted")
+
+' Flow B: vocabulary-specific fetch resolves content through vocabulary reference
+Rel($index=SetIndex(1), learner, client_app, "Open private vocabulary flashcards")
+Rel($index=Index(), client_app, vocab_cards_controller, "GET /api/v1/vocabulary-flashcards/cards/next/v1")
+Rel($index=Index(), vocab_cards_controller, cards_service, "getNextPrivateVocabularyCardsToStudy(userId, count)")
+Rel($index=Index(), cards_service, vocab_card_repo_port, "findVocabularyFlashCardsByUser(userId)")
+Rel($index=Index(), vocab_card_repo_port, vocab_card_repo_impl, "findVocabularyFlashCardsByUser(userId)")
+Rel($index=Index(), vocab_card_repo_impl, app_db, "Read flashcard_review (VOCABULARY cards)")
+Rel($index=Index(), app_db, vocab_card_repo_impl, "Return card refs + review state")
+Rel($index=Index(), vocab_card_repo_impl, vocab_card_repo_port, "Return domain reviews")
+Rel($index=Index(), vocab_card_repo_port, cards_service, "Return due cards")
+Rel($index=Index(), cards_service, vocab_cards_api, "getVocabularyRecord(vocabularyId, userId)")
+Rel($index=Index(), cards_service, generic_flashcard_domain, "Use FlashCardReview list (VOCABULARY content)")
+Rel($index=Index(), vocab_cards_api, vocab_cards_api_impl, "Dispatch to implementation")
+Rel($index=Index(), vocab_cards_api_impl, vocab_repo_port, "findByIdAndUserId(vocabularyId, userId)")
+Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "findByIdAndUserId")
+Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary + example sentences")
+Rel($index=Index(), app_db, vocab_repo_impl, "Return vocabulary aggregate")
+Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return vocabulary")
+Rel($index=Index(), vocab_repo_port, vocab_cards_api_impl, "Return vocabulary")
+Rel($index=Index(), vocab_cards_api_impl, vocab_cards_api, "Return PrivateVocabularyRecord")
+Rel($index=Index(), vocab_cards_api, cards_service, "Return vocabulary content")
+Rel($index=Index(), cards_service, vocab_card_data, "Build VocabularyFlashCardData from review + fetched vocabulary")
+Rel($index=Index(), vocab_card_data, cards_service, "Return normalized card data")
+Rel($index=Index(), cards_service, cards_service, "Map VocabularyFlashCardData -> VocabularyFlashCardView")
+Rel($index=Index(), cards_service, vocab_cards_controller, "Return VocabularyFlashCardView list")
+Rel($index=Index(), vocab_cards_controller, client_app, "200 + cards")
+
+' Flow C: vocabulary review updates FSRS state only
+Rel($index=SetIndex(1), learner, client_app, "Submit card rating")
+Rel($index=Index(), client_app, vocab_cards_controller, "POST /api/v1/vocabulary-flashcards/cards/{cardId}/review/v1")
+Rel($index=Index(), vocab_cards_controller, cards_service, "reviewVocabularyStudiedCard(cardId, rating)")
+Rel($index=Index(), cards_service, vocab_card_repo_port, "findVocabularyReviewInfoByCard(cardId)")
+Rel($index=Index(), vocab_card_repo_port, vocab_card_repo_impl, "findVocabularyReviewInfoByCard(cardId)")
+Rel($index=Index(), vocab_card_repo_impl, app_db, "Read review json")
+Rel($index=Index(), app_db, vocab_card_repo_impl, "Return review state")
+Rel($index=Index(), vocab_card_repo_impl, vocab_card_repo_port, "Return review")
+Rel($index=Index(), vocab_card_repo_port, cards_service, "Return review")
+Rel($index=Index(), cards_service, cards_service, "FSRS reschedule")
+Rel($index=Index(), cards_service, vocab_card_repo_port, "saveVocabularyFlashCardState(updated)")
+Rel($index=Index(), vocab_card_repo_port, vocab_card_repo_impl, "saveVocabularyFlashCardState(updated)")
+Rel($index=Index(), vocab_card_repo_impl, app_db, "Update flashcard_review.card_json only")
+Rel($index=Index(), vocab_cards_controller, client_app, "200 OK")
+
+' Flow D: legacy endpoint still available during migration (deprecated)
+Rel($index=SetIndex(1), learner, client_app, "Legacy card fetch path (temporary)")
+Rel($index=Index(), client_app, cards_controller, "GET /api/decks/{deckId}/cards/next/v1 [DEPRECATED]")
+Rel($index=Index(), cards_controller, cards_service, "getNextCardsToStudy(deckId, userId, count) [DEPRECATED]")
+Rel($index=Index(), cards_service, generic_flashcard_domain, "Uses shared FlashCardReview [DEPRECATED path]")
+Rel($index=Index(), cards_controller, client_app, "200 (to be removed after migration)")
+
+SHOW_LEGEND()
+
+@enduml

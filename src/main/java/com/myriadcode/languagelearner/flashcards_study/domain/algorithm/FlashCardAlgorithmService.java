@@ -22,7 +22,6 @@ public class FlashCardAlgorithmService {
                 .toList();
     }
 
-    // this code gives us the next card to study based on the due date
     public static Optional<FlashCardReview> getNextCardToStudy(List<FlashCardReview> cards) {
         Instant now = Instant.now();
         var dueCards = filterDueCards(cards, now);

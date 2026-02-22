@@ -1,0 +1,122 @@
+@startuml
+
+title Private Vocabulary Flashcard Domain Schema
+
+class Vocabulary {
+  +id : VocabularyId
+  +userId : UserId
+  +surface : String
+  +translation : String
+  +entryKind : EntryKind
+  +notes : String?
+  +exampleSentences : List<VocabularyExampleSentence>
+}
+
+class VocabularyId {
+  +id : String
+}
+
+class UserId {
+  +id : String
+}
+
+class VocabularyExampleSentence {
+  +id : VocabularyExampleSentenceId
+  +sentence : String
+  +translation : String
+}
+
+class VocabularyExampleSentenceId {
+  +id : String
+}
+
+class FlashCardReview {
+  +id : FlashCardId
+  +userId : UserId
+  +contentId : ContentId
+  +isReversed : boolean
+  +cardReviewData : FsrsCardState
+}
+
+class VocabularyFlashCardData {
+  +id : FlashCardId
+  +frontWordOrChunk : String
+  +backWordOrChunk : String
+  +sentences : List<SentenceData>
+  +isReversed : boolean
+}
+
+class SentenceData {
+  +id : String
+  +sentence : String
+  +translation : String
+}
+
+class FsrsCardState {
+  +json : String
+}
+
+class FlashCardId {
+  +id : String
+}
+
+class ContentId {
+  +id : String
+}
+
+Vocabulary --> VocabularyId
+Vocabulary --> UserId
+Vocabulary *-- "1..*" VocabularyExampleSentence : exampleSentences
+VocabularyExampleSentence --> VocabularyExampleSentenceId
+
+FlashCardReview --> FlashCardId
+FlashCardReview --> UserId
+FlashCardReview --> ContentId
+FlashCardReview --> FsrsCardState
+VocabularyFlashCardData --> FlashCardId
+VocabularyFlashCardData *-- "0..*" SentenceData
+
+note right of FlashCardReview
+Rendering contract:
+- isReversed = false:
+  front: vocabulary.surface (German)
+  back: vocabulary.translation (English)
+  + vocabulary.exampleSentences list (sentence + translation)
+- isReversed = true:
+  front: vocabulary.translation (English)
+  back: vocabulary.surface (German)
+  + vocabulary.exampleSentences list (sentence + translation)
+
+Storage rule:
+- No vocabulary text/examples are stored in flashcard rows.
+- Flashcard aggregate keeps only stable references + FSRS state.
+end note
+
+note right of VocabularyFlashCardData
+Single domain data flow point for vocabulary cards:
+- fetched vocabulary content -> VocabularyFlashCardData -> response view
+- no direct adapter-to-response mapping in service flow
+end note
+
+note left of FlashCardReview
+Module boundaries:
+- vocabulary aggregate ownership:
+  language_learning_system/domain/vocabulary
+- flashcard aggregate ownership:
+  flashcards_study/domain/models
+- relation is by stable ID reference (contentId), not by embedding.
+end note
+
+note bottom of Vocabulary
+Vocabulary remains the single source of lexical content.
+Flashcards keep references only.
+end note
+
+note bottom of FlashCardReview
+Private vocabulary cards are generated explicitly by:
+POST /api/v1/vocabularies/{vocabularyId}/flashcards/v1
+They are fetched via:
+GET /api/v1/vocabulary-flashcards/cards/*
+end note
+
+@enduml

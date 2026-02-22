@@ -17,26 +17,41 @@ import java.util.Optional;
 @CrossOrigin("*")
 @RestController
 @RequestMapping("api/decks/{deckId}/cards")
+/**
+ * @deprecated Legacy mixed-concern controller.
+ * Use explicit module-specific controllers (e.g. VocabularyCardsStudyController) and remove after system stability.
+ */
+@Deprecated(since = "2026-02-22", forRemoval = true)
 public class CardsStudyController {
 
     @Autowired
     private CardStudyService flashCardsService;
 
+    /**
+     * @deprecated Legacy mixed-concern endpoint that serves multiple modules.
+     * Use explicit vocabulary and sentence endpoints. Remove after client migration.
+     */
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     @GetMapping("next/v1")
     public ResponseEntity<ApiResponse<List<FlashCardView>>> getNextCardToStudy(
             @PathVariable DeckInfo deckId,
             @RequestParam String userId) {
 
         List<FlashCardView> card = new ArrayList<>();
-        if(DeckInfo.SENTENCES.equals(deckId)) {
+        if(DeckInfo.SENTENCES.equals(deckId) || DeckInfo.PRIVATE_VOCABULARY.equals(deckId)) {
              card = flashCardsService.getNextCardsToStudy(deckId, userId,3);
         }
-        else if(DeckInfo.SENTENCES_REVISION.equals(deckId)) {
+        else if(DeckInfo.SENTENCES_REVISION.equals(deckId) || DeckInfo.PRIVATE_VOCABULARY_REVISION.equals(deckId)) {
             card = flashCardsService.getCardsForRevision(deckId, userId,1);
         }
         return ResponseEntity.ok(new ApiResponse<>(card));
     }
 
+    /**
+     * @deprecated Legacy mixed-concern endpoint that serves multiple modules.
+     * Use explicit vocabulary and sentence endpoints. Remove after client migration.
+     */
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     @GetMapping("/revision/next/v1")
     public ResponseEntity<ApiResponse<Optional<FlashCardView>>> getNextCardToRevise(
             @PathVariable DeckInfo deckId,

@@ -1,4 +1,4 @@
-package com.myriadcode.languagelearner.events;
+package com.myriadcode.languagelearner.flashcards;
 
 
 import com.myriadcode.languagelearner.common.enums.DeckInfo;

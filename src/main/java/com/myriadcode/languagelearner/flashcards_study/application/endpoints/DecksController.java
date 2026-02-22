@@ -11,31 +11,45 @@ import java.util.List;
 @CrossOrigin("*")
 @RestController
 @RequestMapping("api/decks")
+/**
+ * @deprecated Legacy deck-discovery controller for generic mixed-concern flow.
+ * Prefer explicit module endpoints (for vocabulary: VocabularyCardsStudyController).
+ * Remove after client migration to explicit endpoints.
+ */
+@Deprecated(since = "2026-02-22", forRemoval = true)
 public class DecksController {
 
-    //    FIXME: for now, it is for language only. later when we generalize it, we'll add some identifier to decide from where to fetch cards data
+    /**
+     * @deprecated Legacy mixed-concern endpoint.
+     * Returns explicit private-vocabulary deck metadata to match current vocabulary flashcard flow.
+     */
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     @GetMapping("v1")
     public ResponseEntity<ApiResponse<List<DeckView>>> getDecksData(
             @RequestParam(name = "mode") FlashCardMode mode,
             @RequestParam(name="userId") String userId
     ) {
-
-        var deck = List.of(
-                new DeckView(DeckInfo.SENTENCES, "Sentences", 1));
-
-        return ResponseEntity.ok(new ApiResponse<>(deck));
+        return ResponseEntity.ok(new ApiResponse<>(toDecks(mode)));
     }
 
+    /**
+     * @deprecated Legacy mixed-concern endpoint.
+     * Returns explicit private-vocabulary revision deck metadata to match current vocabulary flashcard flow.
+     */
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     @GetMapping("/revision/v1")
     public ResponseEntity<ApiResponse<List<DeckView>>> getRevisionList(
             @RequestParam(name = "mode") FlashCardMode mode,
             @RequestParam(name="userId") String userId
     ) {
+        return ResponseEntity.ok(new ApiResponse<>(toDecks(mode)));
+    }
 
-        var deck = List.of(
-                new DeckView(DeckInfo.SENTENCES_REVISION, "Sentences", 1));
-
-        return ResponseEntity.ok(new ApiResponse<>(deck));
+    private List<DeckView> toDecks(FlashCardMode mode) {
+        if (mode == FlashCardMode.REVISION) {
+            return List.of(new DeckView(DeckInfo.PRIVATE_VOCABULARY_REVISION, "Private Vocabulary", 1));
+        }
+        return List.of(new DeckView(DeckInfo.PRIVATE_VOCABULARY, "Private Vocabulary", 1));
     }
 
     //    data for endpoints

@@ -1,0 +1,77 @@
+@startuml
+
+title Private Vocabulary Flashcard Entity Schema
+
+entity "VocabularyEntity\n(vocabulary_entries)" as VocabularyEntity {
+  * id : String
+  --
+  * user_id : String
+  * surface : String
+  * translation : String
+  * entry_kind : String
+  notes : String
+  * schema_version : Integer
+  * created_at : Instant
+  * updated_at : Instant
+}
+
+entity "VocabularyExampleSentenceEntity\n(vocabulary_example_sentences)" as VocabularyExampleSentenceEntity {
+  * id : String
+  --
+  * entry_id : String
+  * sentence : String
+  * translation : String
+  * display_order : Integer
+}
+
+entity "FlashCardReviewEntity\n(flashcard_review)" as FlashCardReviewEntity {
+  * id : String
+  --
+  * user_id : String
+  * language_content_id : String
+  * content_type : String
+  * is_reversed : Boolean
+  * card_json : jsonb
+}
+
+VocabularyEntity ||--|{ VocabularyExampleSentenceEntity : exampleSentences
+VocabularyEntity ||..o{ FlashCardReviewEntity : language_content_id logical reference
+
+note right of FlashCardReviewEntity
+Constraints:
+- unique(language_content_id, content_type, user_id, is_reversed)
+- content_type in ('VOCABULARY', 'SENTENCE', 'CHUNK')
+
+Rule:
+- For private vocabulary generation:
+  exactly two rows per vocabulary per user
+  one is_reversed=false and one is_reversed=true.
+  Vocabulary flashcard domain reads/writes only rows where content_type='VOCABULARY'.
+end note
+
+note right of FlashCardReviewEntity
+Contains FSRS scheduling state only.
+No card front/back text is stored.
+end note
+
+note bottom of VocabularyEntity
+All flashcard content is resolved from:
+- vocabulary_entries.surface / translation
+- vocabulary_example_sentences.sentence / translation
+end note
+
+note left of FlashCardReviewEntity
+Module boundaries:
+- `flashcards_study/infrastructure/jpa/*` owns flashcard persistence.
+- `language_learning_system/infra/jpa/vocabulary/*` owns vocabulary persistence.
+- Cross-capability coupling stays at ID reference level only.
+- Boundary mapping should be explicit in mapper classes (MapStruct).
+end note
+
+note bottom of FlashCardReviewEntity
+`FlashCardReview` is the shared domain shape for vocabulary, sentence, and chunk references.
+Vocabulary response payloads are assembled through domain model `VocabularyFlashCardData`
+before mapping to API view DTOs.
+end note
+
+@enduml

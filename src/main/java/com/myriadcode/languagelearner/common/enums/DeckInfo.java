@@ -4,7 +4,9 @@ public enum DeckInfo {
     CHUNKS("chunks"),
 
     SENTENCES("sentences"),
-    SENTENCES_REVISION("sentences");
+    SENTENCES_REVISION("sentences"),
+    PRIVATE_VOCABULARY("private_vocabulary"),
+    PRIVATE_VOCABULARY_REVISION("private_vocabulary");
 
     private final String id;
 

@@ -14,4 +14,11 @@ public interface FlashCardReviewJpaRepo extends JpaRepository<FlashCardReviewEnt
     List<FlashCardReviewEntity> findAllByContentTypeAndUserId(ContentRefType contentType, String userId);
 
     Optional<FlashCardReviewEntity> findByLanguageContentIdAndContentTypeAndUserId(String languageContentId, ContentRefType contentType, String userId);
+
+    Optional<FlashCardReviewEntity> findByLanguageContentIdAndContentTypeAndUserIdAndIsReversed(
+            String languageContentId,
+            ContentRefType contentType,
+            String userId,
+            boolean isReversed
+    );
 }

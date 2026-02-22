@@ -64,4 +64,13 @@ public class VocabularyController {
         var response = vocabularyOrchestrationService.fetchVocabulary(userId, vocabularyId);
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
+
+    @PostMapping("{vocabularyId}/flashcards/v1")
+    public ResponseEntity<Void> createFlashCardsForVocabulary(
+            @RequestParam String userId,
+            @PathVariable String vocabularyId
+    ) {
+        vocabularyOrchestrationService.createFlashCardsForVocabulary(userId, vocabularyId);
+        return ResponseEntity.accepted().build();
+    }
 }

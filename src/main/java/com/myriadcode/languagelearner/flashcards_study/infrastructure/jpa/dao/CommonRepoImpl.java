@@ -32,6 +32,7 @@ public class CommonRepoImpl implements FlashCardRepo {
     }
 
     @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     public Optional<FlashCardReview> findReviewInfoByCard(FlashCardReview.FlashCardId id) {
         var entity = flashCardReviewJpaRepo.findById(id.id());
         if (entity.isEmpty()) return Optional.empty();
@@ -40,6 +41,7 @@ public class CommonRepoImpl implements FlashCardRepo {
     }
 
     @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     public List<FlashCardReview> findFlashCardsByDeckAndUser(DeckId deckId, String userId) {
         if ("chunks".equalsIgnoreCase(deckId.id())) {
             var entities = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.CHUNK, userId);
@@ -47,12 +49,15 @@ public class CommonRepoImpl implements FlashCardRepo {
         } else if ("sentences".equalsIgnoreCase(deckId.id())) {
             var entities = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.SENTENCE, userId);
             return entities.parallelStream().map(FlashCardMapper.INSTANCE::toModel).toList();
-
+        } else if ("private_vocabulary".equalsIgnoreCase(deckId.id())) {
+            var entities = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.VOCABULARY, userId);
+            return entities.parallelStream().map(FlashCardMapper.INSTANCE::toModel).toList();
         }
         return List.of();
     }
 
     @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     public void saveFlashCardState(FlashCardReview review) {
 
         var reviewEntity = flashCardReviewJpaRepo.findById(review.id().id());
@@ -66,12 +71,14 @@ public class CommonRepoImpl implements FlashCardRepo {
     }
 
     @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     public void createFlashCard(FlashCardReview flashCardReview) {
         var entity = FlashCardMapper.INSTANCE.toEntity(flashCardReview);
         flashCardReviewJpaRepo.save(entity);
     }
 
     @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
     public Optional<FlashCardReview> getCardAgainstContentAndUser(ContentId contentId,
                                                                   ContentRefType contentType,
                                                                   UserId userId) {
@@ -81,5 +88,69 @@ public class CommonRepoImpl implements FlashCardRepo {
         if (entity.isEmpty()) return Optional.empty();
         var value = entity.get();
         return Optional.of(FlashCardMapper.INSTANCE.toModel(value));
+    }
+
+    @Override
+    @Deprecated(since = "2026-02-22", forRemoval = true)
+    public Optional<FlashCardReview> getCardAgainstContentAndUserAndDirection(ContentId contentId,
+                                                                               ContentRefType contentType,
+                                                                               UserId userId,
+                                                                               boolean isReversed) {
+        var entity = flashCardReviewJpaRepo.findByLanguageContentIdAndContentTypeAndUserIdAndIsReversed(
+                contentId.id(),
+                contentType,
+                userId.id(),
+                isReversed
+        );
+        if (entity.isEmpty()) return Optional.empty();
+        return Optional.of(FlashCardMapper.INSTANCE.toModel(entity.get()));
+    }
+
+    @Override
+    public List<FlashCardReview> findVocabularyFlashCardsByUser(String userId) {
+        var entities = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.VOCABULARY, userId);
+        return entities.parallelStream()
+                .map(FlashCardMapper.INSTANCE::toModel)
+                .toList();
+    }
+
+    @Override
+    public Optional<FlashCardReview> findVocabularyReviewInfoByCard(FlashCardReview.FlashCardId id) {
+        var entity = flashCardReviewJpaRepo.findById(id.id());
+        if (entity.isEmpty()) return Optional.empty();
+        var value = entity.get();
+        if (!ContentRefType.VOCABULARY.equals(value.getContentType())) return Optional.empty();
+        return Optional.of(FlashCardMapper.INSTANCE.toModel(value));
+    }
+
+    @Override
+    public void saveVocabularyFlashCardState(FlashCardReview review) {
+        var reviewEntity = flashCardReviewJpaRepo.findById(review.id().id());
+        if (reviewEntity.isPresent()) {
+            var json = review.cardReviewData().toJson();
+            var entity = reviewEntity.get();
+            entity.setCardJson(json);
+            flashCardReviewJpaRepo.save(entity);
+        }
+    }
+
+    @Override
+    public void createVocabularyFlashCard(FlashCardReview review) {
+        var entity = FlashCardMapper.INSTANCE.toEntity(review);
+        flashCardReviewJpaRepo.save(entity);
+    }
+
+    @Override
+    public Optional<FlashCardReview> getVocabularyCardAgainstContentAndUserAndDirection(ContentId vocabularyId,
+                                                                                         UserId userId,
+                                                                                         boolean isReversed) {
+        var entity = flashCardReviewJpaRepo.findByLanguageContentIdAndContentTypeAndUserIdAndIsReversed(
+                vocabularyId.id(),
+                ContentRefType.VOCABULARY,
+                userId.id(),
+                isReversed
+        );
+        if (entity.isEmpty()) return Optional.empty();
+        return Optional.of(FlashCardMapper.INSTANCE.toModel(entity.get()));
     }
 }
