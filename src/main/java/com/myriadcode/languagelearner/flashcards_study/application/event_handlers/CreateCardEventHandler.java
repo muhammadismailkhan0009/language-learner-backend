@@ -31,6 +31,9 @@ public class CreateCardEventHandler {
         var userId = new UserId(event.getUserId());
 
         if (ContentRefType.VOCABULARY.equals(event.getContentType())) {
+            if (vocabularyCardExists(contentId, userId)) {
+                return;
+            }
             ensureVocabularyCardExists(contentId, userId, false);
             if (event.isReversed()) {
                 ensureVocabularyCardExists(contentId, userId, true);
@@ -42,6 +45,18 @@ public class CreateCardEventHandler {
         if (event.isReversed()) {
             ensureLegacyCardExists(contentId, event, userId, true);
         }
+    }
+
+    private boolean vocabularyCardExists(ContentId vocabularyId, UserId userId) {
+        return flashCardRepo.getVocabularyCardAgainstContentAndUserAndDirection(
+                vocabularyId,
+                userId,
+                false
+        ).isPresent() || flashCardRepo.getVocabularyCardAgainstContentAndUserAndDirection(
+                vocabularyId,
+                userId,
+                true
+        ).isPresent();
     }
 
     private void ensureLegacyCardExists(ContentId contentId,
