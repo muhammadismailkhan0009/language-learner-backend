@@ -2,8 +2,8 @@
 spring:
   jpa:
     open-in-view: false #using it is bad idea bcz it initializes proxy
-    hibernate.ddl-auto: update
-    generate-ddl: true # creates tables for @Entity marked classes at startup
+    hibernate.ddl-auto: validate
+    generate-ddl: false # Flyway manages schema changes
     show-sql: false
 
   datasource:

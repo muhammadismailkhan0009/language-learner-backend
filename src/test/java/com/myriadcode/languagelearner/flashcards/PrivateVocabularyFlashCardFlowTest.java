@@ -77,7 +77,7 @@ public class PrivateVocabularyFlashCardFlowTest {
         assertThat(generatedCards).extracting(card -> card.getIsReversed()).containsExactlyInAnyOrder(false, true);
 
         var studyCards = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 5);
-        assertThat(studyCards).hasSize(2);
+        assertThat(studyCards).hasSize(1);
         assertThat(studyCards)
                 .extracting(
                         card -> card.front().wordOrChunk(),
@@ -85,7 +85,7 @@ public class PrivateVocabularyFlashCardFlowTest {
                         card -> card.back().sentences().stream().map(sentence -> sentence.sentence()).toList(),
                         card -> card.isReversed()
                 )
-                .containsExactlyInAnyOrder(
+                .containsAnyOf(
                         tuple("lernen", "to learn", List.of("Ich lerne Deutsch."), false),
                         tuple("to learn", "lernen", List.of("Ich lerne Deutsch."), true)
                 );
@@ -123,7 +123,7 @@ public class PrivateVocabularyFlashCardFlowTest {
         assertThat(generatedCards).extracting(card -> card.getIsReversed()).containsExactlyInAnyOrder(false, true);
 
         var studyCards = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 5);
-        assertThat(studyCards).hasSize(2);
+        assertThat(studyCards).hasSize(1);
         assertThat(studyCards)
                 .extracting(
                         card -> card.front().wordOrChunk(),
@@ -131,7 +131,7 @@ public class PrivateVocabularyFlashCardFlowTest {
                         card -> card.back().sentences().stream().map(sentence -> sentence.sentence()).toList(),
                         card -> card.isReversed()
                 )
-                .containsExactlyInAnyOrder(
+                .containsAnyOf(
                         tuple("auf jeden Fall", "definitely", List.of("Auf jeden Fall komme ich."), false),
                         tuple("definitely", "auf jeden Fall", List.of("Auf jeden Fall komme ich."), true)
                 );

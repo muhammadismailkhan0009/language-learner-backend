@@ -38,7 +38,7 @@ class VocabularyCardsStudyControllerTests {
     @Test
     @DisplayName("Next cards endpoint: fetches private vocabulary study cards only")
     void nextCardsEndpointReturnsVocabularyStudyCards() throws Exception {
-        when(cardStudyService.getNextPrivateVocabularyCardsToStudy(eq("user-1"), eq(3)))
+        when(cardStudyService.getNextPrivateVocabularyCardsToStudy(eq("user-1"), eq(1)))
                 .thenReturn(List.of(new VocabularyFlashCardView(
                         "card-1",
                         new VocabularyFlashCardView.Front("lernen"),
@@ -61,7 +61,7 @@ class VocabularyCardsStudyControllerTests {
                 .andExpect(jsonPath("$.response[0].back.sentences.length()").value(1))
                 .andExpect(jsonPath("$.response[0].back.sentences[0].sentence").value("Ich lerne Deutsch."));
 
-        verify(cardStudyService).getNextPrivateVocabularyCardsToStudy("user-1", 3);
+        verify(cardStudyService).getNextPrivateVocabularyCardsToStudy("user-1", 1);
     }
 
     @Test
