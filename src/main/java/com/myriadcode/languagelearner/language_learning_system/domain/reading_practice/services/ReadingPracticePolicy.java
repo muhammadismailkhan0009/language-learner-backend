@@ -12,11 +12,11 @@ import java.util.Objects;
 
 public class ReadingPracticePolicy {
 
-    public static final int MAX_WORDS = 10;
-    public static final int REVIEW_COUNT = 4;
-    public static final int RE_LEARNING_COUNT = 3;
-    public static final int LEARNING_COUNT = 2;
-    public static final int NEW_COUNT = 1;
+    public static final int MAX_WORDS = 30;
+    public static final int REVIEW_COUNT = 12;
+    public static final int RE_LEARNING_COUNT = 9;
+    public static final int LEARNING_COUNT = 6;
+    public static final int NEW_COUNT = 3;
 
     public List<ReadingPracticeCandidate> selectCandidates(String userId,
                                                            List<ReadingPracticeCandidate> candidates,

@@ -61,6 +61,34 @@ class ReadingPracticePolicyTests {
         assertThat(selected.stream().map(ReadingPracticeCandidate::flashCardId).distinct()).hasSize(8);
     }
 
+    @Test
+    @DisplayName("Selects 30 with preserved 4/3/2/1 ratio when enough candidates exist")
+    void selectsThirtyWithPreservedRatio() {
+        var rotationHour = Instant.parse("2026-01-01T10:00:00Z");
+        var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
+
+        for (int i = 1; i <= 12; i++) {
+            candidates.add(candidate("r" + i, "vr" + i, State.REVIEW, "2026-01-01T00:%02d:00Z".formatted(i % 60)));
+        }
+        for (int i = 1; i <= 9; i++) {
+            candidates.add(candidate("rl" + i, "vrl" + i, State.RE_LEARNING, "2026-01-01T01:%02d:00Z".formatted(i % 60)));
+        }
+        for (int i = 1; i <= 6; i++) {
+            candidates.add(candidate("l" + i, "vl" + i, State.LEARNING, "2026-01-01T02:%02d:00Z".formatted(i % 60)));
+        }
+        for (int i = 1; i <= 3; i++) {
+            candidates.add(candidate("n" + i, "vn" + i, State.NEW, "2026-01-01T03:%02d:00Z".formatted(i % 60)));
+        }
+
+        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+
+        assertThat(selected).hasSize(30);
+        assertThat(selected.stream().filter(c -> c.state() == State.REVIEW)).hasSize(12);
+        assertThat(selected.stream().filter(c -> c.state() == State.RE_LEARNING)).hasSize(9);
+        assertThat(selected.stream().filter(c -> c.state() == State.LEARNING)).hasSize(6);
+        assertThat(selected.stream().filter(c -> c.state() == State.NEW)).hasSize(3);
+    }
+
     private ReadingPracticeCandidate candidate(String cardId, String vocabId, State state, String createdAt) {
         return new ReadingPracticeCandidate(
                 cardId,
