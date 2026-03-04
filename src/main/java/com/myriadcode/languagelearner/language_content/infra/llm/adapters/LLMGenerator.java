@@ -1,6 +1,9 @@
 package com.myriadcode.languagelearner.language_content.infra.llm.adapters;
 
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicCandidates;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -62,6 +65,25 @@ public class LLMGenerator implements LLMPort {
         });
         var result = LLMVocabMapper.INSTANCE.toDomainVocabulary(llmVocab);
         return result;
+    }
+
+    @Override
+    public ReadingTopicCandidates generateReadingTopicCandidates(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                 String difficultyLevel) {
+        var prompt = PromptsGenerator.readingTopicCandidates(vocabulary, difficultyLevel);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<ReadingTopicCandidates>() {
+        });
+    }
+
+    @Override
+    public ReadingContent generateReadingContent(String topic,
+                                                 List<ReadingPracticeVocabularySeed> vocabulary,
+                                                 String difficultyLevel) {
+        var prompt = PromptsGenerator.readingContent(topic, vocabulary, difficultyLevel);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<ReadingContent>() {
+        });
     }
 
     record SystemPrompt(String prompt) {

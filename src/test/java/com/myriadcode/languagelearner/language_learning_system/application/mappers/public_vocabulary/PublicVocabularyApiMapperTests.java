@@ -38,7 +38,8 @@ public class PublicVocabularyApiMapperTests {
                         new VocabularyExampleSentence.VocabularyExampleSentenceId("ex-1"),
                         "Ich gehe nach Hause.",
                         "I go home."
-                ))
+                )),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         var response = MAPPER.toResponse(publicVocabulary, vocabulary);
@@ -61,7 +62,8 @@ public class PublicVocabularyApiMapperTests {
                 "to go",
                 Vocabulary.EntryKind.WORD,
                 null,
-                List.of()
+                List.of(),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         assertThat(MAPPER.toResponse(null, vocabulary)).isNull();

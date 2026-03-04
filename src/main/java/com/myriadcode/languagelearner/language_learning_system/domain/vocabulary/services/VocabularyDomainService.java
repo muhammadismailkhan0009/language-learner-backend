@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.time.Instant;
 
 public final class VocabularyDomainService {
 
@@ -31,7 +32,8 @@ public final class VocabularyDomainService {
                 translation,
                 entryKind,
                 normalizeNotes(notes),
-                normalizeNewExamples(exampleSentences)
+                normalizeNewExamples(exampleSentences),
+                Instant.now()
         );
     }
 
@@ -57,7 +59,8 @@ public final class VocabularyDomainService {
                 updatedTranslation,
                 updatedEntryKind,
                 updatedNotes,
-                mergeExampleUpdates(existing.exampleSentences(), exampleSentenceUpdates)
+                mergeExampleUpdates(existing.exampleSentences(), exampleSentenceUpdates),
+                existing.createdAt()
         );
     }
 

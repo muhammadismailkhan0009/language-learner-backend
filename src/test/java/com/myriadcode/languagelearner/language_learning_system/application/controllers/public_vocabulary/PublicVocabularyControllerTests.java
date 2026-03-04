@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.Instant;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -144,7 +145,8 @@ public class PublicVocabularyControllerTests {
                         new VocabularyExampleSentence.VocabularyExampleSentenceId("ex-1"),
                         "Ich gehe nach Hause.",
                         "I go home."
-                ))
+                )),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
     }
 

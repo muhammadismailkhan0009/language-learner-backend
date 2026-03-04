@@ -8,6 +8,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -64,7 +65,8 @@ public class VocabularyApiMapperTests {
                                 "Ich gehe nach Hause.",
                                 "I go home."
                         )
-                )
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         var response = MAPPER.toResponse(domain);

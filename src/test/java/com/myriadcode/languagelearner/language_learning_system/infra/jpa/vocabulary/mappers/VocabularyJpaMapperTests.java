@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_learning_system.infra.jpa.vocabul
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,7 +32,8 @@ public class VocabularyJpaMapperTests {
                                 "Auf jeden Fall komme ich.",
                                 "I am definitely coming."
                         )
-                )
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         var entity = MAPPER.toEntity(domain);

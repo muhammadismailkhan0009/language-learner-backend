@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.domain.vocabular
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 
+import java.time.Instant;
 import java.util.List;
 
 public record Vocabulary(
@@ -11,7 +12,8 @@ public record Vocabulary(
         String translation,
         EntryKind entryKind,
         String notes,
-        List<VocabularyExampleSentence> exampleSentences
+        List<VocabularyExampleSentence> exampleSentences,
+        Instant createdAt
 ) {
 
     public record VocabularyId(String id) {

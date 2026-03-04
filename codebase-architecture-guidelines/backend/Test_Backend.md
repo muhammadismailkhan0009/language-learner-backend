@@ -25,6 +25,7 @@ This document:
 
 This document does **not**:
 - define architecture or directory structure
+- require production-code package mirroring for tests
 - mandate testing frameworks or tools
 - require TDD
 - define coverage targets
@@ -193,6 +194,28 @@ If a deterministic rule exists, it must have at least one direct pure test at th
 Test location and naming must not claim stronger isolation than the test actually uses.
 
 If a test uses composed runtime, it must be identified as composition/flow/integration in naming and placement conventions used by the repository.
+
+### 8. Behavior-First Test Organization (Mandatory for New Tests)
+
+New tests must be organized by **declared system behavior first**, not by production package or class layout.
+The main purpose of tests is to verify that the system does what we intend it to do.
+
+Required rule:
+- create and use a dedicated behavior-first test directory (for example: `src/test/.../behavior/`).
+- group tests by behavior domain/capability/journey (for example: `order-placement`, `refund-processing`, `access-control`), not by `controller/service/repository` mirrors.
+
+Framework-neutral note:
+- do **not** auto-generate test folders that mirror production source structure as the primary organization strategy.
+- structural placement is allowed only when needed for language/framework visibility constraints, and behavior grouping must still remain the primary organization signal.
+
+Retention rule:
+- existing verification coverage remains required: boundary tests, contract tests, mapper/translator tests, integration composition tests, and non-functional guarantees.
+- behavior-first organization adds clarity of system intent; it does not remove or weaken direct boundary verification obligations.
+
+Migration rule:
+- existing tests do not need immediate relocation.
+- all newly added tests must follow behavior-first organization.
+- gradual migration of older structure-mirrored tests is recommended when touched.
 
 ---
 

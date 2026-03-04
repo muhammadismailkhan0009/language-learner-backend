@@ -23,4 +23,18 @@ public class VocabularyFlashcardsAdapter implements FetchPrivateVocabularyApi {
                 .orElseThrow(() -> new IllegalArgumentException("Vocabulary not found for this user"));
         return VOCABULARY_FLASHCARDS_API_MAPPER.toPrivateVocabularyRecord(vocabulary);
     }
+
+    @Override
+    public java.util.List<PrivateVocabularyRecord> getVocabularyRecords(
+            java.util.List<String> vocabularyIds,
+            String userId
+    ) {
+        if (vocabularyIds == null || vocabularyIds.isEmpty()) {
+            return java.util.List.of();
+        }
+        return vocabularyRepo.findByIds(vocabularyIds).stream()
+                .filter(vocabulary -> vocabulary.userId() != null && userId.equals(vocabulary.userId().id()))
+                .map(VOCABULARY_FLASHCARDS_API_MAPPER::toPrivateVocabularyRecord)
+                .toList();
+    }
 }

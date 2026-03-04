@@ -1,0 +1,100 @@
+@startuml
+
+title Flashcard Reading Practice Domain Schema
+
+class ReadingPracticeSession {
+  +id : ReadingPracticeSessionId
+  +userId : UserId
+  +topic : String
+  +createdAt : Instant
+  +readingText : String
+  +vocabularyUsages : List<ReadingVocabularyUsage>
+}
+
+class ReadingPracticeSessionId {
+  +id : String
+}
+
+class ReadingVocabularyUsage {
+  +id : ReadingVocabularyUsageId
+  +flashCardId : FlashCardId
+  +vocabularyId : VocabularyId
+}
+
+class ReadingVocabularyUsageId {
+  +id : String
+}
+
+class FlashCardId {
+  +id : String
+}
+
+class VocabularyId {
+  +id : String
+}
+
+class UserId {
+  +id : String
+}
+
+class ReadingPracticePolicy {
+  +maxWords : int = 10
+  +reviewCount : int = 4
+  +reLearningCount : int = 3
+  +learningCount : int = 2
+  +newCount : int = 1
+  +selectFlashcards(cards) : List<FlashCardReview>
+}
+
+class FlashCardReview {
+  +id : FlashCardId
+  +contentId : ContentId
+  +fsrsState : State
+}
+
+class ContentId {
+  +id : String
+}
+
+enum State {
+  NEW
+  LEARNING
+  RE_LEARNING
+  REVIEW
+}
+
+ReadingPracticeSession --> ReadingPracticeSessionId
+ReadingPracticeSession --> UserId
+ReadingPracticeSession *-- "1..*" ReadingVocabularyUsage : vocabularyUsages
+ReadingVocabularyUsage --> ReadingVocabularyUsageId
+ReadingVocabularyUsage --> FlashCardId
+ReadingVocabularyUsage --> VocabularyId
+FlashCardReview --> FlashCardId
+FlashCardReview --> ContentId
+FlashCardReview --> State
+
+note right of ReadingPracticeSession
+Aggregate root:
+- owns reading text and vocabulary usage references
+- stores only IDs for flashcards/vocab
+end note
+
+note right of ReadingVocabularyUsage
+Usage row binds:
+- flashcard
+- vocabulary
+end note
+
+note right of ReadingPracticePolicy
+Selection policy:
+- max 10 words
+- 4 review, 3 re-learning, 2 learning, 1 new
+- fallback fills missing counts
+end note
+
+note bottom of ReadingPracticeSession
+Reading text is generated from selected
+flashcard vocabulary and stored in session.
+end note
+
+@enduml

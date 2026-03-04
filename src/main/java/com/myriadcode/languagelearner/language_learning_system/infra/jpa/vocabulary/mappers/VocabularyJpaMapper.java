@@ -15,6 +15,7 @@ public interface VocabularyJpaMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
+    @Mapping(target = "createdAt", source = "createdAt")
     VocabularyEntity toEntity(Vocabulary vocabulary);
 
     @Mapping(target = "id", source = "id.id")
@@ -24,6 +25,7 @@ public interface VocabularyJpaMapper {
 
     @Mapping(target = "id.id", source = "id")
     @Mapping(target = "userId.id", source = "userId")
+    @Mapping(target = "createdAt", source = "createdAt")
     Vocabulary toDomain(VocabularyEntity entity);
 
     @Mapping(target = "id.id", source = "id")

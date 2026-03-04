@@ -1,0 +1,129 @@
+@startuml
+!include <C4/C4_Dynamic>
+
+LAYOUT_TOP_DOWN()
+
+Person(learner, "Learner", "Creates reading practice from flashcard vocabulary")
+
+System_Boundary(lms, "Language Learner System") {
+  Container(client_app, "Web/Mobile App", "Frontend", "Reading practice + flashcard UI")
+
+  Container_Boundary(reading_practice_module, "Reading Practice Module (reading_practice)") {
+    Component(reading_controller, "ReadingPracticeController", "API Component", "Reading practice endpoints")
+    Component(reading_service, "ReadingPracticeService", "Application Service", "Selects vocab, calls LLM, stores session")
+    Component(reading_domain_service, "ReadingPracticePolicy", "Domain Service", "Enforces ratio: 4 review, 3 re-learning, 2 learning, 1 new (max 10)")
+    Component(flashcard_reviews_api, "FetchVocabularyFlashcardReviewsApi", "Named Interface (language_learning_system_api)", "Fetch vocabulary flashcard reviews by user")
+    Component(vocab_lookup_api, "FetchPrivateVocabularyApi", "Named Interface (language_learning_system_api)", "Load vocabulary content for selected cards")
+    Component(reading_llm_api, "ReadingPracticeLlmApi", "Named Interface (language_content_api)", "Generate topics + reading text")
+    Component(reading_repo_port, "ReadingPracticeRepo", "Application Port", "Persist reading practice sessions")
+    Component(reading_repo_impl, "ReadingPracticeJpaRepoImpl", "Infrastructure Adapter", "Stores sessions + reading text + vocab refs")
+    Component(reading_mapper, "ReadingPracticeMapper", "MapStruct Mapper", "Boundary mapping for API/persistence")
+  }
+
+  Container_Boundary(flashcards_module, "Flashcards Module (flashcards_study)") {
+    Component(vocab_cards_controller, "VocabularyCardsStudyController", "API Component", "Vocabulary flashcard review endpoints")
+    Component(cards_service, "CardStudyService", "Application Service", "FSRS review + scheduling")
+    Component(flashcard_repo, "FlashCardRepo", "Domain Port", "Flashcard review persistence boundary")
+    Component(flashcard_repo_impl, "CommonRepoImpl", "Infrastructure Adapter", "JPA adapter for flashcard_review")
+    Component(flashcard_reviews_adapter, "VocabularyFlashcardReviewsAdapter", "Application Adapter", "Implements FetchVocabularyFlashcardReviewsApi")
+  }
+
+  Container_Boundary(vocabulary_module, "Vocabulary Module (language_learning_system)") {
+    Component(vocab_repo, "VocabularyRepo", "Domain Port", "Private vocabulary persistence boundary")
+    Component(vocab_repo_impl, "VocabularyJpaRepoImpl", "Infrastructure Adapter", "JPA adapter for vocabulary entries")
+    Component(fetch_vocab_api_impl, "VocabularyFlashcardsAdapter", "Application Adapter", "Implements FetchPrivateVocabularyApi")
+  }
+
+  Container_Boundary(language_content_module, "Language Content Module (language_content)") {
+    Component(llm_port, "LLMPort", "Application Port", "LLM boundary")
+    Component(llm_adapter, "OpenAiLlmAdapter", "Infrastructure Adapter", "Calls external LLM")
+  }
+
+  ContainerDb(app_db, "App Database", "PostgreSQL", "flashcard_review, vocabulary_entries, reading_practice_*")
+  System_Ext(llm_provider, "LLM Provider", "OpenAI-compatible API")
+}
+
+' Flow A: Create reading practice text
+Rel($index=SetIndex(1), learner, client_app, "Create reading practice")
+Rel($index=Index(), client_app, reading_controller, "POST /api/v1/reading-practice/sessions")
+Rel($index=Index(), reading_controller, reading_service, "createSession(userId)")
+Rel($index=Index(), reading_service, reading_domain_service, "selectRatio(max=10, review=4, re-learning=3, learning=2, new=1)")
+Rel($index=Index(), reading_service, flashcard_reviews_api, "getVocabularyFlashcardsByUser(userId)")
+Rel($index=Index(), flashcard_reviews_api, flashcard_reviews_adapter, "dispatch")
+Rel($index=Index(), flashcard_reviews_adapter, flashcard_repo, "findVocabularyFlashCardsByUser(userId)")
+Rel($index=Index(), flashcard_repo, flashcard_repo_impl, "findVocabularyFlashCardsByUser")
+Rel($index=Index(), flashcard_repo_impl, app_db, "Read flashcard_review")
+Rel($index=Index(), app_db, flashcard_repo_impl, "Return reviews")
+Rel($index=Index(), flashcard_repo_impl, flashcard_repo, "Return reviews")
+Rel($index=Index(), flashcard_repo, flashcard_reviews_adapter, "Return flashcards")
+Rel($index=Index(), flashcard_reviews_adapter, flashcard_reviews_api, "Return flashcards")
+Rel($index=Index(), reading_service, reading_service, "Filter non-reversed only (German -> English)")
+Rel($index=Index(), reading_service, vocab_lookup_api, "getVocabularyRecords(vocabIds)")
+Rel($index=Index(), vocab_lookup_api, fetch_vocab_api_impl, "dispatch")
+Rel($index=Index(), fetch_vocab_api_impl, vocab_repo, "findByIdAndUserId")
+Rel($index=Index(), vocab_repo, vocab_repo_impl, "findByIdAndUserId")
+Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary_entries")
+Rel($index=Index(), app_db, vocab_repo_impl, "Return vocabulary")
+Rel($index=Index(), vocab_repo_impl, vocab_repo, "Return vocabulary")
+Rel($index=Index(), vocab_repo, fetch_vocab_api_impl, "Return vocabulary")
+Rel($index=Index(), fetch_vocab_api_impl, vocab_lookup_api, "Return vocabulary")
+Rel($index=Index(), reading_service, reading_llm_api, "generate topic candidates (5) from vocabulary")
+Rel($index=Index(), reading_llm_api, llm_port, "dispatch")
+Rel($index=Index(), llm_port, llm_adapter, "generate topics")
+Rel($index=Index(), llm_adapter, llm_provider, "LLM completion")
+Rel($index=Index(), llm_provider, llm_adapter, "Topic candidates")
+Rel($index=Index(), llm_adapter, llm_port, "Return topics")
+Rel($index=Index(), llm_port, reading_llm_api, "Return topics")
+Rel($index=Index(), reading_service, reading_llm_api, "generate reading text (B1) from selected topic + vocabulary")
+Rel($index=Index(), reading_llm_api, llm_port, "dispatch")
+Rel($index=Index(), llm_port, llm_adapter, "generate reading text")
+Rel($index=Index(), llm_adapter, llm_provider, "LLM completion")
+Rel($index=Index(), llm_provider, llm_adapter, "Reading text")
+Rel($index=Index(), llm_adapter, llm_port, "Return reading text")
+Rel($index=Index(), llm_port, reading_llm_api, "Return reading text")
+Rel($index=Index(), reading_service, reading_repo_port, "save(session + reading text + vocab refs [cardId, vocabId])")
+Rel($index=Index(), reading_repo_port, reading_repo_impl, "save")
+Rel($index=Index(), reading_repo_impl, app_db, "Persist reading_practice_*")
+Rel($index=Index(), reading_controller, client_app, "201 Created (no body)")
+
+' Flow B: Fetch reading practice session
+Rel($index=SetIndex(1), learner, client_app, "List reading practice sessions")
+Rel($index=Index(), client_app, reading_controller, "GET /api/v1/reading-practice/sessions")
+Rel($index=Index(), reading_controller, reading_service, "listSessions(userId)")
+Rel($index=Index(), reading_service, reading_repo_port, "findAllByUserId")
+Rel($index=Index(), reading_repo_port, reading_repo_impl, "findAllByUserId")
+Rel($index=Index(), reading_repo_impl, app_db, "Read reading_practice_*")
+Rel($index=Index(), reading_service, reading_mapper, "toListResponse(summaries)")
+Rel($index=Index(), reading_mapper, reading_controller, "ReadingPracticeSessionListView")
+Rel($index=Index(), reading_controller, client_app, "200 OK")
+
+Rel($index=SetIndex(1), learner, client_app, "Open reading practice session")
+Rel($index=Index(), client_app, reading_controller, "GET /api/v1/reading-practice/sessions/{id}")
+Rel($index=Index(), reading_controller, reading_service, "getSession(userId, sessionId)")
+Rel($index=Index(), reading_service, reading_repo_port, "findByIdAndUserId")
+Rel($index=Index(), reading_repo_port, reading_repo_impl, "findByIdAndUserId")
+Rel($index=Index(), reading_repo_impl, app_db, "Read reading_practice_*")
+Rel($index=Index(), reading_service, reading_mapper, "toResponse(session)")
+Rel($index=Index(), reading_mapper, reading_controller, "ReadingPracticeSessionView")
+Rel($index=Index(), reading_controller, client_app, "200 OK")
+
+Rel($index=SetIndex(1), learner, client_app, "Delete reading practice session")
+Rel($index=Index(), client_app, reading_controller, "DELETE /api/v1/reading-practice/sessions/{id}")
+Rel($index=Index(), reading_controller, reading_service, "deleteSession(userId, sessionId)")
+Rel($index=Index(), reading_service, reading_repo_port, "deleteByIdAndUserId")
+Rel($index=Index(), reading_repo_port, reading_repo_impl, "deleteByIdAndUserId")
+Rel($index=Index(), reading_repo_impl, app_db, "Delete reading_practice_*")
+Rel($index=Index(), reading_controller, client_app, "204 No Content")
+
+' Flow C: Rate vocabulary flashcards after reading
+Rel($index=SetIndex(1), learner, client_app, "Rate vocab flashcards")
+Rel($index=Index(), client_app, vocab_cards_controller, "POST /api/v1/vocabulary-flashcards/cards/{cardId}/review/v1")
+Rel($index=Index(), vocab_cards_controller, cards_service, "reviewVocabularyStudiedCard(cardId, rating)")
+Rel($index=Index(), cards_service, flashcard_repo, "saveVocabularyFlashCardState(updated)")
+Rel($index=Index(), flashcard_repo, flashcard_repo_impl, "saveVocabularyFlashCardState(updated)")
+Rel($index=Index(), flashcard_repo_impl, app_db, "Update flashcard_review")
+Rel($index=Index(), vocab_cards_controller, client_app, "200 OK")
+
+SHOW_LEGEND()
+
+@enduml

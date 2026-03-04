@@ -1,0 +1,140 @@
+@startuml
+
+title Flashcard Reading Practice - Class Flow
+
+class ReadingPracticeRequest {
+  +userId : String
+}
+
+class ReadingPracticeSession {
+  +id : ReadingPracticeSessionId
+  +userId : UserId
+  +topic : String
+  +createdAt : Instant
+  +readingText : String
+  +vocabularyUsages : List<ReadingVocabularyUsage>
+}
+
+class ReadingVocabularyUsage {
+  +flashCardId : FlashCardId
+  +vocabularyId : VocabularyId
+}
+
+class ReadingPracticeResponse {
+  +sessionId : String
+  +topic : String
+  +readingText : String
+  +vocabFlashcards : List<VocabularyFlashCardView>
+}
+
+class ReadingPracticePolicy {
+  +maxWords : int = 10
+  +reviewCount : int = 4
+  +reLearningCount : int = 3
+  +learningCount : int = 2
+  +newCount : int = 1
+  +selectFlashcards(cards) : List<FlashCardReview>
+}
+
+class FlashCardReview {
+  +id : FlashCardId
+  +contentId : ContentId
+  +fsrsState : State
+}
+
+class Vocabulary {
+  +id : VocabularyId
+  +surface : String
+  +translation : String
+}
+
+class ReadingPrompt {
+  +topic : String
+  +vocabulary : List<Vocabulary>
+}
+
+enum State {
+  NEW
+  LEARNING
+  RE_LEARNING
+  REVIEW
+}
+
+interface FetchVocabularyFlashcardReviewsApi {
+  +getVocabularyFlashcardsByUser(userId) : List<FlashCardReview>
+}
+
+interface FetchPrivateVocabularyApi {
+  +getVocabularyRecords(vocabIds, userId) : List<Vocabulary>
+}
+
+interface ReadingPracticeLlmApi {
+  +generateTopicCandidates(vocabulary, difficulty) : List<String>
+  +generateReadingText(topic, vocabulary, difficulty) : String
+}
+
+interface ReadingPracticeRepo {
+  +save(session) : ReadingPracticeSession
+  +findByIdAndUserId(sessionId, userId) : ReadingPracticeSession
+  +findAllByUserId(userId) : List<ReadingPracticeSession>
+}
+
+class ReadingPracticeSessionEntity {
+  +id : String
+  +userId : String
+  +topic : String
+  +createdAt : Instant
+  +readingText : String
+}
+
+class ReadingVocabularyRefEntity {
+  +id : String
+  +sessionId : String
+  +flashCardId : String
+  +vocabularyId : String
+  +createdAt : Instant
+}
+
+class ReadingPracticeMapper <<MapStruct>> {
+  +toResponse(session) : ReadingPracticeResponse
+}
+
+class ReadingPracticeEntityMapper <<MapStruct>> {
+  +toEntity(session) : ReadingPracticeSessionEntity
+  +toDomain(sessionEntity, vocabEntities) : ReadingPracticeSession
+}
+
+
+ReadingPracticeSession *-- "1..*" ReadingVocabularyUsage
+ReadingPracticePolicy ..> FlashCardReview
+ReadingPracticeSession ..> FetchVocabularyFlashcardReviewsApi
+ReadingPracticeSession ..> FetchPrivateVocabularyApi
+ReadingPracticeSession ..> ReadingPracticeLlmApi
+ReadingPracticeSession ..> ReadingPracticeRepo
+ReadingPrompt ..> Vocabulary
+ReadingPracticeMapper ..> ReadingPracticeResponse
+ReadingPracticeEntityMapper ..> ReadingPracticeSessionEntity
+ReadingPracticeEntityMapper ..> ReadingVocabularyRefEntity
+ReadingPracticeSessionEntity *-- ReadingVocabularyRefEntity
+ReadingVocabularyUsage ..> FlashCardReview
+ReadingVocabularyUsage ..> Vocabulary
+
+note right of ReadingPracticePolicy
+Selection policy (FSRS State):
+- max 10 words
+- 4 review, 3 re-learning, 2 learning, 1 new
+- fallback: fill remaining from available states
+end note
+
+note right of ReadingPrompt
+Prompt includes:
+- topic
+- selected vocabulary (surface + translation)
+end note
+
+note bottom of ReadingPracticeMapper
+Boundary mapping uses MapStruct
+(API <-> domain, domain <-> persistence).
+end note
+
+@enduml

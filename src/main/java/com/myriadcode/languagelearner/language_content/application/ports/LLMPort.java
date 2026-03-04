@@ -4,6 +4,9 @@ import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicCandidates;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 
 import java.util.List;
 
@@ -18,5 +21,12 @@ public interface LLMPort {
 
     List<Sentence.SentenceData> generateSentences(LangConfigsAdaptive languageConfigs,
                                                   List<Sentence.SentenceData> previousSentences);
+
+    ReadingTopicCandidates generateReadingTopicCandidates(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                          String difficultyLevel);
+
+    ReadingContent generateReadingContent(String topic,
+                                          List<ReadingPracticeVocabularySeed> vocabulary,
+                                          String difficultyLevel);
 
 }

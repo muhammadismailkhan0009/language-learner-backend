@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,7 +87,8 @@ public class VocabularyJpaRepoBoundaryTests {
                                 "Auf jeden Fall ja.",
                                 "Definitely yes."
                         )
-                )
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
     }
 

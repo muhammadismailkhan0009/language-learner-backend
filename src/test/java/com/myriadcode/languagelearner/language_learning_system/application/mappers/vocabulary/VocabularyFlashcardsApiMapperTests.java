@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,7 +37,8 @@ public class VocabularyFlashcardsApiMapperTests {
                                 "Wir lernen zusammen.",
                                 "We study together."
                         )
-                )
+                ),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         var mapped = MAPPER.toPrivateVocabularyRecord(vocabulary);
@@ -61,7 +63,8 @@ public class VocabularyFlashcardsApiMapperTests {
                 "to go",
                 Vocabulary.EntryKind.WORD,
                 null,
-                List.of()
+                List.of(),
+                Instant.parse("2026-01-01T00:00:00Z")
         );
 
         var mapped = MAPPER.toPrivateVocabularyRecord(vocabulary);

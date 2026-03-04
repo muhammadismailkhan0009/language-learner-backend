@@ -16,6 +16,7 @@ public interface VocabularyFlashcardsApiMapper {
     @Mapping(target = "userId", source = "userId.id")
     @Mapping(target = "entryKind", source = "entryKind")
     @Mapping(target = "exampleSentences", source = "exampleSentences")
+    @Mapping(target = "createdAt", source = "createdAt")
     PrivateVocabularyRecord toPrivateVocabularyRecord(Vocabulary vocabulary);
 
     @Mapping(target = "id", source = "id.id")

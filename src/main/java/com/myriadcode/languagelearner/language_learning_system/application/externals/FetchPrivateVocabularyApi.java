@@ -3,4 +3,6 @@ package com.myriadcode.languagelearner.language_learning_system.application.exte
 public interface FetchPrivateVocabularyApi {
 
     PrivateVocabularyRecord getVocabularyRecord(String vocabularyId, String userId);
+
+    java.util.List<PrivateVocabularyRecord> getVocabularyRecords(java.util.List<String> vocabularyIds, String userId);
 }
