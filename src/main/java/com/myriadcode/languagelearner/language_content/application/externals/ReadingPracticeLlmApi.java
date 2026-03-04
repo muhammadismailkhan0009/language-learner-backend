@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface ReadingPracticeLlmApi {
 
-    List<String> generateTopicCandidates(List<ReadingPracticeVocabularySeed> vocabulary, String difficultyLevel);
+    String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary, String difficultyLevel);
 
     String generateReadingText(String topic, List<ReadingPracticeVocabularySeed> vocabulary, String difficultyLevel);
 }

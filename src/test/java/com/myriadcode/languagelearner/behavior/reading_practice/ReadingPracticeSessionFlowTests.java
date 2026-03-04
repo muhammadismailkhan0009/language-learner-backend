@@ -201,10 +201,10 @@ class ReadingPracticeSessionFlowTests {
         private String lastTopic;
 
         @Override
-        public List<String> generateTopicCandidates(List<ReadingPracticeVocabularySeed> vocabulary,
-                                                    String difficultyLevel) {
+        public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                   String difficultyLevel) {
             this.lastSeeds = vocabulary;
-            return List.of("topic-1", "topic-2", "topic-3", "topic-4", "topic-5");
+            return "topic-1";
         }
 
         @Override

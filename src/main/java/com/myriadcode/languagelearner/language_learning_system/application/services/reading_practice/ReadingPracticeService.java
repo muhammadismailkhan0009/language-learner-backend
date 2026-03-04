@@ -74,8 +74,10 @@ public class ReadingPracticeService {
                 .map(record -> new ReadingPracticeVocabularySeed(record.surface(), record.translation()))
                 .toList();
 
-        var topics = readingPracticeLlmApi.generateTopicCandidates(selectedVocab, DIFFICULTY_LEVEL);
-        var topic = topics.isEmpty() ? "General practice" : topics.get(0);
+        var topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, DIFFICULTY_LEVEL);
+        if (topic == null || topic.isBlank()) {
+            topic = "General practice";
+        }
 
         var readingText = readingPracticeLlmApi.generateReadingText(topic, selectedVocab, DIFFICULTY_LEVEL);
 

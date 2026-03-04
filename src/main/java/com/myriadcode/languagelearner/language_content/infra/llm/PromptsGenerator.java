@@ -237,7 +237,7 @@ public final class PromptsGenerator {
             return builder.toString();
         }
     
-        public static String readingTopicCandidates(
+        public static String readingTopicSelection(
                 List<ReadingPracticeVocabularySeed> vocabulary,
                 String difficultyLevel
         ) {
@@ -245,29 +245,22 @@ public final class PromptsGenerator {
             String vocabList = formatVocabulary(vocabulary);
         
             return """
-        You generate topic candidates for short German reading exercises.
+        Act as an expert German language teacher. You select the best single topic for a German reading exercise.
         
         CEFR level: %s
         
         Goal:
-        Create topics that allow the learner to naturally use the given vocabulary.
+        Pick ONE topic that allows the learner to naturally use the given vocabulary.
         
         Rules:
-        - Return EXACTLY 5 topics.
-        - Each topic must be a SHORT PHRASE (2–6 words).
-        - Do NOT write full sentences.
-        - Topics must represent realistic everyday situations.
-        - Topics must be suitable for short reading exercises.
+        - Return EXACTLY 1 topic.
+        - The topic must be a SHORT to MEDIUM PHRASE (4–20 words).
+        - Do NOT write a full sentence.
+        - The topic must be suitable for a short to medium reading exercise.
         
-        Output format:
-        Return ONLY a numbered list.
-        
-        Example:
-        1. Ein Gespräch im Café
-        2. Mein Morgen zu Hause
-        3. Einkaufen im Supermarkt
-        4. Ein Besuch bei Freunden
-        5. Lernen in der Bibliothek
+        Steps:
+        1- Create 5 topics as candidate.
+        2- Decide the most suitable topic among candidates.
         
         Learner Vocabulary (German - translation):
         %s
@@ -283,77 +276,51 @@ public final class PromptsGenerator {
             String vocabList = formatVocabulary(vocabulary);
         
             return """
-        You generate German reading practice text.
-        
-        CEFR Level: %s
-        Topic: "%s"
-        
-        Goal:
-        Create a short reading text that maximizes exposure to the learner vocabulary.
-        
-        Vocabulary Rules:
-        - The learner vocabulary MUST be reused heavily.
-        - Each vocabulary word should appear 1–3 times when possible.
-        - Prefer repeating these words instead of introducing new vocabulary.
-        
-        Sentence Rules:
-        - Minimum sentences: 3
-        - Maximum sentences: 12
-        - Sentence count should scale naturally with vocabulary size
-        - Sentences must be short (6–12 words)
-        - Sentences must be clear and simple
-        
-        Vocabulary Coverage Planning:
-        
-        Before writing the text, internally plan vocabulary usage.
-        
-        Rules:
-        - Distribute vocabulary usage across the list
-        - Do not concentrate repetition on only the first words
-        - Try to use different vocabulary words across different sentences
-        - Prefer combining multiple learner vocabulary words within the same sentence
-        - Avoid isolating vocabulary into separate clusters when possible
-        
-        Difficulty Control:
-        
-        Before writing the text:
-        
-        1. Identify the learner vocabulary
-        2. Prefer repeating these words frequently
-        3. If additional words are required, use only extremely common German
-           structure words (articles, pronouns, auxiliaries, connectors)
-        4. Avoid introducing new thematic vocabulary
-        5. Keep sentences simple when vocabulary size is small
-        
-        If vocabulary size is small (1–5 words):
-        - Use very simple sentence structures
-        - Repeat vocabulary frequently
-        - Prefer shorter sentences
-        
-        If vocabulary size is larger (6–10 words):
-        - Allow slightly more natural variation
-        - Still prioritize vocabulary reuse
-        
-        Allowed Additional Words:
-        
-        Only extremely common German structure words such as (not limited to):
-        der, die, das, ein, eine, ich, du, er, sie, wir, ist, habe,
-        und, oder, weil, mit, in, zu, auf, für.
-        
-        Do NOT introduce new thematic vocabulary unless necessary for grammar.
-        
-        Sentence Roles:
-        
-        Try to vary sentence roles slightly to keep the text natural:
-        - describing actions
-        - expressing understanding or thoughts
-        - describing habits
-        - describing simple situations
-        
-        Output Format:
-        Return ONLY the reading text in plain German sentences.
-        
-        Learner Vocabulary (German - translation):
+        Act as an expert German language teacher. You generate German reading practice text.
+
+CEFR Level: %s
+Topic: "%s"
+
+Goal:
+Write a natural, coherent German reading one or more paragraphs that helps the learner
+practice the provided vocabulary in context.
+
+Core Requirements:
+- The text should read like a small natural paragraph, not isolated sentences.
+- Sentences should connect logically and flow around the topic.
+
+Vocabulary Usage:
+- Use the learner vocabulary as much as possible.
+- Try to include most of the provided vocabulary in the text.
+- Important words may appear more than once.
+- Combine multiple learner vocabulary words in the same sentence when natural.
+
+Sentence Guidelines:
+- Minimum sentences: 3
+- Maximum sentences: 12
+- Sentence length: 6–20 words
+- Vary sentence structure when possible.
+
+Grammar Usage:
+- Use natural German grammar appropriate for the CEFR level.
+- Present tense is common, but perfect tense, modal verbs, questions,
+  and connectors (z.B. weil, aber, oder, dann) may appear naturally.
+- Avoid repeating the same grammatical pattern in many sentences.
+
+Additional Vocabulary:
+- Prefer the provided learner vocabulary whenever possible.
+- If extra words are necessary for natural language, introduce only a small
+  number of common everyday words.
+- Avoid introducing many new thematic words.
+
+Difficulty Control:
+- Difficulty is controlled by CEFR level and not amount of vocabulary.
+
+Style:
+- Keep the language clear and readable.
+
+Learner Vocabulary (German - translation):
+%s
         %s
         """.formatted(difficultyLevel, topic, vocabList);
         }

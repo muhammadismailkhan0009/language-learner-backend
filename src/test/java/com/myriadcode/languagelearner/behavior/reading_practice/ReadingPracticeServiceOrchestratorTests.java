@@ -62,7 +62,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 .hasMessage("No vocabulary flashcards found for user");
 
         verify(privateVocabularyApi, never()).getVocabularyRecords(any(), any());
-        verify(readingPracticeLlmApi, never()).generateTopicCandidates(any(), any());
+        verify(readingPracticeLlmApi, never()).selectTopicForTextGeneration(any(), any());
         verify(readingPracticeRepo, never()).save(any());
     }
 
@@ -87,7 +87,7 @@ class ReadingPracticeServiceOrchestratorTests {
     }
 
     @Test
-    @DisplayName("createSession: falls back to general topic when LLM returns no topic candidates")
+    @DisplayName("createSession: falls back to general topic when LLM returns no topic")
     void createSessionUsesGeneralTopicFallback() {
         var reviews = List.of(
                 new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, false)
@@ -96,13 +96,13 @@ class ReadingPracticeServiceOrchestratorTests {
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
-        when(readingPracticeLlmApi.generateTopicCandidates(any(), eq("B1"))).thenReturn(List.of());
+        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq("B1"))).thenReturn("");
         when(readingPracticeLlmApi.generateReadingText(eq("General practice"), any(), eq("B1")))
                 .thenReturn("fallback reading");
 
         service.createSession("user-1");
 
-        verify(readingPracticeLlmApi).generateTopicCandidates(any(), eq("B1"));
+        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq("B1"));
         verify(readingPracticeLlmApi).generateReadingText(eq("General practice"), any(), eq("B1"));
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));
     }

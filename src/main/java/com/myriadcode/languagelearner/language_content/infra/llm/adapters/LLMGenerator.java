@@ -2,7 +2,7 @@ package com.myriadcode.languagelearner.language_content.infra.llm.adapters;
 
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
-import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicCandidates;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
@@ -68,11 +68,11 @@ public class LLMGenerator implements LLMPort {
     }
 
     @Override
-    public ReadingTopicCandidates generateReadingTopicCandidates(List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                 String difficultyLevel) {
-        var prompt = PromptsGenerator.readingTopicCandidates(vocabulary, difficultyLevel);
+    public ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                     String difficultyLevel) {
+        var prompt = PromptsGenerator.readingTopicSelection(vocabulary, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<ReadingTopicCandidates>() {
+        return runLLM(messages, new ParameterizedTypeReference<ReadingTopicSelection>() {
         });
     }
 
