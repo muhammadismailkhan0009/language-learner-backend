@@ -117,6 +117,10 @@ public class ReadingPracticeService {
         readingPracticeRepo.deleteByIdAndUserId(sessionId, userId);
     }
 
+    public void detachFlashcard(String userId, String sessionId, String flashcardId) {
+        readingPracticeRepo.detachFlashcard(userId, sessionId, flashcardId);
+    }
+
     private List<ReadingVocabularyFlashCardView> buildFlashcards(String userId,
                                                                  List<ReadingVocabularyUsage> usages) {
         if (usages == null || usages.isEmpty()) {

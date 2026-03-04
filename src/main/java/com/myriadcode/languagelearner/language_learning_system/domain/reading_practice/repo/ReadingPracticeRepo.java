@@ -14,4 +14,6 @@ public interface ReadingPracticeRepo {
     List<ReadingPracticeSession> findAllByUserId(String userId);
 
     void deleteByIdAndUserId(String sessionId, String userId);
+
+    void detachFlashcard(String userId, String sessionId, String flashcardId);
 }

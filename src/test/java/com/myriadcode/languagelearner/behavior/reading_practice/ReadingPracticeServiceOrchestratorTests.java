@@ -169,6 +169,14 @@ class ReadingPracticeServiceOrchestratorTests {
         verify(privateVocabularyApi, never()).getVocabularyRecords(any(), any());
     }
 
+    @Test
+    @DisplayName("detachFlashcard: forwards user/session/flashcard to repo")
+    void detachFlashcardForwardsToRepo() {
+        service.detachFlashcard("user-1", "session-1", "flashcard-1");
+
+        verify(readingPracticeRepo).detachFlashcard("user-1", "session-1", "flashcard-1");
+    }
+
     private PrivateVocabularyRecord vocab(String id) {
         return new PrivateVocabularyRecord(
                 id,

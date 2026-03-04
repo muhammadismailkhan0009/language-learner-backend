@@ -62,4 +62,14 @@ public class ReadingPracticeController {
         readingPracticeService.deleteSession(userId, sessionId);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("{sessionId}/flashcards/{flashcardId}")
+    public ResponseEntity<Void> detachFlashcard(
+            @PathVariable String sessionId,
+            @PathVariable String flashcardId,
+            @RequestParam String userId
+    ) {
+        readingPracticeService.detachFlashcard(userId, sessionId, flashcardId);
+        return ResponseEntity.noContent().build();
+    }
 }

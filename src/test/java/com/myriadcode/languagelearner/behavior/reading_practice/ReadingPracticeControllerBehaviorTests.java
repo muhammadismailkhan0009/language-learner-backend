@@ -134,6 +134,22 @@ class ReadingPracticeControllerBehaviorTests {
     }
 
     @Test
+    @DisplayName("Detach flashcard API: returns 204 and forwards session/user/flashcard ids")
+    void detachFlashcardReturnsNoContentAndForwardsArgs() throws Exception {
+        var service = mock(ReadingPracticeService.class);
+        var controller = new ReadingPracticeController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}/flashcards/{flashcardId}",
+                                "session-1",
+                                "flashcard-1")
+                        .queryParam("userId", "user-1"))
+                .andExpect(status().isNoContent());
+
+        verify(service).detachFlashcard("user-1", "session-1", "flashcard-1");
+    }
+
+    @Test
     @DisplayName("List sessions API: requires userId query parameter")
     void listSessionsRequiresUserIdQueryParam() throws Exception {
         var service = mock(ReadingPracticeService.class);
@@ -169,6 +185,21 @@ class ReadingPracticeControllerBehaviorTests {
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}", "session-1"))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    @DisplayName("Detach flashcard API: requires userId query parameter")
+    void detachFlashcardRequiresUserIdQueryParam() throws Exception {
+        var service = mock(ReadingPracticeService.class);
+        var controller = new ReadingPracticeController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}/flashcards/{flashcardId}",
+                                "session-1",
+                                "flashcard-1"))
                 .andExpect(status().isBadRequest());
 
         verifyNoInteractions(service);

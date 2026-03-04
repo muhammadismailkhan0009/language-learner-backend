@@ -67,6 +67,22 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
         readingPracticeSessionJpaRepo.deleteByIdAndUserId(sessionId, userId);
     }
 
+    @Override
+    @Transactional
+    public void detachFlashcard(String userId, String sessionId, String flashcardId) {
+        readingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
+                .ifPresent(session -> {
+                    var usages = session.getVocabularyUsages();
+                    if (usages == null || usages.isEmpty()) {
+                        return;
+                    }
+                    var removed = usages.removeIf(usage -> flashcardId.equals(usage.getFlashcardId()));
+                    if (removed) {
+                        readingPracticeSessionJpaRepo.save(session);
+                    }
+                });
+    }
+
     private ReadingPracticeSession toDomain(ReadingPracticeSessionEntity entity) {
         var base = READING_PRACTICE_JPA_MAPPER.toDomain(entity);
         var usages = entity.getVocabularyUsages().stream()

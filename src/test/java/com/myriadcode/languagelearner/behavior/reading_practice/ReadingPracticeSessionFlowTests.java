@@ -174,6 +174,33 @@ class ReadingPracticeSessionFlowTests {
                 .hasMessage("Reading session not found");
     }
 
+    @Test
+    @DisplayName("detachFlashcard: removes usage and hides flashcard from session response")
+    void detachFlashcardRemovesUsage() {
+        readingPracticeService.createSession("user-1");
+        var sessionId = readingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var usage = readingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1")
+                .orElseThrow()
+                .getVocabularyUsages()
+                .getFirst();
+        var flashcardId = usage.getFlashcardId();
+        var vocabularyId = usage.getVocabularyId();
+
+        readingPracticeService.detachFlashcard("user-1", sessionId, flashcardId);
+
+        var persisted = readingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1")
+                .orElseThrow();
+        assertThat(persisted.getVocabularyUsages())
+                .noneMatch(saved -> saved.getFlashcardId().equals(flashcardId));
+        assertThat(persisted.getVocabularyUsages().size()).isEqualTo(9);
+        assertThat(stubFetchPrivateVocabularyApi.getVocabularyRecord(vocabularyId, "user-1")).isNotNull();
+
+        var response = readingPracticeService.getSession("user-1", sessionId);
+        assertThat(response.vocabFlashcards())
+                .noneMatch(card -> card.id().equals(flashcardId));
+        assertThat(response.vocabFlashcards().size()).isEqualTo(9);
+    }
+
     static class ReadingPracticeTestDoubles {
 
         @Bean
