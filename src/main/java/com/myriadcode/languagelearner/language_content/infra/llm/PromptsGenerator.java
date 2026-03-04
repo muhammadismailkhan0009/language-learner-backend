@@ -321,7 +321,6 @@ Style:
 
 Learner Vocabulary (German - translation):
 %s
-        %s
         """.formatted(difficultyLevel, topic, vocabList);
         }
 
