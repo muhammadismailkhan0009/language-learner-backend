@@ -92,17 +92,17 @@ class ReadingPracticeSessionFlowTests {
     }
 
     @Test
-    @DisplayName("createSession: uses only non-reversed cards and respects 4/3/2/1 state ratio")
+    @DisplayName("createSession: uses only non-reversed cards and respects 3/4/2/1 state ratio")
     void createSessionUsesNonReversedCardsWithTargetRatio() {
         var reviews = new ArrayList<VocabularyFlashcardReviewRecord>();
         reviews.add(new VocabularyFlashcardReviewRecord("r-1", "v-r-1", State.REVIEW, false));
         reviews.add(new VocabularyFlashcardReviewRecord("r-2", "v-r-2", State.REVIEW, false));
         reviews.add(new VocabularyFlashcardReviewRecord("r-3", "v-r-3", State.REVIEW, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("r-4", "v-r-4", State.REVIEW, false));
         reviews.add(new VocabularyFlashcardReviewRecord("r-reversed", "v-r-reversed", State.REVIEW, true));
         reviews.add(new VocabularyFlashcardReviewRecord("rl-1", "v-rl-1", State.RE_LEARNING, false));
         reviews.add(new VocabularyFlashcardReviewRecord("rl-2", "v-rl-2", State.RE_LEARNING, false));
         reviews.add(new VocabularyFlashcardReviewRecord("rl-3", "v-rl-3", State.RE_LEARNING, false));
+        reviews.add(new VocabularyFlashcardReviewRecord("rl-4", "v-rl-4", State.RE_LEARNING, false));
         reviews.add(new VocabularyFlashcardReviewRecord("rl-reversed", "v-rl-reversed", State.RE_LEARNING, true));
         reviews.add(new VocabularyFlashcardReviewRecord("l-1", "v-l-1", State.LEARNING, false));
         reviews.add(new VocabularyFlashcardReviewRecord("l-2", "v-l-2", State.LEARNING, false));
@@ -129,8 +129,8 @@ class ReadingPracticeSessionFlowTests {
                 .toList();
 
         assertThat(selectedCardIds).doesNotContain("r-reversed", "rl-reversed", "l-reversed", "n-reversed");
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(4);
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(3);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(3);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(4);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(2);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).hasSize(1);
     }
