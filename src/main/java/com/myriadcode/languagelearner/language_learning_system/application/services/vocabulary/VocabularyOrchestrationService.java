@@ -6,7 +6,6 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.vocabulary.VocabularyApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
-import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +43,7 @@ public class VocabularyOrchestrationService {
                 VOCABULARY_API_MAPPER.toCreateSentences(request.exampleSentences())
         );
         var saved = vocabularyRepo.save(toSave);
+        vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
     }
 
@@ -59,6 +59,7 @@ public class VocabularyOrchestrationService {
                 VOCABULARY_API_MAPPER.toUpdateSentences(request.exampleSentences())
         );
         var saved = vocabularyRepo.save(toSave);
+        vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
     }
 

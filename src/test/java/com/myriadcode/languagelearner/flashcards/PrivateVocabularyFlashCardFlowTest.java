@@ -46,7 +46,7 @@ public class PrivateVocabularyFlashCardFlowTest {
     }
 
     @Test
-    @DisplayName("WORD vocabulary creates cards only after explicit generation action")
+    @DisplayName("WORD vocabulary creates cards on creation")
     void createWordVocabularyGeneratesTwoReferenceCardsAndRendersGermanExamples() {
         var userId = "user-vocab-cards";
 
@@ -68,11 +68,6 @@ public class PrivateVocabularyFlashCardFlowTest {
                 ContentRefType.VOCABULARY,
                 userId
         );
-        assertThat(generatedCards).isEmpty();
-
-        vocabularyOrchestrationService.createFlashCardsForVocabulary(userId, vocabulary.id());
-
-        generatedCards = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.VOCABULARY, userId);
         assertThat(generatedCards).hasSize(2);
         assertThat(generatedCards).extracting(card -> card.getIsReversed()).containsExactlyInAnyOrder(false, true);
 
@@ -92,7 +87,7 @@ public class PrivateVocabularyFlashCardFlowTest {
     }
 
     @Test
-    @DisplayName("CHUNK vocabulary also creates cards only after explicit generation action")
+    @DisplayName("CHUNK vocabulary creates cards on creation")
     void chunkVocabularyCreatesTwoPrivateVocabularyCards() {
         var userId = "user-vocab-cards-chunk";
 
@@ -114,11 +109,6 @@ public class PrivateVocabularyFlashCardFlowTest {
                 ContentRefType.VOCABULARY,
                 userId
         );
-        assertThat(generatedCards).isEmpty();
-
-        vocabularyOrchestrationService.createFlashCardsForVocabulary(userId, vocabulary.id());
-
-        generatedCards = flashCardReviewJpaRepo.findAllByContentTypeAndUserId(ContentRefType.VOCABULARY, userId);
         assertThat(generatedCards).hasSize(2);
         assertThat(generatedCards).extracting(card -> card.getIsReversed()).containsExactlyInAnyOrder(false, true);
 
