@@ -105,7 +105,7 @@ public class PublicVocabularyControllerTests {
     }
 
     @Test
-    @DisplayName("Add public vocabulary to private: skips when matching private vocab exists")
+    @DisplayName("Add public vocabulary to private: skips when matching private vocab surface exists")
     public void addPublicVocabularyToPrivateSkipsExisting() throws Exception {
         var vocabularyRepo = new FakeVocabularyRepo();
         var publicRepo = new FakePublicVocabularyRepo();

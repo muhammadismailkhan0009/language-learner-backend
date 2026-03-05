@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.vocabulary.VocabularyApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,16 @@ public class VocabularyOrchestrationService {
     }
 
     public VocabularyResponse addVocabulary(String userId, AddVocabularyRequest request) {
+        if (Vocabulary.EntryKind.WORD == request.entryKind()) {
+            var existing = vocabularyRepo.findByUserId(userId).stream()
+                    .filter(vocabulary -> vocabulary.entryKind() == Vocabulary.EntryKind.WORD)
+                    .filter(vocabulary -> vocabulary.surface().equals(request.surface()))
+                    .findFirst();
+            if (existing.isPresent()) {
+                throw new IllegalArgumentException("Vocabulary already exists for this user");
+            }
+        }
+
         var toSave = VocabularyDomainService.create(
                 new UserId(userId),
                 request.surface(),
@@ -61,12 +72,6 @@ public class VocabularyOrchestrationService {
         var saved = vocabularyRepo.save(toSave);
         vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
-    }
-
-    public void createFlashCardsForVocabulary(String userId, String vocabularyId) {
-        var vocabulary = vocabularyRepo.findByIdAndUserId(vocabularyId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Vocabulary not found for this user"));
-        vocabularyFlashCardPublisher.createPrivateVocabularyCards(vocabulary);
     }
 
     public List<VocabularyResponse> fetchVocabularies(String userId) {

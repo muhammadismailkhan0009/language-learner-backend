@@ -84,7 +84,6 @@ public class PublicVocabularyOrchestrationService {
         var existing = vocabularyRepo.findByUserId(userId).stream()
                 .filter(vocabulary -> vocabulary.entryKind() == sourceVocabulary.entryKind())
                 .filter(vocabulary -> vocabulary.surface().equals(sourceVocabulary.surface()))
-                .filter(vocabulary -> vocabulary.translation().equals(sourceVocabulary.translation()))
                 .findFirst();
 
         if (existing.isPresent()) {

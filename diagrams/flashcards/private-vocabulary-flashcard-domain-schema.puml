@@ -113,8 +113,7 @@ Flashcards keep references only.
 end note
 
 note bottom of FlashCardReview
-Private vocabulary cards are generated explicitly by:
-POST /api/v1/vocabularies/{vocabularyId}/flashcards/v1
+Private vocabulary cards are generated on vocabulary create/update.
 They are fetched via:
 GET /api/v1/vocabulary-flashcards/cards/*
 end note

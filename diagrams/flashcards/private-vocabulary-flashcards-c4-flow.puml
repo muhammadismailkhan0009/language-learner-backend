@@ -34,7 +34,7 @@ System_Boundary(lms, "Language Learner System") {
   Component(event_bus, "In-Process Domain Event Bus", "Spring Events", "Cross-module event delivery")
 }
 
-' Flow A: vocabulary upsert only persists vocabulary
+' Flow A: vocabulary upsert persists vocabulary and ensures flashcards
 Rel($index=SetIndex(1), learner, client_app, "Create or edit private vocabulary")
 Rel($index=Index(), client_app, vocab_controller, "POST/PUT /api/v1/vocabularies/*")
 Rel($index=Index(), vocab_controller, vocab_service, "addVocabulary()/updateVocabulary()")
@@ -46,19 +46,6 @@ Rel($index=Index(), vocab_repo_impl, app_db, "Persist vocabulary entry + German 
 Rel($index=Index(), app_db, vocab_repo_impl, "Saved")
 Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return saved vocabulary")
 Rel($index=Index(), vocab_repo_port, vocab_service, "Return saved vocabulary")
-Rel($index=Index(), vocab_service, vocab_controller, "Return vocabulary response")
-Rel($index=Index(), vocab_controller, client_app, "201/200")
-
-' Flow A2: explicit trigger creates two flashcard references
-Rel($index=SetIndex(1), learner, client_app, "Generate vocabulary flashcards explicitly")
-Rel($index=Index(), client_app, vocab_controller, "POST /api/v1/vocabularies/{vocabularyId}/flashcards/v1")
-Rel($index=Index(), vocab_controller, vocab_service, "createFlashCardsForVocabulary(userId, vocabularyId)")
-Rel($index=Index(), vocab_service, vocab_repo_port, "findByIdAndUserId(vocabularyId, userId)")
-Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "findByIdAndUserId(vocabularyId, userId)")
-Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary entry + examples")
-Rel($index=Index(), app_db, vocab_repo_impl, "Return vocabulary aggregate")
-Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return vocabulary")
-Rel($index=Index(), vocab_repo_port, vocab_service, "Return vocabulary")
 Rel($index=Index(), vocab_service, vocab_event_publisher, "createPrivateVocabularyCards(vocabulary)")
 Rel($index=Index(), vocab_event_publisher, event_bus, "publish(CreateFlashCardEvent(contentType=VOCABULARY, isReversed=true/false))")
 Rel($index=Index(), event_bus, vocab_card_handler, "Handle CreateFlashCardEvent")
@@ -68,7 +55,8 @@ Rel($index=Index(), vocab_card_repo_impl, app_db, "Persist rows in flashcard_rev
 Rel($index=Index(), app_db, vocab_card_repo_impl, "Saved/updated")
 Rel($index=Index(), vocab_card_repo_impl, vocab_card_repo_port, "Done")
 Rel($index=Index(), vocab_card_repo_port, vocab_card_handler, "Done")
-Rel($index=Index(), vocab_controller, client_app, "202 Accepted")
+Rel($index=Index(), vocab_service, vocab_controller, "Return vocabulary response")
+Rel($index=Index(), vocab_controller, client_app, "201/200")
 
 ' Flow B: vocabulary-specific fetch resolves content through vocabulary reference
 Rel($index=SetIndex(1), learner, client_app, "Open private vocabulary flashcards")

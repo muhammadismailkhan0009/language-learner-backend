@@ -1,8 +1,6 @@
 package com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary;
 
 import com.myriadcode.languagelearner.common.ids.UserId;
-import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.AddVocabularyRequest;
-import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
@@ -129,21 +127,6 @@ public class VocabularyControllerTests {
                 .andExpect(jsonPath("$.response.length()").value(1))
                 .andExpect(jsonPath("$.response[0].id").value("vocab-1"))
                 .andExpect(jsonPath("$.response[0].userId").value("user-a"));
-    }
-
-    @Test
-    @DisplayName("Create flashcards API: explicit trigger endpoint is available")
-    public void createFlashCardsForVocabularyReturnsAccepted() throws Exception {
-        var repo = new FakeVocabularyRepo();
-        repo.save(sampleVocabulary("vocab-1", "user-a"));
-        VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service);
-        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
-
-        mockMvc.perform(post("/api/v1/vocabularies/{vocabularyId}/flashcards/v1", "vocab-1")
-                        .queryParam("userId", "user-a")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isAccepted());
     }
 
     private Vocabulary sampleVocabulary(String id, String userId) {

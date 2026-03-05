@@ -19,6 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -117,5 +118,39 @@ class PrivateVocabularyFlashcardCreationTests {
         assertThat(generatedCards)
                 .extracting(card -> card.getIsReversed())
                 .containsExactlyInAnyOrder(false, true);
+    }
+
+    @Test
+    @DisplayName("addVocabulary: rejects duplicate WORD for the same user")
+    void addVocabularyRejectsDuplicateWord() {
+        var userId = "behavior-user-3";
+
+        var request = new AddVocabularyRequest(
+                "gehen",
+                "to go",
+                Vocabulary.EntryKind.WORD,
+                null,
+                List.of(new AddVocabularyRequest.ExampleSentenceRequest(
+                        "Ich gehe nach Hause.",
+                        "I am going home."
+                ))
+        );
+
+        vocabularyOrchestrationService.addVocabulary(userId, request);
+
+        var differentTranslation = new AddVocabularyRequest(
+                "gehen",
+                "to walk",
+                Vocabulary.EntryKind.WORD,
+                null,
+                List.of(new AddVocabularyRequest.ExampleSentenceRequest(
+                        "Ich gehe nach Hause.",
+                        "I am going home."
+                ))
+        );
+
+        assertThatThrownBy(() -> vocabularyOrchestrationService.addVocabulary(userId, differentTranslation))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Vocabulary already exists for this user");
     }
 }
