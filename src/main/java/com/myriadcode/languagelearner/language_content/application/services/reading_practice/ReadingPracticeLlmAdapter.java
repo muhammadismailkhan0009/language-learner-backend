@@ -1,8 +1,9 @@
 package com.myriadcode.languagelearner.language_content.application.services.reading_practice;
 
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
-import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,9 +24,19 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     }
 
     @Override
-    public String generateReadingText(String topic,
-                                      List<ReadingPracticeVocabularySeed> vocabulary,
-                                      String difficultyLevel) {
-        return llmPort.generateReadingContent(topic, vocabulary, difficultyLevel).readingText();
+    public ReadingPracticeReadingContent generateReadingContent(String topic,
+                                                                List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                String difficultyLevel) {
+        var content = llmPort.generateReadingContent(topic, vocabulary, difficultyLevel);
+        if (content == null || content.paragraphs() == null) {
+            return new ReadingPracticeReadingContent(List.of());
+        }
+        var paragraphs = content.paragraphs().stream()
+                .map(paragraph -> new ReadingPracticeReadingContent.Paragraph(
+                        paragraph.text(),
+                        paragraph.sentences()
+                ))
+                .toList();
+        return new ReadingPracticeReadingContent(paragraphs);
     }
 }

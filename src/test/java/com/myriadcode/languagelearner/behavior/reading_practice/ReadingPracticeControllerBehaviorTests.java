@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.behavior.reading_practice;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.ReadingPracticeController;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionSummaryResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeParagraphResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingVocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeService;
 import org.junit.jupiter.api.DisplayName;
@@ -99,6 +100,10 @@ class ReadingPracticeControllerBehaviorTests {
                 "session-1",
                 "Travel",
                 "Generated reading",
+                List.of(new ReadingPracticeParagraphResponse(
+                        "Generated reading",
+                        List.of("Generated reading")
+                )),
                 List.of(flashcard),
                 Instant.parse("2026-01-01T00:00:00Z")
         ));
@@ -110,6 +115,7 @@ class ReadingPracticeControllerBehaviorTests {
                 .andExpect(jsonPath("$.response.sessionId").value("session-1"))
                 .andExpect(jsonPath("$.response.topic").value("Travel"))
                 .andExpect(jsonPath("$.response.readingText").value("Generated reading"))
+                .andExpect(jsonPath("$.response.readingParagraphs.length()").value(1))
                 .andExpect(jsonPath("$.response.vocabFlashcards.length()").value(1))
                 .andExpect(jsonPath("$.response.vocabFlashcards[0].id").value("f-1"))
                 .andExpect(jsonPath("$.response.vocabFlashcards[0].front.wordOrChunk").value("Wort"))

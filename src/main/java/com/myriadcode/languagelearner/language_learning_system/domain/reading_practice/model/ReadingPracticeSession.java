@@ -10,6 +10,7 @@ public record ReadingPracticeSession(
         UserId userId,
         String topic,
         String readingText,
+        List<ReadingPracticeParagraph> paragraphs,
         Instant createdAt,
         List<ReadingVocabularyUsage> vocabularyUsages
 ) {

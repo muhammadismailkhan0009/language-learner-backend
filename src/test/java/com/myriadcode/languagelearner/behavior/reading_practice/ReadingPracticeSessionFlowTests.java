@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.behavior.reading_practice;
 import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
@@ -71,6 +72,8 @@ class ReadingPracticeSessionFlowTests {
         assertThat(session.getUserId()).isEqualTo("user-1");
         assertThat(session.getTopic()).isEqualTo("topic-1");
         assertThat(session.getReadingText()).isEqualTo("reading text");
+        assertThat(session.getParagraphs()).hasSize(1);
+        assertThat(session.getParagraphs().getFirst().getSentences()).hasSize(2);
         assertThat(session.getVocabularyUsages()).hasSize(10);
         assertThat(stubReadingPracticeLlmApi.lastSeeds).hasSize(10);
     }
@@ -182,7 +185,8 @@ class ReadingPracticeSessionFlowTests {
         var usage = readingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1")
                 .orElseThrow()
                 .getVocabularyUsages()
-                .getFirst();
+                .iterator()
+                .next();
         var flashcardId = usage.getFlashcardId();
         var vocabularyId = usage.getVocabularyId();
 
@@ -235,11 +239,16 @@ class ReadingPracticeSessionFlowTests {
         }
 
         @Override
-        public String generateReadingText(String topic,
-                                          List<ReadingPracticeVocabularySeed> vocabulary,
-                                          String difficultyLevel) {
+        public ReadingPracticeReadingContent generateReadingContent(String topic,
+                                                                    List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                    String difficultyLevel) {
             this.lastTopic = topic;
-            return "reading text";
+            return new ReadingPracticeReadingContent(List.of(
+                    new ReadingPracticeReadingContent.Paragraph(
+                            "reading text",
+                            List.of("reading sentence 1", "reading sentence 2")
+                    )
+            ));
         }
     }
 

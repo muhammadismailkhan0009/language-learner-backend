@@ -1,5 +1,7 @@
 package com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice;
 
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeParagraph;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
@@ -33,12 +35,34 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
         }
 
         var usageEntities = session.vocabularyUsages() == null ? List.<ReadingVocabularyUsage>of() : session.vocabularyUsages();
-        entity.setVocabularyUsages(usageEntities.stream()
+        entity.setVocabularyUsages(new java.util.LinkedHashSet<>(usageEntities.stream()
                 .map(READING_PRACTICE_JPA_MAPPER::toUsageEntity)
                 .peek(usage -> {
                     if (usage.getCreatedAt() == null) {
                         usage.setCreatedAt(Instant.now());
                     }
+                })
+                .toList()));
+
+        var paragraphEntities = session.paragraphs() == null ? List.<ReadingPracticeParagraph>of() : session.paragraphs();
+        entity.setParagraphs(paragraphEntities.stream()
+                .map(paragraph -> {
+                    var paragraphEntity = READING_PRACTICE_JPA_MAPPER.toParagraphEntity(paragraph);
+                    if (paragraphEntity.getCreatedAt() == null) {
+                        paragraphEntity.setCreatedAt(Instant.now());
+                    }
+                    var sentenceEntities = paragraph.sentences() == null
+                            ? List.<ReadingPracticeSentence>of()
+                            : paragraph.sentences();
+                    paragraphEntity.setSentences(sentenceEntities.stream()
+                            .map(READING_PRACTICE_JPA_MAPPER::toSentenceEntity)
+                            .peek(sentence -> {
+                                if (sentence.getCreatedAt() == null) {
+                                    sentence.setCreatedAt(Instant.now());
+                                }
+                            })
+                            .toList());
+                    return paragraphEntity;
                 })
                 .toList());
 
@@ -88,11 +112,37 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
         var usages = entity.getVocabularyUsages().stream()
                 .map(READING_PRACTICE_JPA_MAPPER::toUsageDomain)
                 .toList();
+        var paragraphs = entity.getParagraphs() == null ? List.<ReadingPracticeParagraph>of()
+                : java.util.stream.IntStream.range(0, entity.getParagraphs().size())
+                .mapToObj(index -> {
+                    var paragraphEntity = entity.getParagraphs().get(index);
+                    var baseParagraph = READING_PRACTICE_JPA_MAPPER.toParagraphDomain(paragraphEntity);
+                    var sentences = paragraphEntity.getSentences() == null ? List.<ReadingPracticeSentence>of()
+                            : java.util.stream.IntStream.range(0, paragraphEntity.getSentences().size())
+                            .mapToObj(sentenceIndex -> {
+                                var sentenceEntity = paragraphEntity.getSentences().get(sentenceIndex);
+                                var baseSentence = READING_PRACTICE_JPA_MAPPER.toSentenceDomain(sentenceEntity);
+                                return new ReadingPracticeSentence(
+                                        baseSentence.id(),
+                                        baseSentence.text(),
+                                        sentenceIndex
+                                );
+                            })
+                            .toList();
+                    return new ReadingPracticeParagraph(
+                            baseParagraph.id(),
+                            baseParagraph.text(),
+                            index,
+                            sentences
+                    );
+                })
+                .toList();
         return new ReadingPracticeSession(
                 base.id(),
                 base.userId(),
                 base.topic(),
                 base.readingText(),
+                paragraphs,
                 base.createdAt(),
                 usages
         );
@@ -108,6 +158,7 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
                 base.userId(),
                 base.topic(),
                 base.readingText(),
+                List.of(),
                 base.createdAt(),
                 usages
         );

@@ -2,6 +2,8 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.readin
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeParagraph;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
@@ -44,6 +46,16 @@ class ReadingPracticeJpaRepoBoundaryTests {
                 new UserId("user-1"),
                 "topic",
                 "reading text",
+                List.of(new ReadingPracticeParagraph(
+                        new ReadingPracticeParagraph.ReadingPracticeParagraphId("p1"),
+                        "para",
+                        0,
+                        List.of(new ReadingPracticeSentence(
+                                new ReadingPracticeSentence.ReadingPracticeSentenceId("s1"),
+                                "sentence",
+                                0
+                        ))
+                )),
                 null,
                 List.of(new ReadingVocabularyUsage(
                         new ReadingVocabularyUsage.ReadingVocabularyUsageId(UUID.randomUUID().toString()),
@@ -58,6 +70,11 @@ class ReadingPracticeJpaRepoBoundaryTests {
                 .orElseThrow();
         assertThat(persisted.getCreatedAt()).isNotNull();
         assertThat(persisted.getVocabularyUsages()).hasSize(1);
-        assertThat(persisted.getVocabularyUsages().get(0).getCreatedAt()).isNotNull();
+        var firstUsage = persisted.getVocabularyUsages().iterator().next();
+        assertThat(firstUsage.getCreatedAt()).isNotNull();
+        assertThat(persisted.getParagraphs()).hasSize(1);
+        assertThat(persisted.getParagraphs().get(0).getCreatedAt()).isNotNull();
+        assertThat(persisted.getParagraphs().get(0).getSentences()).hasSize(1);
+        assertThat(persisted.getParagraphs().get(0).getSentences().get(0).getCreatedAt()).isNotNull();
     }
 }

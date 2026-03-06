@@ -8,6 +8,7 @@ class ReadingPracticeSession {
   +topic : String
   +createdAt : Instant
   +readingText : String
+  +paragraphs : List<ReadingPracticeParagraph>
   +vocabularyUsages : List<ReadingVocabularyUsage>
 }
 
@@ -19,6 +20,27 @@ class ReadingVocabularyUsage {
   +id : ReadingVocabularyUsageId
   +flashCardId : FlashCardId
   +vocabularyId : VocabularyId
+}
+
+class ReadingPracticeParagraph {
+  +id : ReadingPracticeParagraphId
+  +text : String
+  +position : int
+  +sentences : List<ReadingPracticeSentence>
+}
+
+class ReadingPracticeParagraphId {
+  +id : String
+}
+
+class ReadingPracticeSentence {
+  +id : ReadingPracticeSentenceId
+  +text : String
+  +position : int
+}
+
+class ReadingPracticeSentenceId {
+  +id : String
 }
 
 class ReadingVocabularyUsageId {
@@ -65,7 +87,11 @@ enum State {
 
 ReadingPracticeSession --> ReadingPracticeSessionId
 ReadingPracticeSession --> UserId
+ReadingPracticeSession *-- "0..*" ReadingPracticeParagraph : paragraphs
 ReadingPracticeSession *-- "1..*" ReadingVocabularyUsage : vocabularyUsages
+ReadingPracticeParagraph --> ReadingPracticeParagraphId
+ReadingPracticeParagraph *-- "0..*" ReadingPracticeSentence : sentences
+ReadingPracticeSentence --> ReadingPracticeSentenceId
 ReadingVocabularyUsage --> ReadingVocabularyUsageId
 ReadingVocabularyUsage --> FlashCardId
 ReadingVocabularyUsage --> VocabularyId
@@ -75,8 +101,14 @@ FlashCardReview --> State
 
 note right of ReadingPracticeSession
 Aggregate root:
-- owns reading text and vocabulary usage references
+- owns reading text, paragraphs, and vocabulary usage references
 - stores only IDs for flashcards/vocab
+end note
+
+note right of ReadingPracticeParagraph
+Paragraph:
+- stores original paragraph text
+- owns ordered sentences
 end note
 
 note right of ReadingVocabularyUsage
@@ -95,6 +127,8 @@ end note
 note bottom of ReadingPracticeSession
 Reading text is generated from selected
 flashcard vocabulary and stored in session.
+Paragraphs and sentences are generated
+via LLM and stored separately.
 end note
 
 @enduml

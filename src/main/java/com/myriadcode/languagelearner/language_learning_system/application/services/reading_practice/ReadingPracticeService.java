@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.serv
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionSummaryResponse;
@@ -11,6 +12,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeParagraph;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
@@ -79,7 +82,9 @@ public class ReadingPracticeService {
             topic = "General practice";
         }
 
-        var readingText = readingPracticeLlmApi.generateReadingText(topic, selectedVocab, DIFFICULTY_LEVEL);
+        var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
+        var paragraphs = buildParagraphs(generated);
+        var readingText = joinParagraphs(paragraphs);
 
         var usageRecords = selected.stream()
                 .map(candidate -> new ReadingVocabularyUsage(
@@ -94,6 +99,7 @@ public class ReadingPracticeService {
                 new UserId(userId),
                 topic,
                 readingText,
+                paragraphs,
                 Instant.now(),
                 usageRecords
         );
@@ -148,10 +154,13 @@ public class ReadingPracticeService {
     private ReadingPracticeSessionResponse toSessionResponse(ReadingPracticeSession session, String userId) {
         var response = READING_PRACTICE_API_MAPPER.toResponse(session);
         var flashcards = buildFlashcards(userId, session.vocabularyUsages());
+        List<com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeParagraphResponse> paragraphs =
+                response.readingParagraphs() == null ? List.of() : response.readingParagraphs();
         return new ReadingPracticeSessionResponse(
                 response.sessionId(),
                 response.topic(),
                 response.readingText(),
+                paragraphs,
                 flashcards,
                 response.createdAt()
         );
@@ -201,5 +210,40 @@ public class ReadingPracticeService {
                 new ReadingVocabularyFlashCardView.Back(back, sentences),
                 false
         );
+    }
+
+    private List<ReadingPracticeParagraph> buildParagraphs(ReadingPracticeReadingContent generated) {
+        if (generated == null || generated.paragraphs() == null) {
+            return List.of();
+        }
+        return java.util.stream.IntStream.range(0, generated.paragraphs().size())
+                .mapToObj(index -> {
+                    var paragraph = generated.paragraphs().get(index);
+                    var sentences = paragraph.sentences() == null ? List.<ReadingPracticeSentence>of()
+                            : java.util.stream.IntStream.range(0, paragraph.sentences().size())
+                            .mapToObj(sentenceIndex -> new ReadingPracticeSentence(
+                                    new ReadingPracticeSentence.ReadingPracticeSentenceId(UUID.randomUUID().toString()),
+                                    paragraph.sentences().get(sentenceIndex),
+                                    sentenceIndex
+                            ))
+                            .toList();
+                    return new ReadingPracticeParagraph(
+                            new ReadingPracticeParagraph.ReadingPracticeParagraphId(UUID.randomUUID().toString()),
+                            paragraph.text(),
+                            index,
+                            sentences
+                    );
+                })
+                .toList();
+    }
+
+    private String joinParagraphs(List<ReadingPracticeParagraph> paragraphs) {
+        if (paragraphs == null || paragraphs.isEmpty()) {
+            return "";
+        }
+        return paragraphs.stream()
+                .map(ReadingPracticeParagraph::text)
+                .filter(text -> text != null && !text.isBlank())
+                .collect(Collectors.joining("\n\n"));
     }
 }

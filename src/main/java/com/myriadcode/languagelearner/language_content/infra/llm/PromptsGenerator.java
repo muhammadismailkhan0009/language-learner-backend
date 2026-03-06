@@ -267,7 +267,7 @@ public final class PromptsGenerator {
         """.formatted(difficultyLevel, vocabList);
         }
 
-        public static String readingContent(
+        public static String readingContentParagraphs(
                 String topic,
                 List<ReadingPracticeVocabularySeed> vocabulary,
                 String difficultyLevel
@@ -282,11 +282,12 @@ CEFR Level: %s
 Topic: "%s"
 
 Goal:
-Write a natural, coherent German reading one or more paragraphs that helps the learner
+Write one or more natural, coherent German paragraphs that help the learner
 practice the provided vocabulary in context.
 
 Core Requirements:
-- The text should read like a small natural paragraph, not isolated sentences.
+- Return 1 to 3 separate paragraphs (as needed).
+- Each paragraph must read naturally, not like isolated sentences.
 - Sentences should connect logically and flow around the topic.
 
 Vocabulary Usage:
@@ -318,10 +319,34 @@ Difficulty Control:
 
 Style:
 - Keep the language clear and readable.
+- Do not include bullet points or numbering.
 
 Learner Vocabulary (German - translation):
 %s
         """.formatted(difficultyLevel, topic, vocabList);
+        }
+
+        public static String readingContentParagraphSentenceSplit(List<String> paragraphs) {
+            var builder = new StringBuilder();
+            for (int i = 0; i < paragraphs.size(); i++) {
+                builder.append("Paragraph ").append(i).append(":\n")
+                        .append(paragraphs.get(i)).append("\n\n");
+            }
+
+            return """
+        You are given German reading paragraphs.
+
+Goal:
+Split each paragraph into its original sentences without rewriting or reordering.
+
+Rules:
+- Do not change any words, punctuation, or casing.
+- Preserve sentence order exactly as in the paragraph.
+- Use the provided paragraph index as `paragraphIndex`.
+
+Paragraphs:
+%s
+        """.formatted(builder.toString());
         }
 
     public static String sentenceGeneratorNew(

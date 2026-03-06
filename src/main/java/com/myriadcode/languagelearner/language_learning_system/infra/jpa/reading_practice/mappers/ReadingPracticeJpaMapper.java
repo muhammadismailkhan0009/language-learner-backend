@@ -1,7 +1,11 @@
 package com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.mappers;
 
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeParagraph;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeParagraphEntity;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeSentenceEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeSessionEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeVocabularyUsageEntity;
 import org.mapstruct.Mapper;
@@ -15,11 +19,13 @@ public interface ReadingPracticeJpaMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
+    @Mapping(target = "paragraphs", ignore = true)
     ReadingPracticeSessionEntity toEntity(ReadingPracticeSession session);
 
     @Mapping(target = "id.id", source = "id")
     @Mapping(target = "userId.id", source = "userId")
     @Mapping(target = "vocabularyUsages", ignore = true)
+    @Mapping(target = "paragraphs", ignore = true)
     ReadingPracticeSession toDomain(ReadingPracticeSessionEntity entity);
 
     @Mapping(target = "id", source = "id.id")
@@ -30,6 +36,22 @@ public interface ReadingPracticeJpaMapper {
     @Mapping(target = "id.id", source = "id")
     @Mapping(target = "flashCardId", source = "flashcardId")
     ReadingVocabularyUsage toUsageDomain(ReadingPracticeVocabularyUsageEntity entity);
+
+    @Mapping(target = "id", source = "id.id")
+    @Mapping(target = "sentences", ignore = true)
+    ReadingPracticeParagraphEntity toParagraphEntity(ReadingPracticeParagraph paragraph);
+
+    @Mapping(target = "id.id", source = "id")
+    @Mapping(target = "sentences", ignore = true)
+    @Mapping(target = "position", ignore = true)
+    ReadingPracticeParagraph toParagraphDomain(ReadingPracticeParagraphEntity entity);
+
+    @Mapping(target = "id", source = "id.id")
+    ReadingPracticeSentenceEntity toSentenceEntity(ReadingPracticeSentence sentence);
+
+    @Mapping(target = "id.id", source = "id")
+    @Mapping(target = "position", ignore = true)
+    ReadingPracticeSentence toSentenceDomain(ReadingPracticeSentenceEntity entity);
 
     // No metadata mapping (kept minimal for now).
 }

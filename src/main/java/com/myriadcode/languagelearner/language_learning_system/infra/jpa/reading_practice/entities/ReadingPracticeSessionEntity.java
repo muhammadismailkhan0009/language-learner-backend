@@ -4,14 +4,20 @@ import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "reading_practice_session")
@@ -32,9 +38,15 @@ public class ReadingPracticeSessionEntity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "session_id", nullable = false)
+    @OrderColumn(name = "paragraph_index")
+    private List<ReadingPracticeParagraphEntity> paragraphs = new ArrayList<>();
+
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
-    private List<ReadingPracticeVocabularyUsageEntity> vocabularyUsages = new ArrayList<>();
+    @Fetch(FetchMode.SUBSELECT)
+    private Set<ReadingPracticeVocabularyUsageEntity> vocabularyUsages = new LinkedHashSet<>();
 
     @PrePersist
     public void onCreate() {
@@ -83,11 +95,29 @@ public class ReadingPracticeSessionEntity {
         this.createdAt = createdAt;
     }
 
-    public List<ReadingPracticeVocabularyUsageEntity> getVocabularyUsages() {
+    public List<ReadingPracticeParagraphEntity> getParagraphs() {
+        return paragraphs;
+    }
+
+    public void setParagraphs(List<ReadingPracticeParagraphEntity> paragraphs) {
+        this.paragraphs.clear();
+        if (paragraphs == null) {
+            return;
+        }
+        for (ReadingPracticeParagraphEntity paragraph : paragraphs) {
+            addParagraph(paragraph);
+        }
+    }
+
+    public void addParagraph(ReadingPracticeParagraphEntity paragraph) {
+        this.paragraphs.add(paragraph);
+    }
+
+    public Set<ReadingPracticeVocabularyUsageEntity> getVocabularyUsages() {
         return vocabularyUsages;
     }
 
-    public void setVocabularyUsages(List<ReadingPracticeVocabularyUsageEntity> vocabularyUsages) {
+    public void setVocabularyUsages(Set<ReadingPracticeVocabularyUsageEntity> vocabularyUsages) {
         this.vocabularyUsages.clear();
         if (vocabularyUsages == null) {
             return;

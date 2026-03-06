@@ -11,6 +11,24 @@ entity reading_practice_session {
   created_at : timestamp
 }
 
+entity reading_practice_paragraph {
+  * id : uuid
+  --
+  session_id : uuid
+  paragraph_index : int
+  paragraph_text : text
+  created_at : timestamp
+}
+
+entity reading_practice_sentence {
+  * id : uuid
+  --
+  paragraph_id : uuid
+  sentence_index : int
+  sentence_text : text
+  created_at : timestamp
+}
+
 entity reading_practice_vocab_ref {
   * id : uuid
   --
@@ -20,11 +38,22 @@ entity reading_practice_vocab_ref {
   created_at : timestamp
 }
 
+reading_practice_session ||--o{ reading_practice_paragraph : paragraphs
+reading_practice_paragraph ||--o{ reading_practice_sentence : sentences
 reading_practice_session ||--o{ reading_practice_vocab_ref : uses
 
 note right of reading_practice_session
 One session per reading practice generation.
 Stores topic + metadata + creation timestamp.
+Keeps reading_text for backward compatibility.
+end note
+
+note right of reading_practice_paragraph
+Stores ordered paragraphs for the session.
+end note
+
+note right of reading_practice_sentence
+Stores ordered sentences per paragraph.
 end note
 
 note right of reading_practice_vocab_ref

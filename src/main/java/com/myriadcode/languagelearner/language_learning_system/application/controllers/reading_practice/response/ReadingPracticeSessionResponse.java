@@ -7,6 +7,7 @@ public record ReadingPracticeSessionResponse(
         String sessionId,
         String topic,
         String readingText,
+        List<ReadingPracticeParagraphResponse> readingParagraphs,
         List<ReadingVocabularyFlashCardView> vocabFlashcards,
         Instant createdAt
 ) {

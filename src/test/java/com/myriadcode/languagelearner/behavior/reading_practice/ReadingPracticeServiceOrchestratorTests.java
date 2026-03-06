@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.behavior.reading_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
@@ -82,7 +83,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("No vocabulary candidates found for reading practice");
 
-        verify(readingPracticeLlmApi, never()).generateReadingText(any(), any(), any());
+        verify(readingPracticeLlmApi, never()).generateReadingContent(any(), any(), any());
         verify(readingPracticeRepo, never()).save(any());
     }
 
@@ -97,13 +98,18 @@ class ReadingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq("B1"))).thenReturn("");
-        when(readingPracticeLlmApi.generateReadingText(eq("General practice"), any(), eq("B1")))
-                .thenReturn("fallback reading");
+        when(readingPracticeLlmApi.generateReadingContent(eq("General practice"), any(), eq("B1")))
+                .thenReturn(new ReadingPracticeReadingContent(List.of(
+                        new ReadingPracticeReadingContent.Paragraph(
+                                "fallback reading",
+                                List.of("fallback reading")
+                        )
+                )));
 
         service.createSession("user-1");
 
         verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq("B1"));
-        verify(readingPracticeLlmApi).generateReadingText(eq("General practice"), any(), eq("B1"));
+        verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq("B1"));
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));
     }
 
@@ -126,6 +132,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
                 "Travel",
                 "Reading text",
+                List.of(),
                 Instant.parse("2026-01-01T00:00:00Z"),
                 List.of(usage1, usage2)
         );

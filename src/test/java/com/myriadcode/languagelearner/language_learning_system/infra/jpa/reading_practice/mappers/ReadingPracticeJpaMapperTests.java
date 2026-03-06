@@ -24,6 +24,7 @@ class ReadingPracticeJpaMapperTests {
                 new UserId("user-1"),
                 "topic",
                 "reading text",
+                List.of(),
                 Instant.parse("2026-01-01T00:00:00Z"),
                 List.of()
         );
