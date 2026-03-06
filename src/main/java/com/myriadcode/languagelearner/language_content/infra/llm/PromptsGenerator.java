@@ -286,7 +286,7 @@ Write one or more natural, coherent German paragraphs that help the learner
 practice the provided vocabulary in context.
 
 Core Requirements:
-- Return 1 to 3 separate paragraphs (as needed).
+- Return 1 or more separate paragraphs (as needed).
 - Each paragraph must read naturally, not like isolated sentences.
 - Sentences should connect logically and flow around the topic.
 
@@ -296,10 +296,17 @@ Vocabulary Usage:
 - Important words may appear more than once.
 - Combine multiple learner vocabulary words in the same sentence when natural.
 
+Paragraph Guidelines:
+- Minimum paragraphs: 1
+- Maximum paragraphs: 3
+- Minimum Sentences per paragraph: 4
+- Maximum Sententeces per paragraph: 7
+- Vary sentence structure when possible.
+- Total sentences across the text should normally stay between 5 and 18.
+
 Sentence Guidelines:
-- Minimum sentences: 3
-- Maximum sentences: 12
-- Sentence length: 6–20 words
+
+- Sentence length: 6–12 words
 - Vary sentence structure when possible.
 
 Grammar Usage:
