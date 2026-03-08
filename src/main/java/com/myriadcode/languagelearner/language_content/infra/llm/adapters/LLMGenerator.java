@@ -6,6 +6,10 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingParagraphs;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
+import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
+import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -98,6 +102,35 @@ public class LLMGenerator implements LLMPort {
 
         var paragraphList = buildReadingContent(paragraphs, sentenceSplit);
         return new ReadingContent(paragraphList);
+    }
+
+    @Override
+    public WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary,
+                                                                     List<String> previousTopics,
+                                                                     String difficultyLevel) {
+        var prompt = PromptsGenerator.writingTopicSelection(vocabulary, previousTopics, difficultyLevel);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingTopicSelection>() {
+        });
+    }
+
+    @Override
+    public WritingBilingualContent generateWritingBilingualContent(String topic,
+                                                                   List<WritingPracticeVocabularySeed> vocabulary,
+                                                                   String difficultyLevel) {
+        var prompt = PromptsGenerator.writingBilingualContent(topic, vocabulary, difficultyLevel);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingBilingualContent>() {
+        });
+    }
+
+    @Override
+    public WritingSentencePairSplit splitWritingContentIntoSentencePairs(String englishParagraph,
+                                                                         String germanParagraph) {
+        var prompt = PromptsGenerator.writingSentencePairSplit(englishParagraph, germanParagraph);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingSentencePairSplit>() {
+        });
     }
 
     record SystemPrompt(String prompt) {

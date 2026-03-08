@@ -1,0 +1,56 @@
+@startuml
+
+title Flashcard Writing Practice Entity Schema
+
+entity writing_practice_session {
+  * id : varchar(255)
+  --
+  user_id : varchar(255)
+  topic : varchar
+  english_paragraph : text
+  german_paragraph : text
+  submitted_answer : text null
+  submitted_at : timestamp with time zone null
+  created_at : timestamp with time zone
+}
+
+entity writing_practice_sentence_pair {
+  * id : varchar(255)
+  --
+  session_id : varchar(255)
+  sentence_index : int
+  english_sentence : text
+  german_sentence : text
+  created_at : timestamp with time zone
+}
+
+entity writing_practice_vocab_ref {
+  * id : varchar(255)
+  --
+  session_id : varchar(255)
+  flashcard_id : varchar(255)
+  vocabulary_id : varchar(255)
+  created_at : timestamp with time zone
+}
+
+writing_practice_session ||--o{ writing_practice_sentence_pair : sentence_pairs
+writing_practice_session ||--o{ writing_practice_vocab_ref : uses
+
+note right of writing_practice_session
+One session per writing practice generation.
+Stores topic + EN paragraph + DE translation.
+Also stores learner submitted answer and submission timestamp.
+Null submission fields mean "not submitted yet".
+end note
+
+note right of writing_practice_sentence_pair
+Stores ordered 1:1 aligned sentence pairs.
+Both languages live in the same row to preserve mapping.
+end note
+
+note right of writing_practice_vocab_ref
+References selected reversed flashcards and vocabulary.
+No vocab text duplicated here.
+end note
+
+@enduml

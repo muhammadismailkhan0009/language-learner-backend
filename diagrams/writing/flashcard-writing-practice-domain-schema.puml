@@ -1,0 +1,125 @@
+@startuml
+
+title Flashcard Writing Practice Domain Schema
+
+class WritingPracticeSession {
+  +id : WritingPracticeSessionId
+  +userId : UserId
+  +topic : String
+  +createdAt : Instant
+  +englishParagraph : String
+  +germanParagraph : String
+  +sentencePairs : List<WritingSentencePair>
+  +vocabularyUsages : List<WritingVocabularyUsage>
+  +submittedAnswer : String?
+  +submittedAt : Instant?
+}
+
+class WritingPracticeSessionId {
+  +id : String
+}
+
+class WritingSentencePair {
+  +id : WritingSentencePairId
+  +position : int
+  +englishSentence : String
+  +germanSentence : String
+}
+
+class WritingSentencePairId {
+  +id : String
+}
+
+class WritingVocabularyUsage {
+  +id : WritingVocabularyUsageId
+  +flashCardId : FlashCardId
+  +vocabularyId : VocabularyId
+}
+
+class WritingVocabularyUsageId {
+  +id : String
+}
+
+class FlashCardId {
+  +id : String
+}
+
+class VocabularyId {
+  +id : String
+}
+
+class UserId {
+  +id : String
+}
+
+class WritingPracticePolicy {
+  +maxWords : int = 20
+  +reviewCount : int = 6
+  +reLearningCount : int = 8
+  +learningCount : int = 4
+  +newCount : int = 2
+  +selectFlashcards(cards) : List<FlashCardReview>
+}
+
+class FlashCardReview {
+  +id : FlashCardId
+  +contentId : ContentId
+  +fsrsState : State
+  +isReversed : boolean
+}
+
+class ContentId {
+  +id : String
+}
+
+enum State {
+  NEW
+  LEARNING
+  RE_LEARNING
+  REVIEW
+}
+
+WritingPracticeSession --> WritingPracticeSessionId
+WritingPracticeSession --> UserId
+WritingPracticeSession *-- "1..*" WritingSentencePair : sentencePairs
+WritingPracticeSession *-- "1..*" WritingVocabularyUsage : vocabularyUsages
+WritingSentencePair --> WritingSentencePairId
+WritingVocabularyUsage --> WritingVocabularyUsageId
+WritingVocabularyUsage --> FlashCardId
+WritingVocabularyUsage --> VocabularyId
+FlashCardReview --> FlashCardId
+FlashCardReview --> ContentId
+FlashCardReview --> State
+
+note right of WritingPracticeSession
+Aggregate root:
+- owns topic, bilingual paragraph, aligned sentence pairs,
+  and learner submitted answer
+- stores only IDs for flashcards/vocab
+- submission is a later update to the same aggregate
+end note
+
+note right of WritingSentencePair
+Aligned pair:
+- one English sentence
+- one German sentence
+- same position in both paragraph views
+end note
+
+note right of WritingPracticePolicy
+Selection policy:
+- max 20 words
+- 6 review, 8 re-learning, 4 learning, 2 new
+- uses reversed flashcards only
+- fallback fills missing counts
+end note
+
+note bottom of WritingPracticeSession
+Writing session lifecycle:
+1. generate prompt material from reversed flashcards
+2. create bilingual target text
+3. store learner submission later
+This lets frontend detect whether submission happened.
+end note
+
+@enduml

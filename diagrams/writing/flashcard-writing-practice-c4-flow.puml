@@ -1,0 +1,91 @@
+@startuml
+!include <C4/C4_Dynamic>
+
+LAYOUT_TOP_DOWN()
+
+Person(learner, "Learner", "Creates writing practice and submits an answer")
+
+System_Boundary(lms, "Language Learner System") {
+  Container(client_app, "Web/Mobile App", "Frontend", "Writing practice UI")
+
+  Container_Boundary(writing_practice_module, "Writing Practice") {
+    Component(writing_controller, "WritingPracticeController", "API", "Writing practice endpoints")
+    Component(writing_service, "WritingPracticeService", "Application Service", "Selects reversed vocab, runs 3-step LLM flow, stores sessions and submissions")
+    Component(writing_policy, "WritingPracticePolicy", "Domain Service", "Selects up to 20 cards by FSRS state ratio")
+    Component(flashcard_reviews_api, "FetchVocabularyFlashcardReviewsApi", "Interface", "Fetch user flashcard reviews")
+    Component(vocab_lookup_api, "FetchPrivateVocabularyApi", "Interface", "Fetch vocabulary records")
+    Component(writing_llm_api, "WritingPracticeLlmApi", "Interface", "Writing generation contract")
+    Component(writing_repo, "WritingPracticeRepo", "Port", "Persist writing sessions")
+    Component(writing_api_mapper, "WritingPracticeApiMapper", "MapStruct", "Maps session + hydrated flashcards to API response")
+    Component(writing_jpa_mapper, "WritingPracticeJpaMapper", "MapStruct", "Maps domain <-> entities")
+    Component(writing_repo_impl, "WritingPracticeJpaRepoImpl", "Adapter", "JPA repository implementation")
+  }
+
+  Container_Boundary(flashcards_module, "Flashcards Study") {
+    Component(flashcard_reviews_adapter, "VocabularyFlashcardReviewsAdapter", "Adapter", "Implements flashcard review fetch API")
+  }
+
+  Container_Boundary(vocabulary_module, "Vocabulary") {
+    Component(vocab_adapter, "VocabularyFlashcardsAdapter", "Adapter", "Implements vocabulary fetch API")
+  }
+
+  Container_Boundary(language_content_module, "Language Content") {
+    Component(writing_llm_adapter, "WritingPracticeLlmAdapter", "Adapter", "Implements writing LLM API")
+    Component(llm_port, "LLMPort", "Port", "LLM boundary")
+    Component(llm_generator, "LLMGenerator", "Adapter", "Calls external LLM")
+  }
+
+  ContainerDb(app_db, "App Database", "PostgreSQL", "writing_practice_*, flashcard_review, vocabulary_entries")
+  System_Ext(llm_provider, "LLM Provider", "OpenAI-compatible API")
+}
+
+Rel(learner, client_app, "Uses writing practice")
+
+Rel(client_app, writing_controller, "POST /api/v1/writing-practice/sessions")
+Rel(writing_controller, writing_service, "createSession(userId)")
+Rel(writing_service, flashcard_reviews_api, "load flashcards")
+Rel(flashcard_reviews_api, flashcard_reviews_adapter, "dispatch")
+Rel(writing_service, writing_policy, "select candidates")
+Rel(writing_service, writing_service, "keep reversed cards only")
+Rel(writing_service, vocab_lookup_api, "load vocabulary records")
+Rel(vocab_lookup_api, vocab_adapter, "dispatch")
+Rel(writing_service, writing_repo, "find recent topics")
+Rel(writing_service, writing_llm_api, "1. select topic")
+Rel(writing_service, writing_llm_api, "2. generate EN paragraph + DE translation")
+Rel(writing_service, writing_llm_api, "3. split into aligned sentence pairs")
+Rel(writing_llm_api, writing_llm_adapter, "dispatch")
+Rel(writing_llm_adapter, llm_port, "invoke")
+Rel(llm_port, llm_generator, "generate")
+Rel(llm_generator, llm_provider, "LLM request")
+Rel(writing_service, writing_repo, "save session")
+Rel(writing_repo, writing_repo_impl, "persist")
+Rel(writing_repo_impl, writing_jpa_mapper, "map domain/entities")
+Rel(writing_repo_impl, app_db, "write writing_practice_*")
+Rel(writing_controller, client_app, "201 Created")
+
+Rel(client_app, writing_controller, "GET /api/v1/writing-practice/sessions/{id}?userId=...")
+Rel(writing_controller, writing_service, "getSession(userId, sessionId)")
+Rel(writing_service, writing_repo, "load session")
+Rel(writing_repo, writing_repo_impl, "read")
+Rel(writing_repo_impl, app_db, "read writing_practice_*")
+Rel(writing_service, vocab_lookup_api, "hydrate reversed flashcards")
+Rel(writing_service, writing_api_mapper, "toResponse(session, flashcards)")
+Rel(writing_controller, client_app, "200 OK with submission state + submitted answer")
+
+Rel(client_app, writing_controller, "POST /api/v1/writing-practice/sessions/{id}/submission")
+Rel(writing_controller, writing_service, "submitAnswer(userId, sessionId, submittedAnswer)")
+Rel(writing_service, writing_service, "trim and validate answer")
+Rel(writing_service, writing_repo, "updateSubmission(...)")
+Rel(writing_repo, writing_repo_impl, "update")
+Rel(writing_repo_impl, app_db, "update writing_practice_session")
+Rel(writing_controller, client_app, "200 OK")
+
+Rel(client_app, writing_controller, "GET /api/v1/writing-practice/sessions?userId=...")
+Rel(writing_controller, writing_service, "listSessions(userId)")
+Rel(writing_service, writing_repo, "findAllByUserId")
+Rel(writing_service, writing_api_mapper, "toSummary(session)")
+Rel(writing_controller, client_app, "200 OK")
+
+SHOW_LEGEND()
+
+@enduml

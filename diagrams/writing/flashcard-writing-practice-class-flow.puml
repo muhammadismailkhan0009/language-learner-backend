@@ -1,0 +1,221 @@
+@startuml
+
+title Flashcard Writing Practice - Class Flow
+
+class CreateWritingPracticeSessionRequest {
+  +userId : String
+}
+
+class SubmitWritingPracticeAnswerRequest {
+  +userId : String
+  +submittedAnswer : String
+}
+
+class WritingPracticeSession {
+  +id : WritingPracticeSessionId
+  +userId : UserId
+  +topic : String
+  +createdAt : Instant
+  +englishParagraph : String
+  +germanParagraph : String
+  +sentencePairs : List<WritingSentencePair>
+  +vocabularyUsages : List<WritingVocabularyUsage>
+  +submittedAnswer : String?
+  +submittedAt : Instant?
+  +isSubmitted() : boolean
+}
+
+class WritingSentencePair {
+  +id : WritingSentencePairId
+  +position : int
+  +englishSentence : String
+  +germanSentence : String
+}
+
+class WritingVocabularyUsage {
+  +flashCardId : FlashCardId
+  +vocabularyId : VocabularyId
+}
+
+class WritingPracticeSessionResponse {
+  +sessionId : String
+  +topic : String
+  +englishParagraph : String
+  +germanParagraph : String
+  +sentencePairs : List<WritingSentencePairView>
+  +vocabFlashcards : List<VocabularyFlashCardView>
+  +submittedAnswer : String?
+  +submittedAt : Instant?
+}
+
+class WritingPracticeSummaryResponse {
+  +sessionId : String
+  +topic : String
+  +createdAt : Instant
+  +englishParagraphPreview : String
+  +vocabCount : int
+  +submitted : boolean
+}
+
+class WritingPracticePolicy {
+  +maxWords : int = 20
+  +reviewCount : int = 6
+  +reLearningCount : int = 8
+  +learningCount : int = 4
+  +newCount : int = 2
+  +selectCandidates(userId, cards, rotationHour) : List<WritingPracticeCandidate>
+}
+
+class FlashCardReview {
+  +id : FlashCardId
+  +contentId : ContentId
+  +fsrsState : State
+  +isReversed : boolean
+}
+
+class Vocabulary {
+  +id : VocabularyId
+  +surface : String
+  +translation : String
+}
+
+class TopicGenerationPrompt {
+  +vocabulary : List<Vocabulary>
+  +previousTopics : List<String>
+}
+
+class BilingualParagraphPrompt {
+  +topic : String
+  +vocabulary : List<Vocabulary>
+}
+
+class SentenceAlignmentPrompt {
+  +englishParagraph : String
+  +germanParagraph : String
+}
+
+enum State {
+  NEW
+  LEARNING
+  RE_LEARNING
+  REVIEW
+}
+
+interface FetchVocabularyFlashcardReviewsApi {
+  +getVocabularyFlashcardsByUser(userId) : List<FlashCardReview>
+}
+
+interface FetchPrivateVocabularyApi {
+  +getVocabularyRecords(vocabIds, userId) : List<Vocabulary>
+}
+
+interface WritingPracticeLlmApi {
+  +selectTopicForWriting(vocabulary, previousTopics, difficultyLevel) : String
+  +generateBilingualContent(topic, vocabulary, difficultyLevel) : BilingualParagraph
+  +splitIntoSentencePairs(englishParagraph, germanParagraph) : List<WritingSentencePair>
+}
+
+interface WritingPracticeRepo {
+  +save(session) : WritingPracticeSession
+  +findByIdAndUserId(sessionId, userId) : WritingPracticeSession
+  +findAllByUserId(userId) : List<WritingPracticeSession>
+  +findRecentTopicsByUserId(userId, limit) : List<String>
+  +updateSubmission(sessionId, userId, submittedAnswer, submittedAt) : WritingPracticeSession
+  +deleteByIdAndUserId(sessionId, userId) : void
+  +detachFlashcard(userId, sessionId, flashcardId) : void
+}
+
+class BilingualParagraph {
+  +englishParagraph : String
+  +germanParagraph : String
+}
+
+class WritingPracticeSessionEntity {
+  +id : String
+  +userId : String
+  +topic : String
+  +englishParagraph : String
+  +germanParagraph : String
+  +submittedAnswer : String?
+  +submittedAt : Instant?
+  +createdAt : Instant
+}
+
+class WritingSentencePairEntity {
+  +id : String
+  +sessionId : String
+  +sentenceIndex : int
+  +englishSentence : String
+  +germanSentence : String
+  +createdAt : Instant
+}
+
+class WritingVocabularyRefEntity {
+  +id : String
+  +sessionId : String
+  +flashCardId : String
+  +vocabularyId : String
+  +createdAt : Instant
+}
+
+class WritingPracticeApiMapper <<MapStruct>> {
+  +toResponse(session, vocabFlashcards) : WritingPracticeSessionResponse
+  +toSummary(session) : WritingPracticeSummaryResponse
+}
+
+class WritingPracticeJpaMapper <<MapStruct>> {
+  +toEntity(session) : WritingPracticeSessionEntity
+  +toDomain(sessionEntity, sentenceEntities, vocabEntities) : WritingPracticeSession
+}
+
+WritingPracticeSession *-- "1..*" WritingSentencePair
+WritingPracticeSession *-- "1..*" WritingVocabularyUsage
+WritingPracticePolicy ..> FlashCardReview
+WritingPracticeSession ..> FetchVocabularyFlashcardReviewsApi
+WritingPracticeSession ..> FetchPrivateVocabularyApi
+WritingPracticeSession ..> WritingPracticeLlmApi
+WritingPracticeSession ..> WritingPracticeRepo
+TopicGenerationPrompt ..> Vocabulary
+BilingualParagraphPrompt ..> Vocabulary
+WritingPracticeApiMapper ..> WritingPracticeSessionResponse
+WritingPracticeApiMapper ..> WritingPracticeSummaryResponse
+WritingPracticeJpaMapper ..> WritingPracticeSessionEntity
+WritingPracticeJpaMapper ..> WritingSentencePairEntity
+WritingPracticeJpaMapper ..> WritingVocabularyRefEntity
+WritingPracticeSessionEntity *-- WritingSentencePairEntity
+WritingPracticeSessionEntity *-- WritingVocabularyRefEntity
+
+note right of WritingPracticeLlmApi
+Three-stage LLM flow:
+1. pick one new topic
+2. produce EN paragraph + DE translation
+3. split into 1:1 aligned sentence pairs
+end note
+
+note right of WritingPracticeSession
+Session now also owns learner submission state.
+Frontend can branch on:
+- submitted = false -> editing mode
+- submitted = true  -> submitted/review mode
+end note
+
+note right of FlashCardReview
+Only reversed flashcards are eligible
+for writing topic generation and session vocab.
+Fetched session flashcards are also shown
+in reversed orientation.
+end note
+
+note right of TopicGenerationPrompt
+Prompt includes:
+- selected reversed vocabulary cards
+- recent writing topics to avoid repetition
+end note
+
+note bottom of WritingPracticeApiMapper
+Boundary mapping uses MapStruct.
+Service hydrates reversed flashcards first,
+then mapper builds final session response once.
+end note
+
+@enduml
