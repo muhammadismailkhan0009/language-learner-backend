@@ -444,29 +444,35 @@ public final class PromptsGenerator {
       List<WritingPracticeVocabularySeed> vocabulary,
       String englishParagraph,
       String germanParagraph) {
+
     String vocabList = formatWritingVocabulary(vocabulary);
 
     return """
+        You are analyzing which learner vocabulary items actually appear in a German paragraph.
+
         You are given:
-        1. a learner vocabulary list (German surface form + translation)
-        2. an English paragraph
-        3. a German paragraph expressing the same meaning
+        1. A learner vocabulary list (German surface form + translation)
+        2. An English paragraph
+        3. A German paragraph expressing the same meaning
 
         Goal:
-        Return ONLY the vocabulary surface forms from the provided list that are actually used
-        in the generated content.
+        Return ONLY the vocabulary surface forms from the provided list that actually appear
+        in the German paragraph.
 
         Matching Rules:
-        - Match against the provided German vocabulary list only.
-        - A vocabulary item counts as used if its meaning appears in the German paragraph,
-          including natural inflected forms such as plural nouns, declined adjectives,
-          or conjugated verbs.
+        - Match ONLY against the provided German vocabulary list.
+        - A vocabulary item counts as used if the German paragraph contains
+        that word or any of its natural inflected forms (e.g., verb conjugations,
+        plural nouns, declined adjectives).
+        - Do NOT match based on meaning or synonyms.
+        - The word (or its inflected form) must actually appear in the German paragraph.
         - Prefer evidence from the German paragraph.
-        - Use the English paragraph only to disambiguate meaning when necessary.
-        - Return the exact `surface` values from the provided list.
+        - Use the English paragraph only to disambiguate meaning if necessary.
+
+        Output Rules:
+        - The returned values must exactly match the `surface` entries from the list.
         - Do NOT invent new values.
         - Do NOT return translations.
-        - If none are used, return an empty list.
 
         Learner Vocabulary (German - translation):
         %s
@@ -476,50 +482,7 @@ public final class PromptsGenerator {
 
         German paragraph:
         %s
-        """.formatted(vocabpublic static String writingUsedVocabularySelection(
-          List<WritingPracticeVocabularySeed> vocabulary,
-          String englishParagraph,
-          String germanParagraph) {
-    
-        String vocabList = formatWritingVocabulary(vocabulary);
-    
-        return """
-    You are analyzing which learner vocabulary items actually appear in a German paragraph.
-    
-    You are given:
-    1. A learner vocabulary list (German surface form + translation)
-    2. An English paragraph
-    3. A German paragraph expressing the same meaning
-    
-    Goal:
-    Return ONLY the vocabulary surface forms from the provided list that actually appear
-    in the German paragraph.
-    
-    Matching Rules:
-    - Match ONLY against the provided German vocabulary list.
-    - A vocabulary item counts as used if the German paragraph contains
-      that word or any of its natural inflected forms (e.g., verb conjugations,
-      plural nouns, declined adjectives).
-    - Do NOT match based on meaning or synonyms.
-    - The word (or its inflected form) must actually appear in the German paragraph.
-    - Prefer evidence from the German paragraph.
-    - Use the English paragraph only to disambiguate meaning if necessary.
-    
-    Output Rules:
-    - The returned values must exactly match the `surface` entries from the list.
-    - Do NOT invent new values.
-    - Do NOT return translations.
-        
-    Learner Vocabulary (German - translation):
-    %s
-    
-    English paragraph:
-    %s
-    
-    German paragraph:
-    %s
-    """.formatted(vocabList, englishParagraph, germanParagraph);
-    }List, englishParagraph, germanParagraph);
+        """.formatted(vocabList, englishParagraph, germanParagraph);
   }
 
   public static String writingSentencePairSplit(String englishParagraph, String germanParagraph) {
