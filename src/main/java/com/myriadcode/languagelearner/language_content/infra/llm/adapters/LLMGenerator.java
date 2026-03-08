@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Wri
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
+import com.myriadcode.languagelearner.language_content.application.ports.WritingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -121,6 +122,16 @@ public class LLMGenerator implements LLMPort {
         var prompt = PromptsGenerator.writingBilingualContent(topic, vocabulary, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingBilingualContent>() {
+        });
+    }
+
+    @Override
+    public WritingUsedVocabularySelection identifyUsedWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
+                                                                        String englishParagraph,
+                                                                        String germanParagraph) {
+        var prompt = PromptsGenerator.writingUsedVocabularySelection(vocabulary, englishParagraph, germanParagraph);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingUsedVocabularySelection>() {
         });
     }
 

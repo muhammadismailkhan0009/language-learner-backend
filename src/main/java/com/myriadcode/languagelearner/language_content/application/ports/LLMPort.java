@@ -38,6 +38,10 @@ public interface LLMPort {
                                                             List<WritingPracticeVocabularySeed> vocabulary,
                                                             String difficultyLevel);
 
+    WritingUsedVocabularySelection identifyUsedWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
+                                                                 String englishParagraph,
+                                                                 String germanParagraph);
+
     WritingSentencePairSplit splitWritingContentIntoSentencePairs(String englishParagraph,
                                                                   String germanParagraph);
 

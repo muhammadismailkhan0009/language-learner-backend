@@ -12,6 +12,10 @@ public interface WritingPracticeLlmApi {
                                                              List<WritingPracticeVocabularySeed> vocabulary,
                                                              String difficultyLevel);
 
+    List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
+                                        String englishParagraph,
+                                        String germanParagraph);
+
     List<WritingPracticeSentencePairSeed> splitIntoSentencePairs(String englishParagraph,
                                                                  String germanParagraph);
 }

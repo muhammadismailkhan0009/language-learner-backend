@@ -24,8 +24,10 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,19 +88,14 @@ public class WritingPracticeService {
         var bilingualContent = writingPracticeLlmApi.generateBilingualContent(topic, selectedVocab, DIFFICULTY_LEVEL);
         var englishParagraph = sanitizeParagraph(bilingualContent.englishParagraph());
         var germanParagraph = sanitizeParagraph(bilingualContent.germanParagraph());
+        var usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, englishParagraph, germanParagraph);
         var sentencePairs = buildSentencePairs(
                 writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
                 englishParagraph,
                 germanParagraph
         );
 
-        var usages = selected.stream()
-                .map(candidate -> new WritingVocabularyUsage(
-                        new WritingVocabularyUsage.WritingVocabularyUsageId(UUID.randomUUID().toString()),
-                        candidate.flashCardId(),
-                        candidate.vocabularyId()
-                ))
-                .toList();
+        var usages = buildUsages(selected, vocabRecords, usedVocabularySurfaces);
 
         var session = new WritingPracticeSession(
                 new WritingPracticeSession.WritingPracticeSessionId(UUID.randomUUID().toString()),
@@ -184,6 +181,25 @@ public class WritingPracticeService {
         );
     }
 
+    private List<WritingVocabularyUsage> buildUsages(List<WritingPracticeCandidate> selected,
+                                                     Map<String, PrivateVocabularyRecord> vocabRecords,
+                                                     Set<String> usedVocabularySurfaces) {
+        if (selected == null || selected.isEmpty() || usedVocabularySurfaces.isEmpty()) {
+            return List.of();
+        }
+        return selected.stream()
+                .filter(candidate -> {
+                    var vocab = vocabRecords.get(candidate.vocabularyId());
+                    return vocab != null && usedVocabularySurfaces.contains(normalizeSurface(vocab.surface()));
+                })
+                .map(candidate -> new WritingVocabularyUsage(
+                        new WritingVocabularyUsage.WritingVocabularyUsageId(UUID.randomUUID().toString()),
+                        candidate.flashCardId(),
+                        candidate.vocabularyId()
+                ))
+                .toList();
+    }
+
     private Map<String, PrivateVocabularyRecord> fetchVocabularyRecords(String userId,
                                                                         List<VocabularyFlashcardReviewRecord> flashcards) {
         var vocabIds = flashcards.stream().map(VocabularyFlashcardReviewRecord::vocabularyId).distinct().toList();
@@ -211,6 +227,15 @@ public class WritingPracticeService {
                 .filter(java.util.Objects::nonNull)
                 .sorted(Comparator.comparing(WritingPracticeCandidate::vocabularyCreatedAt))
                 .toList();
+    }
+
+    private Set<String> findUsedVocabularySurfaces(List<WritingPracticeVocabularySeed> selectedVocab,
+                                                   String englishParagraph,
+                                                   String germanParagraph) {
+        return writingPracticeLlmApi.identifyUsedVocabulary(selectedVocab, englishParagraph, germanParagraph).stream()
+                .map(this::normalizeSurface)
+                .filter(surface -> !surface.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private List<WritingSentencePair> buildSentencePairs(List<WritingPracticeSentencePairSeed> pairs,
@@ -246,5 +271,9 @@ public class WritingPracticeService {
 
     private String sanitizeSubmission(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String normalizeSurface(String value) {
+        return value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

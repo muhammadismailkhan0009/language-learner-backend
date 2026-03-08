@@ -99,6 +99,8 @@ class WritingPracticeServiceOrchestratorTests {
         when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of("Old topic")), eq("B1"))).thenReturn("");
         when(writingPracticeLlmApi.generateBilingualContent(eq("General writing practice"), any(), eq("B1")))
                 .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
+        when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
+                .thenReturn(List.of("surface-v-1"));
         when(writingPracticeLlmApi.splitIntoSentencePairs("English paragraph.", "Deutscher Absatz."))
                 .thenReturn(List.of(new WritingPracticeSentencePairSeed("English paragraph.", "Deutscher Absatz.")));
 
@@ -106,6 +108,7 @@ class WritingPracticeServiceOrchestratorTests {
 
         verify(writingPracticeLlmApi).selectTopicForWriting(any(), eq(List.of("Old topic")), eq("B1"));
         verify(writingPracticeLlmApi).generateBilingualContent(eq("General writing practice"), any(), eq("B1"));
+        verify(writingPracticeLlmApi).identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz."));
         verify(writingPracticeRepo).save(any(WritingPracticeSession.class));
     }
 

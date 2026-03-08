@@ -38,6 +38,20 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     }
 
     @Override
+    public List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
+                                               String englishParagraph,
+                                               String germanParagraph) {
+        var result = llmPort.identifyUsedWritingVocabulary(vocabulary, englishParagraph, germanParagraph);
+        if (result == null || result.usedSurfaces() == null) {
+            return List.of();
+        }
+        return result.usedSurfaces().stream()
+                .filter(surface -> surface != null && !surface.isBlank())
+                .map(String::trim)
+                .toList();
+    }
+
+    @Override
     public List<WritingPracticeSentencePairSeed> splitIntoSentencePairs(String englishParagraph,
                                                                         String germanParagraph) {
         var result = llmPort.splitWritingContentIntoSentencePairs(englishParagraph, germanParagraph);

@@ -60,6 +60,7 @@ class WritingPracticeSessionFlowTests {
         stubWritingPracticeLlmApi.lastSeeds = List.of();
         stubWritingPracticeLlmApi.lastTopic = null;
         stubWritingPracticeLlmApi.lastPreviousTopics = List.of();
+        stubWritingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
     }
@@ -146,6 +147,22 @@ class WritingPracticeSessionFlowTests {
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(8);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(4);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("createSession: attaches only flashcards whose vocabulary was used in generated content")
+    void createSessionAttachesOnlyUsedVocabulary() {
+        stubWritingPracticeLlmApi.usedSurfacesOverride = List.of("surface-v-review-1", "surface-v-learning-1");
+
+        writingPracticeService.createSession("user-1");
+
+        var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
+
+        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(20);
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getVocabularyId())
+                .containsExactlyInAnyOrder("v-review-1", "v-learning-1");
     }
 
     @Test
@@ -253,6 +270,7 @@ class WritingPracticeSessionFlowTests {
         private List<WritingPracticeVocabularySeed> lastSeeds = List.of();
         private String lastTopic;
         private List<String> lastPreviousTopics = List.of();
+        private List<String> usedSurfacesOverride;
 
         @Override
         public String selectTopicForWriting(List<WritingPracticeVocabularySeed> vocabulary, List<String> previousTopics, String difficultyLevel) {
@@ -269,6 +287,16 @@ class WritingPracticeSessionFlowTests {
                     "I write about my daily routine.",
                     "Ich schreibe ueber meinen Alltag."
             );
+        }
+
+        @Override
+        public List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
+                                                   String englishParagraph,
+                                                   String germanParagraph) {
+            if (usedSurfacesOverride != null) {
+                return usedSurfacesOverride;
+            }
+            return vocabulary.stream().map(WritingPracticeVocabularySeed::surface).toList();
         }
 
         @Override
