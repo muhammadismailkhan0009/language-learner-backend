@@ -37,6 +37,7 @@ import java.util.stream.Collectors;
 public class ReadingPracticeService {
 
     private static final String DIFFICULTY_LEVEL = "B1";
+    private static final int RECENT_TOPIC_LIMIT = 10;
     private static final ReadingPracticeApiMapper READING_PRACTICE_API_MAPPER = ReadingPracticeApiMapper.INSTANCE;
 
     private final ReadingPracticeRepo readingPracticeRepo;
@@ -80,7 +81,8 @@ public class ReadingPracticeService {
                 .map(record -> new ReadingPracticeVocabularySeed(record.surface(), record.translation()))
                 .toList();
 
-        var topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, DIFFICULTY_LEVEL);
+        var previousTopics = readingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
+        var topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
         if (topic == null || topic.isBlank()) {
             topic = "General practice";
         }

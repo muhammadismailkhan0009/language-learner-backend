@@ -234,9 +234,13 @@ public final class PromptsGenerator {
 
   public static String readingTopicSelection(
       List<ReadingPracticeVocabularySeed> vocabulary,
+      List<String> previousTopics,
       String difficultyLevel) {
 
     String vocabList = formatVocabulary(vocabulary);
+    String topics = previousTopics == null || previousTopics.isEmpty()
+        ? "(none)"
+        : String.join("\n", previousTopics);
 
     return """
         Act as an expert German language teacher. You select the best single topic for a German reading exercise.
@@ -249,16 +253,21 @@ public final class PromptsGenerator {
         Rules:
         - Return EXACTLY 1 topic.
         - The topic must be a SHORT to MEDIUM PHRASE (4–20 words).
+        - The topic must describe a real-life situation or experience.
         - Do NOT write a full sentence.
         - The topic must be suitable for a short to medium reading exercise.
+        - Avoid repeating or closely paraphrasing recent topics.
 
         Steps:
         1- Create 5 topics as candidate.
         2- Decide the most suitable topic among candidates.
 
+        Recent topics to avoid:
+        %s
+
         Learner Vocabulary (German - translation):
         %s
-        """.formatted(difficultyLevel, vocabList);
+        """.formatted(difficultyLevel, topics, vocabList);
   }
 
   public static String readingContentParagraphs(

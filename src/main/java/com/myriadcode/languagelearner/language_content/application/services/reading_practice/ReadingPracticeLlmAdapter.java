@@ -19,8 +19,9 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
 
     @Override
     public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                               List<String> previousTopics,
                                                String difficultyLevel) {
-        return llmPort.selectReadingTopicForTextGeneration(vocabulary, difficultyLevel).topic();
+        return llmPort.selectReadingTopicForTextGeneration(vocabulary, previousTopics, difficultyLevel).topic();
     }
 
     @Override

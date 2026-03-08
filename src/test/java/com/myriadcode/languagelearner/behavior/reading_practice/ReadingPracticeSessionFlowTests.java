@@ -56,6 +56,7 @@ class ReadingPracticeSessionFlowTests {
         readingPracticeSessionJpaRepo.deleteAll();
         stubReadingPracticeLlmApi.lastSeeds = List.of();
         stubReadingPracticeLlmApi.lastTopic = null;
+        stubReadingPracticeLlmApi.lastPreviousTopics = List.of();
         stubReadingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
@@ -77,6 +78,15 @@ class ReadingPracticeSessionFlowTests {
         assertThat(session.getParagraphs().getFirst().getSentences()).hasSize(2);
         assertThat(session.getVocabularyUsages()).hasSize(10);
         assertThat(stubReadingPracticeLlmApi.lastSeeds).hasSize(10);
+    }
+
+    @Test
+    @DisplayName("createSession: passes recent topics to reading topic selection stage")
+    void createSessionPassesRecentTopics() {
+        readingPracticeService.createSession("user-1");
+        readingPracticeService.createSession("user-1");
+
+        assertThat(stubReadingPracticeLlmApi.lastPreviousTopics).isNotEmpty();
     }
 
     @Test
@@ -272,12 +282,15 @@ class ReadingPracticeSessionFlowTests {
 
         private List<ReadingPracticeVocabularySeed> lastSeeds = List.of();
         private String lastTopic;
+        private List<String> lastPreviousTopics = List.of();
         private List<String> usedSurfacesOverride;
 
         @Override
         public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                   List<String> previousTopics,
                                                    String difficultyLevel) {
             this.lastSeeds = vocabulary;
+            this.lastPreviousTopics = previousTopics;
             return "topic-1";
         }
 

@@ -13,6 +13,8 @@ public interface ReadingPracticeRepo {
 
     List<ReadingPracticeSession> findAllByUserId(String userId);
 
+    List<String> findRecentTopicsByUserId(String userId, int limit);
+
     void deleteByIdAndUserId(String sessionId, String userId);
 
     void detachFlashcard(String userId, String sessionId, String flashcardId);

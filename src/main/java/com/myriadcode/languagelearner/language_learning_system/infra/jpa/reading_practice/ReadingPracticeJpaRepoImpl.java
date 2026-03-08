@@ -8,6 +8,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.reading_pr
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeSessionEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.mappers.ReadingPracticeJpaMapper;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.repos.ReadingPracticeSessionJpaRepo;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,6 +83,14 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
     public List<ReadingPracticeSession> findAllByUserId(String userId) {
         return readingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDomainSummary)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> findRecentTopicsByUserId(String userId, int limit) {
+        return readingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
+                .map(ReadingPracticeSessionEntity::getTopic)
                 .toList();
     }
 

@@ -24,6 +24,7 @@ public interface LLMPort {
                                                   List<Sentence.SentenceData> previousSentences);
 
     ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                              List<String> previousTopics,
                                                               String difficultyLevel);
 
     ReadingContent generateReadingContent(String topic,

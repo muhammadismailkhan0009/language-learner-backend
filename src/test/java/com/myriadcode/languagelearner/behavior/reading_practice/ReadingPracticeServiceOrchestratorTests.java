@@ -63,7 +63,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 .hasMessage("No vocabulary flashcards found for user");
 
         verify(privateVocabularyApi, never()).getVocabularyRecords(any(), any());
-        verify(readingPracticeLlmApi, never()).selectTopicForTextGeneration(any(), any());
+        verify(readingPracticeLlmApi, never()).selectTopicForTextGeneration(any(), any(), any());
         verify(readingPracticeRepo, never()).save(any());
     }
 
@@ -97,7 +97,8 @@ class ReadingPracticeServiceOrchestratorTests {
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
-        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq("B1"))).thenReturn("");
+        when(readingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of("Old topic"));
+        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq("B1"))).thenReturn("");
         when(readingPracticeLlmApi.generateReadingContent(eq("General practice"), any(), eq("B1")))
                 .thenReturn(new ReadingPracticeReadingContent(List.of(
                         new ReadingPracticeReadingContent.Paragraph(
@@ -110,7 +111,7 @@ class ReadingPracticeServiceOrchestratorTests {
 
         service.createSession("user-1");
 
-        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq("B1"));
+        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq("B1"));
         verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq("B1"));
         verify(readingPracticeLlmApi).identifyUsedVocabulary(any(), eq("fallback reading"));
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));

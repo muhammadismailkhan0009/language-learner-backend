@@ -77,8 +77,9 @@ public class LLMGenerator implements LLMPort {
 
     @Override
     public ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                     List<String> previousTopics,
                                                                      String difficultyLevel) {
-        var prompt = PromptsGenerator.readingTopicSelection(vocabulary, difficultyLevel);
+        var prompt = PromptsGenerator.readingTopicSelection(vocabulary, previousTopics, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<ReadingTopicSelection>() {
         });
