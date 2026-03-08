@@ -349,30 +349,35 @@ public final class PromptsGenerator {
         : String.join("\n", previousTopics);
 
     return """
-        Act as an expert writing coach for a German learner.
+                Act as an expert writing coach for a German learner.
 
         CEFR level: %s
 
         Goal:
-        Pick exactly one fresh writing topic that fits the learner vocabulary.
+        Pick exactly one fresh writing topic suitable for a short bilingual paragraph.
 
         Rules:
         - Return EXACTLY 1 topic.
-        - The topic must be a SHORT to MEDIUM PHRASE (4-20 words).
+        - The topic must be a SHORT to MEDIUM PHRASE (4–20 words).
         - Do NOT write a full sentence.
+        - The topic must describe a real-life situation or experience.
+        - The topic must allow a natural paragraph to be written.
         - Avoid repeating or closely paraphrasing recent topics.
-        - The topic must naturally support a short English paragraph and its German translation.
+
+        Important Restrictions:
+        - Do NOT generate topics about learning vocabulary, word meanings, grammar, or language explanations.
+        - Do NOT create meta-topics about words or language itself.
 
         Steps:
-        1- Create 5 topics as candidate.
-        2- Decide the most suitable topic among candidates.
+        1. Generate 5 candidate topics internally.
+        2. Choose the most natural and useful topic.
 
         Recent topics to avoid:
         %s
 
         Learner vocabulary (German - translation):
         %s
-        """.formatted(difficultyLevel, topics, vocabList);
+                """.formatted(difficultyLevel, topics, vocabList);
   }
 
   public static String writingBilingualContent(
