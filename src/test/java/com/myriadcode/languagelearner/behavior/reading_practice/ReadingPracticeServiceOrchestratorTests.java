@@ -105,11 +105,14 @@ class ReadingPracticeServiceOrchestratorTests {
                                 List.of("fallback reading")
                         )
                 )));
+        when(readingPracticeLlmApi.identifyUsedVocabulary(any(), eq("fallback reading")))
+                .thenReturn(List.of("surface-v-1"));
 
         service.createSession("user-1");
 
         verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq("B1"));
         verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq("B1"));
+        verify(readingPracticeLlmApi).identifyUsedVocabulary(any(), eq("fallback reading"));
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));
     }
 

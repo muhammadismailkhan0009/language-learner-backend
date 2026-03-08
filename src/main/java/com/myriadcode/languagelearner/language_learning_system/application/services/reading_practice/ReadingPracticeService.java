@@ -24,8 +24,11 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -85,14 +88,9 @@ public class ReadingPracticeService {
         var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
         var paragraphs = buildParagraphs(generated);
         var readingText = joinParagraphs(paragraphs);
+        var usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, readingText);
 
-        var usageRecords = selected.stream()
-                .map(candidate -> new ReadingVocabularyUsage(
-                        new ReadingVocabularyUsage.ReadingVocabularyUsageId(UUID.randomUUID().toString()),
-                        candidate.flashCardId(),
-                        candidate.vocabularyId()
-                ))
-                .toList();
+        var usageRecords = buildUsageRecords(selected, vocabRecords, usedVocabularySurfaces);
 
         var session = new ReadingPracticeSession(
                 new ReadingPracticeSession.ReadingPracticeSessionId(UUID.randomUUID().toString()),
@@ -166,6 +164,32 @@ public class ReadingPracticeService {
         );
     }
 
+    private List<ReadingVocabularyUsage> buildUsageRecords(List<ReadingPracticeCandidate> selected,
+                                                           Map<String, PrivateVocabularyRecord> vocabRecords,
+                                                           Set<String> usedVocabularySurfaces) {
+        if (selected == null || selected.isEmpty() || usedVocabularySurfaces.isEmpty()) {
+            return List.of();
+        }
+        return selected.stream()
+                .filter(candidate -> {
+                    var vocab = vocabRecords.get(candidate.vocabularyId());
+                    return vocab != null && usedVocabularySurfaces.contains(normalizeSurface(vocab.surface()));
+                })
+                .collect(Collectors.toMap(
+                        ReadingPracticeCandidate::flashCardId,
+                        candidate -> new ReadingVocabularyUsage(
+                                new ReadingVocabularyUsage.ReadingVocabularyUsageId(UUID.randomUUID().toString()),
+                                candidate.flashCardId(),
+                                candidate.vocabularyId()
+                        ),
+                        (first, ignored) -> first,
+                        LinkedHashMap::new
+                ))
+                .values()
+                .stream()
+                .toList();
+    }
+
     private List<ReadingPracticeCandidate> buildCandidates(
             List<VocabularyFlashcardReviewRecord> flashcards,
             Map<String, PrivateVocabularyRecord> vocabRecords
@@ -212,6 +236,14 @@ public class ReadingPracticeService {
         );
     }
 
+    private Set<String> findUsedVocabularySurfaces(List<ReadingPracticeVocabularySeed> selectedVocab,
+                                                   String readingText) {
+        return readingPracticeLlmApi.identifyUsedVocabulary(selectedVocab, readingText).stream()
+                .map(this::normalizeSurface)
+                .filter(surface -> !surface.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
     private List<ReadingPracticeParagraph> buildParagraphs(ReadingPracticeReadingContent generated) {
         if (generated == null || generated.paragraphs() == null) {
             return List.of();
@@ -245,5 +277,9 @@ public class ReadingPracticeService {
                 .map(ReadingPracticeParagraph::text)
                 .filter(text -> text != null && !text.isBlank())
                 .collect(Collectors.joining("\n\n"));
+    }
+
+    private String normalizeSurface(String value) {
+        return value == null ? "" : value.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

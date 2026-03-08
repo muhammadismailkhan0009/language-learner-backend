@@ -56,6 +56,7 @@ class ReadingPracticeSessionFlowTests {
         readingPracticeSessionJpaRepo.deleteAll();
         stubReadingPracticeLlmApi.lastSeeds = List.of();
         stubReadingPracticeLlmApi.lastTopic = null;
+        stubReadingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
     }
@@ -136,6 +137,47 @@ class ReadingPracticeSessionFlowTests {
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(4);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(2);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("createSession: attaches only flashcards whose vocabulary was used in generated reading text")
+    void createSessionAttachesOnlyUsedVocabulary() {
+        stubReadingPracticeLlmApi.usedSurfacesOverride = List.of("surface-v-r-1", "surface-v-l-1");
+
+        readingPracticeService.createSession("user-1");
+
+        var persistedId = readingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var persisted = readingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1")
+                .orElseThrow();
+
+        assertThat(stubReadingPracticeLlmApi.lastSeeds).hasSize(10);
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getVocabularyId())
+                .containsExactlyInAnyOrder("v-r-1", "v-l-1");
+    }
+
+    @Test
+    @DisplayName("createSession: does not store duplicate flashcards when used-vocabulary filter returns duplicates")
+    void createSessionDoesNotStoreDuplicateFlashcards() {
+        stubReadingPracticeLlmApi.usedSurfacesOverride = List.of(
+                "surface-v-r-1",
+                "surface-v-r-1",
+                "surface-v-l-1",
+                "surface-v-l-1"
+        );
+
+        readingPracticeService.createSession("user-1");
+
+        var persistedId = readingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var persisted = readingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1")
+                .orElseThrow();
+
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getFlashcardId())
+                .containsExactlyInAnyOrder("r-1", "l-1");
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getFlashcardId())
+                .doesNotHaveDuplicates();
     }
 
     @Test
@@ -230,6 +272,7 @@ class ReadingPracticeSessionFlowTests {
 
         private List<ReadingPracticeVocabularySeed> lastSeeds = List.of();
         private String lastTopic;
+        private List<String> usedSurfacesOverride;
 
         @Override
         public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
@@ -249,6 +292,15 @@ class ReadingPracticeSessionFlowTests {
                             List.of("reading sentence 1", "reading sentence 2")
                     )
             ));
+        }
+
+        @Override
+        public List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                   String readingText) {
+            if (usedSurfacesOverride != null) {
+                return usedSurfacesOverride;
+            }
+            return vocabulary.stream().map(ReadingPracticeVocabularySeed::surface).toList();
         }
     }
 

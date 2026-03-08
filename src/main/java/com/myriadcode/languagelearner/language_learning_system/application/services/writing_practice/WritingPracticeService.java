@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -192,11 +193,18 @@ public class WritingPracticeService {
                     var vocab = vocabRecords.get(candidate.vocabularyId());
                     return vocab != null && usedVocabularySurfaces.contains(normalizeSurface(vocab.surface()));
                 })
-                .map(candidate -> new WritingVocabularyUsage(
-                        new WritingVocabularyUsage.WritingVocabularyUsageId(UUID.randomUUID().toString()),
-                        candidate.flashCardId(),
-                        candidate.vocabularyId()
+                .collect(Collectors.toMap(
+                        WritingPracticeCandidate::flashCardId,
+                        candidate -> new WritingVocabularyUsage(
+                                new WritingVocabularyUsage.WritingVocabularyUsageId(UUID.randomUUID().toString()),
+                                candidate.flashCardId(),
+                                candidate.vocabularyId()
+                        ),
+                        (first, ignored) -> first,
+                        LinkedHashMap::new
                 ))
+                .values()
+                .stream()
                 .toList();
     }
 

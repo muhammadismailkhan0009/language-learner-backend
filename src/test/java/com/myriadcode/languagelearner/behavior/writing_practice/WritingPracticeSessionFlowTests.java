@@ -166,6 +166,29 @@ class WritingPracticeSessionFlowTests {
     }
 
     @Test
+    @DisplayName("createSession: does not store duplicate flashcards when used-vocabulary filter returns duplicates")
+    void createSessionDoesNotStoreDuplicateFlashcards() {
+        stubWritingPracticeLlmApi.usedSurfacesOverride = List.of(
+                "surface-v-review-1",
+                "surface-v-review-1",
+                "surface-v-learning-1",
+                "surface-v-learning-1"
+        );
+
+        writingPracticeService.createSession("user-1");
+
+        var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
+
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getFlashcardId())
+                .containsExactlyInAnyOrder("review-1", "learning-1");
+        assertThat(persisted.getVocabularyUsages())
+                .extracting(usage -> usage.getFlashcardId())
+                .doesNotHaveDuplicates();
+    }
+
+    @Test
     @DisplayName("listSessions: returns only user's sessions in latest-first order")
     void listSessionsReturnsUserScopedLatestFirst() throws InterruptedException {
         writingPracticeService.createSession("user-1");

@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingParagraphSentenceSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingParagraphs;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
@@ -103,6 +104,15 @@ public class LLMGenerator implements LLMPort {
 
         var paragraphList = buildReadingContent(paragraphs, sentenceSplit);
         return new ReadingContent(paragraphList);
+    }
+
+    @Override
+    public ReadingUsedVocabularySelection identifyUsedReadingVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                        String readingText) {
+        var prompt = PromptsGenerator.readingUsedVocabularySelection(vocabulary, readingText);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<ReadingUsedVocabularySelection>() {
+        });
     }
 
     @Override

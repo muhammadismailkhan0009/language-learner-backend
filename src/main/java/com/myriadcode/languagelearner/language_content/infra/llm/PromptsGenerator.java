@@ -326,6 +326,38 @@ public final class PromptsGenerator {
                 """.formatted(difficultyLevel, topic, vocabList);
   }
 
+  public static String readingUsedVocabularySelection(
+      List<ReadingPracticeVocabularySeed> vocabulary,
+      String readingText) {
+    String vocabList = formatVocabulary(vocabulary);
+
+    return """
+        You are given:
+        1. a learner vocabulary list (German surface form + translation)
+        2. a German reading text
+
+        Goal:
+        Return ONLY the vocabulary surface forms from the provided list that are actually used
+        in the reading text.
+
+        Matching Rules:
+        - Match against the provided German vocabulary list only.
+        - A vocabulary item counts as used if it appears in the reading text,
+          including natural inflected forms such as plural nouns, declined adjectives,
+          or conjugated verbs.
+        - Return the exact `surface` values from the provided list.
+        - Do NOT invent new values.
+        - Do NOT return translations.
+        - If none are used, return an empty list.
+
+        Learner Vocabulary (German - translation):
+        %s
+
+        Reading text:
+        %s
+        """.formatted(vocabList, readingText);
+  }
+
   private static String formatWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary) {
     StringBuilder builder = new StringBuilder();
 

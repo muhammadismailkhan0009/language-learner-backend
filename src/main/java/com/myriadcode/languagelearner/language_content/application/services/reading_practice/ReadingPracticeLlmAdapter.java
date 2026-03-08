@@ -39,4 +39,17 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
                 .toList();
         return new ReadingPracticeReadingContent(paragraphs);
     }
+
+    @Override
+    public List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
+                                               String readingText) {
+        var result = llmPort.identifyUsedReadingVocabulary(vocabulary, readingText);
+        if (result == null || result.usedSurfaces() == null) {
+            return List.of();
+        }
+        return result.usedSurfaces().stream()
+                .filter(surface -> surface != null && !surface.isBlank())
+                .map(String::trim)
+                .toList();
+    }
 }

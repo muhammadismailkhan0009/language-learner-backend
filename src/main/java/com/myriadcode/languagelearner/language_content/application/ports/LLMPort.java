@@ -30,6 +30,9 @@ public interface LLMPort {
                                           List<ReadingPracticeVocabularySeed> vocabulary,
                                           String difficultyLevel);
 
+    ReadingUsedVocabularySelection identifyUsedReadingVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                 String readingText);
+
     WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary,
                                                               List<String> previousTopics,
                                                               String difficultyLevel);
