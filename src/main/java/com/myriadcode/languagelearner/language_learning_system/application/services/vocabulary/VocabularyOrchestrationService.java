@@ -12,6 +12,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.util.List;
 
 @Service
@@ -20,18 +21,26 @@ public class VocabularyOrchestrationService {
     private static final VocabularyApiMapper VOCABULARY_API_MAPPER = VocabularyApiMapper.INSTANCE;
     private final VocabularyRepo vocabularyRepo;
     private final VocabularyFlashCardPublisher vocabularyFlashCardPublisher;
+    private final Clock clock;
 
     @Autowired
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
                                           VocabularyFlashCardPublisher vocabularyFlashCardPublisher) {
+        this(vocabularyRepo, vocabularyFlashCardPublisher, Clock.systemUTC());
+    }
+
+    public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
+                                          VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
+                                          Clock clock) {
         this.vocabularyRepo = vocabularyRepo;
         this.vocabularyFlashCardPublisher = vocabularyFlashCardPublisher;
+        this.clock = clock;
     }
 
     // Backward-compatible constructor for unit tests with fake repos.
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo) {
         this(vocabularyRepo, new VocabularyFlashCardPublisher(domainEvent -> {
-        }));
+        }), Clock.systemUTC());
     }
 
     public VocabularyResponse addVocabulary(String userId, AddVocabularyRequest request) {
@@ -75,7 +84,7 @@ public class VocabularyOrchestrationService {
     }
 
     public List<VocabularyResponse> fetchVocabularies(String userId) {
-        return vocabularyRepo.findByUserId(userId).stream()
+        return VocabularyListingArranger.arrange(vocabularyRepo.findByUserId(userId), clock.instant()).stream()
                 .map(VOCABULARY_API_MAPPER::toResponse)
                 .toList();
     }
