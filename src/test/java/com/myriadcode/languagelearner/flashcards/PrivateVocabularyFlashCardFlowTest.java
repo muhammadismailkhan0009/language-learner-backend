@@ -128,11 +128,11 @@ public class PrivateVocabularyFlashCardFlowTest {
     }
 
     @Test
-    @DisplayName("Study fetch: a shown private vocabulary flashcard waits for five other cards before repeating")
-    void studyFetchWaitsForFiveOtherFlashcardsBeforeRepeating() {
-        var userId = "user-vocab-cards-cooldown";
+    @DisplayName("Study fetch: a vocabulary card and its reverse wait for five other cards before repeating")
+    void studyFetchWaitsForFiveOtherFlashcardsBeforeShowingSameVocabularyAgain() {
+        var userId = "user-vocab-cards-cooldown-pair";
 
-        for (int index = 1; index <= 3; index++) {
+        for (int index = 1; index <= 6; index++) {
             vocabularyOrchestrationService.addVocabulary(
                     userId,
                     new AddVocabularyRequest(
@@ -148,17 +148,55 @@ public class PrivateVocabularyFlashCardFlowTest {
             );
         }
 
-        var firstSixIds = new java.util.ArrayList<String>();
+        var firstSixVocabularyKeys = new java.util.ArrayList<String>();
+        var firstSixDirections = new java.util.ArrayList<Boolean>();
         for (int fetchNumber = 0; fetchNumber < 6; fetchNumber++) {
             var fetched = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
             assertThat(fetched).hasSize(1);
-            firstSixIds.add(fetched.getFirst().id());
+            firstSixVocabularyKeys.add(vocabularyKey(fetched.getFirst()));
+            firstSixDirections.add(fetched.getFirst().isReversed());
         }
 
         var seventhFetch = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
 
-        assertThat(firstSixIds).doesNotHaveDuplicates();
+        assertThat(firstSixVocabularyKeys).doesNotHaveDuplicates();
         assertThat(seventhFetch).hasSize(1);
-        assertThat(seventhFetch.getFirst().id()).isEqualTo(firstSixIds.getFirst());
+        assertThat(vocabularyKey(seventhFetch.getFirst())).isEqualTo(firstSixVocabularyKeys.getFirst());
+        assertThat(seventhFetch.getFirst().isReversed()).isNotEqualTo(firstSixDirections.getFirst());
+    }
+
+    @Test
+    @DisplayName("Study fetch: when only one vocabulary entry is available, study continues and flips direction instead of going empty")
+    void studyFetchFallsBackToReturnedPoolWhenCooldownWouldEmptyIt() {
+        var userId = "user-vocab-cards-single-pool";
+
+        vocabularyOrchestrationService.addVocabulary(
+                userId,
+                new AddVocabularyRequest(
+                        "lernen",
+                        "to learn",
+                        Vocabulary.EntryKind.WORD,
+                        null,
+                        List.of(new AddVocabularyRequest.ExampleSentenceRequest(
+                                "Ich lerne Deutsch.",
+                                "I am learning German."
+                        ))
+                )
+        );
+
+        var firstFetch = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
+        var secondFetch = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
+
+        assertThat(firstFetch).hasSize(1);
+        assertThat(secondFetch).hasSize(1);
+        assertThat(vocabularyKey(secondFetch.getFirst())).isEqualTo(vocabularyKey(firstFetch.getFirst()));
+        assertThat(secondFetch.getFirst().isReversed()).isNotEqualTo(firstFetch.getFirst().isReversed());
+    }
+
+    private static String vocabularyKey(com.myriadcode.languagelearner.flashcards_study.domain.views.VocabularyFlashCardView card) {
+        return java.util.stream.Stream.of(card.front().wordOrChunk(), card.back().wordOrChunk())
+                .sorted()
+                .reduce((left, right) -> left + "|" + right)
+                .orElseThrow();
     }
 }

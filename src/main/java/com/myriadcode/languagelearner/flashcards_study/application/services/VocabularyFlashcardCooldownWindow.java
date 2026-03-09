@@ -4,8 +4,11 @@ import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardRe
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,9 +27,7 @@ class VocabularyFlashcardCooldownWindow {
         if (cards == null || cards.isEmpty()) {
             return;
         }
-        stateFor(userId).recordShown(cards.stream()
-                .map(card -> card.id().id())
-                .toList());
+        stateFor(userId).recordShownCards(cards);
     }
 
     private UserCooldownState stateFor(String userId) {
@@ -38,12 +39,50 @@ class VocabularyFlashcardCooldownWindow {
         private final Set<String> recentCardIdSet = new HashSet<>();
 
         synchronized List<FlashCardReview> filterEligible(List<FlashCardReview> cards) {
-            return cards.stream()
-                    .filter(card -> !recentCardIdSet.contains(card.id().id()))
+            var cooldownPreferred = cards.stream()
+                    .filter(card -> !recentCardIdSet.contains(card.contentId().id()))
                     .toList();
+            return prioritizeDirections(cooldownPreferred.isEmpty() ? cards : cooldownPreferred);
         }
 
-        synchronized void recordShown(List<String> cardIds) {
+        private List<FlashCardReview> prioritizeDirections(List<FlashCardReview> cards) {
+            if (cards.isEmpty()) {
+                return List.of();
+            }
+
+            var prioritized = new ArrayList<FlashCardReview>();
+            var cardsByVocabularyId = new HashMap<String, List<FlashCardReview>>();
+            for (FlashCardReview card : cards) {
+                cardsByVocabularyId.computeIfAbsent(card.contentId().id(), ignored -> new ArrayList<>())
+                        .add(card);
+            }
+
+            for (Map.Entry<String, List<FlashCardReview>> entry : cardsByVocabularyId.entrySet()) {
+                var vocabularyId = entry.getKey();
+                var options = entry.getValue();
+                var lastShownDirection = lastShownDirectionByVocabularyId.get(vocabularyId);
+
+                if (lastShownDirection == null) {
+                    prioritized.addAll(options);
+                    continue;
+                }
+
+                var oppositeDirectionCards = options.stream()
+                        .filter(card -> card.isReversed() != lastShownDirection)
+                        .toList();
+
+                if (!oppositeDirectionCards.isEmpty()) {
+                    prioritized.addAll(oppositeDirectionCards);
+                    continue;
+                }
+
+                prioritized.addAll(options);
+            }
+
+            return List.copyOf(prioritized);
+        }
+
+        synchronized void recordShownVocabularyIds(List<String> cardIds) {
             for (String cardId : cardIds) {
                 if (recentCardIdSet.remove(cardId)) {
                     recentCardIds.remove(cardId);
@@ -58,5 +97,16 @@ class VocabularyFlashcardCooldownWindow {
                 }
             }
         }
+
+        synchronized void recordShownCards(List<FlashCardReview> cards) {
+            for (FlashCardReview card : cards) {
+                lastShownDirectionByVocabularyId.put(card.contentId().id(), card.isReversed());
+            }
+            recordShownVocabularyIds(cards.stream()
+                    .map(card -> card.contentId().id())
+                    .toList());
+        }
+
+        private final Map<String, Boolean> lastShownDirectionByVocabularyId = new HashMap<>();
     }
 }
