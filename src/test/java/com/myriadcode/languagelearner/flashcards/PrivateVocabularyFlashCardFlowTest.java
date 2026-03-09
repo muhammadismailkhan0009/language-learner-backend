@@ -126,4 +126,39 @@ public class PrivateVocabularyFlashCardFlowTest {
                         tuple("definitely", "auf jeden Fall", List.of("Auf jeden Fall komme ich."), true)
                 );
     }
+
+    @Test
+    @DisplayName("Study fetch: a shown private vocabulary flashcard waits for five other cards before repeating")
+    void studyFetchWaitsForFiveOtherFlashcardsBeforeRepeating() {
+        var userId = "user-vocab-cards-cooldown";
+
+        for (int index = 1; index <= 3; index++) {
+            vocabularyOrchestrationService.addVocabulary(
+                    userId,
+                    new AddVocabularyRequest(
+                            "word-" + index,
+                            "translation-" + index,
+                            Vocabulary.EntryKind.WORD,
+                            null,
+                            List.of(new AddVocabularyRequest.ExampleSentenceRequest(
+                                    "Sentence " + index,
+                                    "Translation " + index
+                            ))
+                    )
+            );
+        }
+
+        var firstSixIds = new java.util.ArrayList<String>();
+        for (int fetchNumber = 0; fetchNumber < 6; fetchNumber++) {
+            var fetched = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
+            assertThat(fetched).hasSize(1);
+            firstSixIds.add(fetched.getFirst().id());
+        }
+
+        var seventhFetch = cardStudyService.getNextPrivateVocabularyCardsToStudy(userId, 1);
+
+        assertThat(firstSixIds).doesNotHaveDuplicates();
+        assertThat(seventhFetch).hasSize(1);
+        assertThat(seventhFetch.getFirst().id()).isEqualTo(firstSixIds.getFirst());
+    }
 }

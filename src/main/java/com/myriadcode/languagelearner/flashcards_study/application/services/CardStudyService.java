@@ -37,6 +37,7 @@ public class CardStudyService {
     private final FlashCardRepo flashCardRepo;
     private final FetchLanguageContentApi fetchLanguageContentApi;
     private final FetchPrivateVocabularyApi fetchPrivateVocabularyApi;
+    private final VocabularyFlashcardCooldownWindow vocabularyFlashcardCooldownWindow;
 
     private final RevisionSession revisionSession = new  RevisionSession();
 
@@ -181,14 +182,24 @@ public class CardStudyService {
         var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId);
         if (cards.isEmpty()) return List.of();
 
-        var randomCards = FlashCardAlgorithmService.getRandomCards(cards, 3);
+        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
+        if (eligibleCards.isEmpty()) return List.of();
+
+        var randomCards = FlashCardAlgorithmService.getRandomCards(eligibleCards, 3);
         if (randomCards.isEmpty()) return List.of();
 
-        return randomCards.stream()
+        var selectedCards = randomCards.stream()
                 .findAny()
-                .map(review -> toVocabularyFlashCardData(review, fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)))
-                .map(data -> toVocabularyFlashCardView(data, false))
                 .stream()
+                .toList();
+        vocabularyFlashcardCooldownWindow.recordShown(userId, selectedCards);
+
+        return selectedCards.stream()
+                .map(review -> toVocabularyFlashCardData(
+                        review,
+                        fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)
+                ))
+                .map(data -> toVocabularyFlashCardView(data, false))
                 .toList();
     }
 
@@ -196,12 +207,16 @@ public class CardStudyService {
         var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId);
         if (cards.isEmpty()) return List.of();
 
-        var revisionCards = FlashCardAlgorithmService.getCardsForRevision(cards, revisionSession, count);
+        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
+        if (eligibleCards.isEmpty()) return List.of();
+
+        var revisionCards = FlashCardAlgorithmService.getCardsForRevision(eligibleCards, revisionSession, count);
         if (revisionCards.isEmpty()) return List.of();
 
         for (var card : revisionCards) {
             revisionSession.markShown(card.id().id());
         }
+        vocabularyFlashcardCooldownWindow.recordShown(userId, revisionCards);
 
         return revisionCards.stream()
                 .map(review -> toVocabularyFlashCardData(review, fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)))
