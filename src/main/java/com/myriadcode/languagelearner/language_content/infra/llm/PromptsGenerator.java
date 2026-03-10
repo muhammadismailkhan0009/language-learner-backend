@@ -824,12 +824,14 @@ public final class PromptsGenerator {
                 - The hint must not contain the German word.
                 - The hint must reflect the precise sense of the word in this sentence.
 
-                Sentence constraints
+                German Sentence constraints
                 - Natural everyday German.
-                - 6–14 words.
-                - Prefer placing the blank in the middle of the sentence rather than the end.
+                - Word limit is 6–14 words per sentence.
+                
+                Sentence Complexity Constraints
+                - Try to add those sentences where the meaning of word can be infered from sentence. But it is a soft constraint, and must never disturb the natural german.
+                - Use every day, common and easy words when building a sentencce.
 
-                let me add my wording a bit:
 
                 Grammar variation
                 Use a wide range of natural German grammar when forming the sentence.
