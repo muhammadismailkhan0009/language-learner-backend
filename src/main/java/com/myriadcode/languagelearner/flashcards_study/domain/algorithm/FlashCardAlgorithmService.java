@@ -98,11 +98,8 @@ public class FlashCardAlgorithmService {
             }
         }
 
-        // 5️⃣ Final fallback: if every eligible card is inside the recent-review window,
-        // allow the pool to continue instead of going empty.
-        var fallback = eligible.stream()
-                .filter(r -> !r.id().id().equals(session.lastShown()))
-                .toList();
+        // 5️⃣ Final fallback
+        var fallback = eligible.stream().toList();
         if (fallback.isEmpty()) return List.of();
 
         return pickRandom(fallback, count);
