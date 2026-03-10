@@ -16,4 +16,6 @@ public interface VocabularyRepo {
     List<Vocabulary> findByUserId(String userId);
 
     List<Vocabulary> findByIds(List<String> vocabularyIds);
+
+    Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze);
 }

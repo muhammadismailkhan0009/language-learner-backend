@@ -88,6 +88,7 @@ public class VocabularyJpaRepoBoundaryTests {
                                 "Definitely yes."
                         )
                 ),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
     }
@@ -135,6 +136,13 @@ public class VocabularyJpaRepoBoundaryTests {
                     }
                 }
                 return result;
+            }
+
+            if ("findAllByIdIn".equals(methodName)) {
+                var ids = (List<String>) args[0];
+                return store.values().stream()
+                        .filter(entity -> ids.contains(entity.getId()))
+                        .toList();
             }
 
             if ("toString".equals(methodName)) {

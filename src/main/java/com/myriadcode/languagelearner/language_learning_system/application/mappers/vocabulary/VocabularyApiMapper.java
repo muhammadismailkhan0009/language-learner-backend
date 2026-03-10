@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -34,4 +35,7 @@ public interface VocabularyApiMapper {
 
     @Mapping(target = "id", source = "id.id")
     VocabularyResponse.ExampleSentenceResponse toSentenceResponse(VocabularyExampleSentence sentence);
+
+    @Mapping(target = "id", source = "id.id")
+    VocabularyResponse.ClozeSentenceResponse toClozeSentenceResponse(VocabularyClozeSentence sentence);
 }

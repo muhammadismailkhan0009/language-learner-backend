@@ -10,6 +10,7 @@ class Vocabulary {
   +entryKind : EntryKind
   +notes : String?
   +exampleSentences : List<VocabularyExampleSentence>
+  +clozeSentence : VocabularyClozeSentence?
 }
 
 class VocabularyId {
@@ -35,11 +36,26 @@ class VocabularyExampleSentenceId {
   +id : String
 }
 
+class VocabularyClozeSentence {
+  +id : VocabularyClozeSentenceId
+  +clozeText : String
+  +hint : String
+  +answerTranslation : String
+  +answerText : String
+  +answerWords : List<String>
+}
+
+class VocabularyClozeSentenceId {
+  +id : String
+}
+
 Vocabulary --> VocabularyId
 Vocabulary --> UserId
 Vocabulary --> EntryKind
 Vocabulary *-- "1..*" VocabularyExampleSentence : exampleSentences
+Vocabulary *-- "0..1" VocabularyClozeSentence : clozeSentence
 VocabularyExampleSentence --> VocabularyExampleSentenceId
+VocabularyClozeSentence --> VocabularyClozeSentenceId
 
 note right of Vocabulary
 Invariants:
@@ -49,6 +65,18 @@ Invariants:
 - entryKind is required
 - exampleSentences has at least 1 item
 - notes is optional free text (blank normalizes to null)
+- clozeSentence is optional derived study content owned by vocabulary
+end note
+
+note right of VocabularyClozeSentence
+Derived content rules:
+- generated from recent reading/writing topics or a general fallback
+- hint is a single-usage clue for the actual sentence meaning
+- answerText may differ from the owning vocabulary surface
+  because the answer can be inflected, split, or otherwise context-shaped
+- answerTranslation translates the filled answerText, not the source vocabulary entry
+- answerWords stores the exact fill-in tokens expected for the blank
+- only one active cloze sentence exists per vocabulary at a time
 end note
 
 @enduml

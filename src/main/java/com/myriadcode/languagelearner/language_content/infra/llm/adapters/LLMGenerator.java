@@ -7,11 +7,13 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingUsedVocabularySelection;
+import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -152,6 +154,15 @@ public class LLMGenerator implements LLMPort {
         var prompt = PromptsGenerator.writingSentencePairSplit(englishParagraph, germanParagraph);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingSentencePairSplit>() {
+        });
+    }
+
+    @Override
+    public VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
+                                                                 List<VocabularyClozeGenerationSeed> vocabulary) {
+        var prompt = PromptsGenerator.vocabularyClozeSentences(topic, vocabulary);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<VocabularyClozeBatch>() {
         });
     }
 

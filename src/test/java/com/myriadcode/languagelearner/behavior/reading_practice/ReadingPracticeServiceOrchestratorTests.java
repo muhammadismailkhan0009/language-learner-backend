@@ -151,7 +151,9 @@ class ReadingPracticeServiceOrchestratorTests {
                                 "Wort",
                                 "word",
                                 "WORD",
+                                null,
                                 List.of(new PrivateVocabularyRecord.ExampleSentenceRecord("ex-1", "Ich lerne.", "I learn.")),
+                                null,
                                 Instant.parse("2026-01-01T00:00:00Z")
                         )
                 ));
@@ -195,7 +197,9 @@ class ReadingPracticeServiceOrchestratorTests {
                 "surface-" + id,
                 "translation-" + id,
                 "WORD",
+                null,
                 List.of(),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
     }

@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.language_set
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 
 import java.util.List;
@@ -48,5 +49,8 @@ public interface LLMPort {
 
     WritingSentencePairSplit splitWritingContentIntoSentencePairs(String englishParagraph,
                                                                   String germanParagraph);
+
+    VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
+                                                          List<VocabularyClozeGenerationSeed> vocabulary);
 
 }

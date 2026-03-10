@@ -41,12 +41,9 @@ class VocabularyCardsStudyControllerTests {
         when(cardStudyService.getNextPrivateVocabularyCardsToStudy(eq("user-1"), eq(1)))
                 .thenReturn(List.of(new VocabularyFlashCardView(
                         "card-1",
-                        new VocabularyFlashCardView.Front("lernen"),
-                        new VocabularyFlashCardView.Back(
-                                "to learn",
-                                List.of(new VocabularyFlashCardView.Sentence("s-1", "Ich lerne Deutsch.", "I am learning German."))
-                        ),
-                        false,
+                        new VocabularyFlashCardView.VocabularyFlashCardFront("Ich ___ Deutsch.", "learn"),
+                        new VocabularyFlashCardView.VocabularyFlashCardBack(List.of("lerne"), "lerne", "learn", "verb notes"),
+                        true,
                         false
                 )));
 
@@ -56,10 +53,13 @@ class VocabularyCardsStudyControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.length()").value(1))
                 .andExpect(jsonPath("$.response[0].id").value("card-1"))
-                .andExpect(jsonPath("$.response[0].front.wordOrChunk").value("lernen"))
-                .andExpect(jsonPath("$.response[0].back.wordOrChunk").value("to learn"))
-                .andExpect(jsonPath("$.response[0].back.sentences.length()").value(1))
-                .andExpect(jsonPath("$.response[0].back.sentences[0].sentence").value("Ich lerne Deutsch."));
+                .andExpect(jsonPath("$.response[0].front.clozeText").value("Ich ___ Deutsch."))
+                .andExpect(jsonPath("$.response[0].front.hint").value("learn"))
+                .andExpect(jsonPath("$.response[0].back.answerWords.length()").value(1))
+                .andExpect(jsonPath("$.response[0].back.answerWords[0]").value("lerne"))
+                .andExpect(jsonPath("$.response[0].back.answerText").value("lerne"))
+                .andExpect(jsonPath("$.response[0].back.answerTranslation").value("learn"))
+                .andExpect(jsonPath("$.response[0].back.notes").value("verb notes"));
 
         verify(cardStudyService).getNextPrivateVocabularyCardsToStudy("user-1", 1);
     }
@@ -70,8 +70,8 @@ class VocabularyCardsStudyControllerTests {
         when(cardStudyService.getNextPrivateVocabularyCardForRevision(eq("user-2"), eq(1)))
                 .thenReturn(Optional.of(new VocabularyFlashCardView(
                         "card-2",
-                        new VocabularyFlashCardView.Front("to learn"),
-                        new VocabularyFlashCardView.Back("lernen", List.of()),
+                        new VocabularyFlashCardView.VocabularyFlashCardFront("Ich ___ Deutsch.", "learn"),
+                        new VocabularyFlashCardView.VocabularyFlashCardBack(List.of("lerne"), "lerne", "learn", "verb notes"),
                         true,
                         true
                 )));
@@ -92,15 +92,15 @@ class VocabularyCardsStudyControllerTests {
                 .thenReturn(List.of(
                         new VocabularyFlashCardView(
                                 "card-3",
-                                new VocabularyFlashCardView.Front("gehen"),
-                                new VocabularyFlashCardView.Back("to go", List.of()),
-                                false,
+                                new VocabularyFlashCardView.VocabularyFlashCardFront("Ich ___ nach Hause.", "go"),
+                                new VocabularyFlashCardView.VocabularyFlashCardBack(List.of("gehe"), "gehe", "go", null),
+                                true,
                                 true
                         ),
                         new VocabularyFlashCardView(
                                 "card-4",
-                                new VocabularyFlashCardView.Front("to come"),
-                                new VocabularyFlashCardView.Back("kommen", List.of()),
+                                new VocabularyFlashCardView.VocabularyFlashCardFront("Wir ___ morgen.", "come"),
+                                new VocabularyFlashCardView.VocabularyFlashCardBack(List.of("kommen"), "kommen", "come", "aux notes"),
                                 true,
                                 true
                         )

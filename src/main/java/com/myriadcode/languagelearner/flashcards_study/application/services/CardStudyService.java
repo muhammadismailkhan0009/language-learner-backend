@@ -5,6 +5,8 @@ import com.myriadcode.fsrs.api.enums.Rating;
 import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.enums.DeckInfo;
+import com.myriadcode.languagelearner.common.events.ClearVocabularyClozeSentenceEvent;
+import com.myriadcode.languagelearner.common.events.EventPublisher;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.concurnas_like_library.Value;
@@ -37,6 +39,7 @@ public class CardStudyService {
     private final FlashCardRepo flashCardRepo;
     private final FetchLanguageContentApi fetchLanguageContentApi;
     private final FetchPrivateVocabularyApi fetchPrivateVocabularyApi;
+    private final EventPublisher eventPublisher;
     private final VocabularyFlashcardCooldownWindow vocabularyFlashcardCooldownWindow;
 
     private final RevisionSession revisionSession = new  RevisionSession();
@@ -179,19 +182,18 @@ public class CardStudyService {
     }
 
     public List<VocabularyFlashCardView> getNextPrivateVocabularyCardsToStudy(String userId, int count) {
-        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId);
+        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId).stream()
+                .filter(FlashCardReview::isReversed)
+                .toList();
         if (cards.isEmpty()) return List.of();
 
         var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
         if (eligibleCards.isEmpty()) return List.of();
 
-        var randomCards = FlashCardAlgorithmService.getRandomCards(eligibleCards, 3);
+        var randomCards = FlashCardAlgorithmService.getRandomCards(eligibleCards, count);
         if (randomCards.isEmpty()) return List.of();
 
-        var selectedCards = randomCards.stream()
-                .findAny()
-                .stream()
-                .toList();
+        var selectedCards = randomCards.stream().limit(count).toList();
         vocabularyFlashcardCooldownWindow.recordShown(userId, selectedCards);
 
         return selectedCards.stream()
@@ -199,12 +201,15 @@ public class CardStudyService {
                         review,
                         fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)
                 ))
+                .filter(java.util.Objects::nonNull)
                 .map(data -> toVocabularyFlashCardView(data, false))
                 .toList();
     }
 
     public List<VocabularyFlashCardView> getPrivateVocabularyCardsForRevision(String userId, int count) {
-        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId);
+        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId).stream()
+                .filter(FlashCardReview::isReversed)
+                .toList();
         if (cards.isEmpty()) return List.of();
 
         var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
@@ -220,6 +225,7 @@ public class CardStudyService {
 
         return revisionCards.stream()
                 .map(review -> toVocabularyFlashCardData(review, fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)))
+                .filter(java.util.Objects::nonNull)
                 .map(data -> toVocabularyFlashCardView(data, true))
                 .toList();
     }
@@ -248,6 +254,12 @@ public class CardStudyService {
         );
 
         flashCardRepo.saveVocabularyFlashCardState(updatedReview);
+        if (rating == Rating.GOOD) {
+            eventPublisher.publish(new ClearVocabularyClozeSentenceEvent(
+                    reviewData.get().contentId().id(),
+                    reviewData.get().userId().id()
+            ));
+        }
     }
 
     private Optional<FlashCardView> mapToFlashCardView(FlashCardReview next, String userId, boolean isRevision) {
@@ -277,67 +289,71 @@ public class CardStudyService {
 
         if (next.contentType().equals(ContentRefType.VOCABULARY)) {
             var data = fetchPrivateVocabularyApi.getVocabularyRecord(next.contentId().id(), userId);
-            var vocabularyData = toVocabularyFlashCardData(next, data);
-            return Optional.of(toLegacyVocabularyFlashCardView(vocabularyData, isRevision));
+            return Optional.of(toLegacyVocabularyFlashCardView(next, data, isRevision));
         }
 
         return Optional.empty();
     }
 
-    private FlashCardView toLegacyVocabularyFlashCardView(VocabularyFlashCardData data,
+    private FlashCardView toLegacyVocabularyFlashCardView(FlashCardReview review,
+                                                          PrivateVocabularyRecord data,
                                                           boolean isRevision) {
-        var examples = data.sentences()
+        var examples = data.exampleSentences()
                 .stream()
-                .map(VocabularyFlashCardData.SentenceData::sentence)
+                .map(PrivateVocabularyRecord.ExampleSentenceRecord::sentence)
                 .filter(sentence -> sentence != null && !sentence.isBlank())
                 .map(sentenceText -> "- " + sentenceText)
                 .collect(Collectors.joining("\n"));
+        var frontText = review.isReversed() ? data.translation() : data.surface();
+        var backBaseText = review.isReversed() ? data.surface() : data.translation();
         var backText = examples.isBlank()
-                ? data.backWordOrChunk()
-                : data.backWordOrChunk() + "\n\nBeispiele:\n" + examples;
+                ? backBaseText
+                : backBaseText + "\n\nBeispiele:\n" + examples;
         return new FlashCardView(
-                data.id().id(),
-                new FlashCardView.Front(data.frontWordOrChunk()),
+                review.id().id(),
+                new FlashCardView.Front(frontText),
                 new FlashCardView.Back(backText),
                 null,
-                data.isReversed(),
+                review.isReversed(),
                 isRevision
         );
     }
 
     private VocabularyFlashCardData toVocabularyFlashCardData(FlashCardReview review,
                                                               PrivateVocabularyRecord data) {
-        var frontWord = review.isReversed() ? data.translation() : data.surface();
-        var backWord = review.isReversed() ? data.surface() : data.translation();
-        var sentences = data.exampleSentences().stream()
-                .map(sentence -> new VocabularyFlashCardData.SentenceData(
-                        sentence.id(),
-                        sentence.sentence(),
-                        sentence.translation()
-                ))
-                .toList();
+        if (!review.isReversed() || data.clozeSentence() == null) {
+            return null;
+        }
+        var cloze = data.clozeSentence();
         return new VocabularyFlashCardData(
                 review.id(),
-                frontWord,
-                backWord,
-                sentences,
+                new VocabularyFlashCardData.ClozeSentenceData(
+                        cloze.id(),
+                        cloze.clozeText(),
+                        cloze.hint(),
+                        cloze.answerText(),
+                        cloze.answerWords(),
+                        cloze.answerTranslation()
+                ),
+                data.notes(),
                 review.isReversed()
         );
     }
 
     private VocabularyFlashCardView toVocabularyFlashCardView(VocabularyFlashCardData data,
                                                               boolean isRevision) {
-        var sentences = data.sentences().stream()
-                .map(sentence -> new VocabularyFlashCardView.Sentence(
-                        sentence.id(),
-                        sentence.sentence(),
-                        sentence.translation()
-                ))
-                .toList();
         return new VocabularyFlashCardView(
                 data.id().id(),
-                new VocabularyFlashCardView.Front(data.frontWordOrChunk()),
-                new VocabularyFlashCardView.Back(data.backWordOrChunk(), sentences),
+                new VocabularyFlashCardView.VocabularyFlashCardFront(
+                        data.clozeSentence().clozeText(),
+                        data.clozeSentence().hint()
+                ),
+                new VocabularyFlashCardView.VocabularyFlashCardBack(
+                        data.clozeSentence().answerWords(),
+                        data.clozeSentence().answerText(),
+                        data.clozeSentence().answerTranslation(),
+                        data.vocabularyNotes()
+                ),
                 data.isReversed(),
                 isRevision
         );

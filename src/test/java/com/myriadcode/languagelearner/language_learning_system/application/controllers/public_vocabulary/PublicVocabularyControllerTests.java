@@ -146,6 +146,7 @@ public class PublicVocabularyControllerTests {
                         "Ich gehe nach Hause.",
                         "I go home."
                 )),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
     }
@@ -182,6 +183,12 @@ public class PublicVocabularyControllerTests {
         @Override
         public List<Vocabulary> findByIds(List<String> vocabularyIds) {
             return data.values().stream().filter(v -> vocabularyIds.contains(v.id().id())).toList();
+        }
+
+        @Override
+        public Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze) {
+            data.put(vocabularyId, vocabularyWithUpdatedCloze);
+            return vocabularyWithUpdatedCloze;
         }
     }
 

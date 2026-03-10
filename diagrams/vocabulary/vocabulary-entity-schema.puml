@@ -24,18 +24,48 @@ entity "VocabularyExampleSentenceEntity" as VocabularyExampleSentenceEntity {
   * displayOrder : Integer
 }
 
+entity "VocabularyClozeSentenceEntity" as VocabularyClozeSentenceEntity {
+  * id : String
+  --
+  * entry_id : String
+  * cloze_text : String
+  * hint : String
+  * answer_translation : String
+  * answer_text : String
+  * answer_words_json : text
+  * created_at : Instant
+}
+
 VocabularyEntity ||--|{ VocabularyExampleSentenceEntity : exampleSentences
+VocabularyEntity ||--o| VocabularyClozeSentenceEntity : clozeSentence
 
 note right of VocabularyEntity
 - @Table(name = "vocabulary_entries")
 - @OneToMany(mappedBy = "vocabulary", cascade = ALL, orphanRemoval = true)
 - @OrderBy("displayOrder ASC")
+- @OneToOne(mappedBy = "vocabulary", cascade = ALL, orphanRemoval = true)
 end note
 
 note right of VocabularyExampleSentenceEntity
 - @Table(name = "vocabulary_example_sentences")
 - @ManyToOne(fetch = LAZY)
 - @JoinColumn(name = "entry_id", nullable = false)
+end note
+
+note right of VocabularyClozeSentenceEntity
+- @Table(name = "vocabulary_cloze_sentences")
+- @OneToOne(fetch = LAZY)
+- @JoinColumn(name = "entry_id", nullable = false, unique = true)
+- single active cloze sentence for study rendering
+- no display order because the relation is one-to-one
+- hint is persisted separately from answer_translation
+end note
+
+note bottom of VocabularyEntity
+Vocabulary remains the single owner of both:
+- curated example sentences
+- generated cloze study sentences
+Flashcards keep only vocabulary references + FSRS state.
 end note
 
 @enduml

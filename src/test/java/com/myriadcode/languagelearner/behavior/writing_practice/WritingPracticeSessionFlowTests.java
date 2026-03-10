@@ -426,7 +426,9 @@ class WritingPracticeSessionFlowTests {
                     "surface-" + id,
                     "translation-" + id,
                     "WORD",
+                    null,
                     List.of(new PrivateVocabularyRecord.ExampleSentenceRecord("ex-" + id, "Beispiel " + id, "Example " + id)),
+                    null,
                     Instant.parse("2026-01-01T00:%02d:00Z".formatted(minuteOffset % 60))
             );
         }

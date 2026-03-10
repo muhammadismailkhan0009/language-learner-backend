@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.domain.vocabular
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ public final class VocabularyDomainService {
                 entryKind,
                 normalizeNotes(notes),
                 normalizeNewExamples(exampleSentences),
+                null,
                 Instant.now()
         );
     }
@@ -60,6 +62,21 @@ public final class VocabularyDomainService {
                 updatedEntryKind,
                 updatedNotes,
                 mergeExampleUpdates(existing.exampleSentences(), exampleSentenceUpdates),
+                null,
+                existing.createdAt()
+        );
+    }
+
+    public static Vocabulary withClozeSentence(Vocabulary existing, VocabularyClozeSentence clozeSentence) {
+        return new Vocabulary(
+                existing.id(),
+                existing.userId(),
+                existing.surface(),
+                existing.translation(),
+                existing.entryKind(),
+                existing.notes(),
+                existing.exampleSentences(),
+                clozeSentence,
                 existing.createdAt()
         );
     }

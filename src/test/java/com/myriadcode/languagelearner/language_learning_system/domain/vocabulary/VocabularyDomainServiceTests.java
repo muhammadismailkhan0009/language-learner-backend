@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.domain.vocabular
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,7 @@ public class VocabularyDomainServiceTests {
         assertThat(vocabulary.translation()).isEqualTo("to go");
         assertThat(vocabulary.entryKind()).isEqualTo(Vocabulary.EntryKind.WORD);
         assertThat(vocabulary.exampleSentences()).hasSize(2);
+        assertThat(vocabulary.clozeSentence()).isNull();
         assertThat(vocabulary.exampleSentences())
                 .extracting(example -> example.id().id())
                 .allMatch(id -> id != null && !id.isBlank());
@@ -69,6 +71,14 @@ public class VocabularyDomainServiceTests {
                         new VocabularyExampleSentence(null, "Wir machen Pause.", "We take a break.")
                 )
         );
+        existing = VocabularyDomainService.withClozeSentence(existing, new VocabularyClozeSentence(
+                new VocabularyClozeSentence.VocabularyClozeSentenceId("c-1"),
+                "Ich ___ Sport.",
+                "do",
+                "mache",
+                List.of("mache"),
+                "do"
+        ));
 
         var toKeepAndUpdate = existing.exampleSentences().get(0);
 
@@ -95,6 +105,7 @@ public class VocabularyDomainServiceTests {
         assertThat(edited.translation()).isEqualTo("to make/do");
         assertThat(edited.notes()).isEqualTo("updated note");
         assertThat(edited.exampleSentences()).hasSize(2);
+        assertThat(edited.clozeSentence()).isNull();
         assertThat(edited.exampleSentences())
                 .extracting(example -> example.sentence() + "|" + example.translation())
                 .contains(

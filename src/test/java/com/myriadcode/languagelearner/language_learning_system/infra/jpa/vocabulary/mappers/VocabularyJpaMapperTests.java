@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.vocabu
 
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.vocabulary.entities.VocabularyEntity;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,14 @@ public class VocabularyJpaMapperTests {
                                 "I am definitely coming."
                         )
                 ),
+                new VocabularyClozeSentence(
+                        new VocabularyClozeSentence.VocabularyClozeSentenceId("c1"),
+                        "Ich ___ morgen nach Hause.",
+                        "go",
+                        "gehe",
+                        List.of("gehe"),
+                        "go"
+                ),
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 
@@ -44,6 +53,9 @@ public class VocabularyJpaMapperTests {
         assertThat(entity.getExampleSentences()).hasSize(1);
         assertThat(entity.getExampleSentences().get(0).getVocabulary()).isSameAs(entity);
         assertThat(entity.getExampleSentences().get(0).getSentence()).isEqualTo("Auf jeden Fall komme ich.");
+        assertThat(entity.getClozeSentence()).isNotNull();
+        assertThat(entity.getClozeSentence().getVocabulary()).isSameAs(entity);
+        assertThat(entity.getClozeSentence().getAnswerWordsJson()).contains("gehe");
     }
 
     @Test
@@ -66,6 +78,15 @@ public class VocabularyJpaMapperTests {
         );
         sentence.setDisplayOrder(0);
         entity.setExampleSentences(List.of(sentence));
+        var clozeSentence = MAPPER.toClozeSentenceEntity(new VocabularyClozeSentence(
+                new VocabularyClozeSentence.VocabularyClozeSentenceId("c2"),
+                "Ich ___ nach Hause.",
+                "go",
+                "gehe",
+                List.of("gehe"),
+                "go"
+        ));
+        entity.setClozeSentence(clozeSentence);
 
         var domain = MAPPER.toDomain(entity);
 
@@ -74,6 +95,9 @@ public class VocabularyJpaMapperTests {
         assertThat(domain.entryKind()).isEqualTo(Vocabulary.EntryKind.WORD);
         assertThat(domain.exampleSentences()).hasSize(1);
         assertThat(domain.exampleSentences().get(0).id().id()).isEqualTo("e2");
+        assertThat(domain.clozeSentence()).isNotNull();
+        assertThat(domain.clozeSentence().hint()).isEqualTo("go");
+        assertThat(domain.clozeSentence().answerWords()).containsExactly("gehe");
     }
 
     @Test

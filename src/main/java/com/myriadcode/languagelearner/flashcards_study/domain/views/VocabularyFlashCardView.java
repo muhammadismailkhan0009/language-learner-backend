@@ -4,17 +4,14 @@ import java.util.List;
 
 public record VocabularyFlashCardView(
         String id,
-        Front front,
-        Back back,
+        VocabularyFlashCardFront front,
+        VocabularyFlashCardBack back,
         boolean isReversed,
         boolean isRevision
 ) {
-    public record Front(String wordOrChunk) {
+    public record VocabularyFlashCardFront(String clozeText, String hint) {
     }
 
-    public record Back(String wordOrChunk, List<Sentence> sentences) {
-    }
-
-    public record Sentence(String id, String sentence, String translation) {
+    public record VocabularyFlashCardBack(List<String> answerWords, String answerText, String answerTranslation, String notes) {
     }
 }

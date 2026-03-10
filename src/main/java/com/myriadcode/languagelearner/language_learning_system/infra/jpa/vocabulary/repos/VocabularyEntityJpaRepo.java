@@ -9,16 +9,16 @@ import java.util.Optional;
 
 public interface VocabularyEntityJpaRepo extends JpaRepository<VocabularyEntity, String> {
 
-    @EntityGraph(attributePaths = "exampleSentences")
+    @EntityGraph(attributePaths = {"exampleSentences", "clozeSentence"})
     Optional<VocabularyEntity> findByIdAndUserId(String id, String userId);
 
     @Override
-    @EntityGraph(attributePaths = "exampleSentences")
+    @EntityGraph(attributePaths = {"exampleSentences", "clozeSentence"})
     Optional<VocabularyEntity> findById(String id);
 
-    @EntityGraph(attributePaths = "exampleSentences")
+    @EntityGraph(attributePaths = {"exampleSentences", "clozeSentence"})
     List<VocabularyEntity> findAllByUserId(String userId);
 
-    @EntityGraph(attributePaths = "exampleSentences")
+    @EntityGraph(attributePaths = {"exampleSentences", "clozeSentence"})
     List<VocabularyEntity> findAllByIdIn(List<String> ids);
 }

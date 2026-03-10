@@ -1,6 +1,8 @@
 package com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary;
 
 import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -30,7 +33,7 @@ public class VocabularyControllerTests {
     public void addVocabularyStoresAndReturnsResponse() throws Exception {
         var repo = new FakeVocabularyRepo();
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service);
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         var payload = """
@@ -69,7 +72,7 @@ public class VocabularyControllerTests {
         repo.save(seed);
 
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service);
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         var existingExampleId = seed.exampleSentences().get(0).id().id();
@@ -117,7 +120,7 @@ public class VocabularyControllerTests {
         repo.save(sampleVocabulary("vocab-1", "user-a"));
         repo.save(sampleVocabulary("vocab-2", "user-b"));
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service);
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/vocabularies/v1")
@@ -127,6 +130,24 @@ public class VocabularyControllerTests {
                 .andExpect(jsonPath("$.response.length()").value(1))
                 .andExpect(jsonPath("$.response[0].id").value("vocab-1"))
                 .andExpect(jsonPath("$.response[0].userId").value("user-a"));
+    }
+
+    @Test
+    @DisplayName("Generate cloze sentences API: delegates to explicit generation service")
+    public void generateClozeSentencesDelegatesToService() throws Exception {
+        var repo = new FakeVocabularyRepo();
+        var vocabularyService = new VocabularyOrchestrationService(repo);
+        var clozeService = org.mockito.Mockito.mock(VocabularyClozeGenerationService.class);
+        when(clozeService.generate("user-a")).thenReturn(new GenerateVocabularyClozeSentencesResponse(3));
+
+        var controller = new VocabularyController(vocabularyService, clozeService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(post("/api/v1/vocabularies/cloze-sentences/v1")
+                        .queryParam("userId", "user-a")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.generatedCount").value(3));
     }
 
     private Vocabulary sampleVocabulary(String id, String userId) {
@@ -149,6 +170,7 @@ public class VocabularyControllerTests {
                                 "They go to school."
                         )
                 ),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
     }
@@ -188,6 +210,12 @@ public class VocabularyControllerTests {
             return data.values().stream()
                     .filter(vocabulary -> vocabularyIds.contains(vocabulary.id().id()))
                     .toList();
+        }
+
+        @Override
+        public Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze) {
+            data.put(vocabularyId, vocabularyWithUpdatedCloze);
+            return vocabularyWithUpdatedCloze;
         }
     }
 }

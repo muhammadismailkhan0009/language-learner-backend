@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.mapp
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.AddVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 import org.junit.jupiter.api.DisplayName;
@@ -66,6 +67,14 @@ public class VocabularyApiMapperTests {
                                 "I go home."
                         )
                 ),
+                new VocabularyClozeSentence(
+                        new VocabularyClozeSentence.VocabularyClozeSentenceId("c1"),
+                        "Ich ___ nach Hause.",
+                        "go",
+                        "gehe",
+                        List.of("gehe"),
+                        "go"
+                ),
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 
@@ -77,6 +86,9 @@ public class VocabularyApiMapperTests {
         assertThat(response.exampleSentences()).hasSize(1);
         assertThat(response.exampleSentences().get(0).id()).isEqualTo("s1");
         assertThat(response.exampleSentences().get(0).sentence()).isEqualTo("Ich gehe nach Hause.");
+        assertThat(response.clozeSentence()).isNotNull();
+        assertThat(response.clozeSentence().hint()).isEqualTo("go");
+        assertThat(response.clozeSentence().answerWords()).containsExactly("gehe");
     }
 
     @Test

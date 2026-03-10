@@ -11,9 +11,20 @@ public record VocabularyResponse(
         String translation,
         Vocabulary.EntryKind entryKind,
         String notes,
-        List<ExampleSentenceResponse> exampleSentences
+        List<ExampleSentenceResponse> exampleSentences,
+        ClozeSentenceResponse clozeSentence
 ) {
 
     public record ExampleSentenceResponse(String id, String sentence, String translation) {
+    }
+
+    public record ClozeSentenceResponse(
+            String id,
+            String clozeText,
+            String hint,
+            String answerText,
+            List<String> answerWords,
+            String answerTranslation
+    ) {
     }
 }

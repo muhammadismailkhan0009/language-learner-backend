@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -42,6 +43,9 @@ public class VocabularyEntity {
     @OneToMany(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     private List<VocabularyExampleSentenceEntity> exampleSentences = new ArrayList<>();
+
+    @OneToOne(mappedBy = "vocabulary", cascade = CascadeType.ALL, orphanRemoval = true)
+    private VocabularyClozeSentenceEntity clozeSentence;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -150,5 +154,21 @@ public class VocabularyEntity {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public VocabularyClozeSentenceEntity getClozeSentence() {
+        return clozeSentence;
+    }
+
+    public void setClozeSentence(VocabularyClozeSentenceEntity clozeSentence) {
+        if (clozeSentence == null) {
+            if (this.clozeSentence != null) {
+                this.clozeSentence.setVocabulary(null);
+            }
+            this.clozeSentence = null;
+            return;
+        }
+        clozeSentence.setVocabulary(this);
+        this.clozeSentence = clozeSentence;
     }
 }

@@ -24,6 +24,18 @@ entity "VocabularyExampleSentenceEntity\n(vocabulary_example_sentences)" as Voca
   * display_order : Integer
 }
 
+entity "VocabularyClozeSentenceEntity\n(vocabulary_cloze_sentences)" as VocabularyClozeSentenceEntity {
+  * id : String
+  --
+  * entry_id : String
+  * cloze_text : String
+  * hint : String
+  * answer_translation : String
+  * answer_text : String
+  * answer_words_json : text
+  * created_at : Instant
+}
+
 entity "FlashCardReviewEntity\n(flashcard_review)" as FlashCardReviewEntity {
   * id : String
   --
@@ -35,6 +47,7 @@ entity "FlashCardReviewEntity\n(flashcard_review)" as FlashCardReviewEntity {
 }
 
 VocabularyEntity ||--|{ VocabularyExampleSentenceEntity : exampleSentences
+VocabularyEntity ||--o| VocabularyClozeSentenceEntity : clozeSentence
 VocabularyEntity ||..o{ FlashCardReviewEntity : language_content_id logical reference
 
 note right of FlashCardReviewEntity
@@ -58,6 +71,17 @@ note bottom of VocabularyEntity
 All flashcard content is resolved from:
 - vocabulary_entries.surface / translation
 - vocabulary_example_sentences.sentence / translation
+- vocabulary_cloze_sentences.cloze_text / hint / answer_text / answer_translation / answer_words_json
+end note
+
+note right of VocabularyClozeSentenceEntity
+Generated study content:
+- owned by vocabulary, not flashcard_review
+- is retained until a GOOD review clears it
+- one-to-one with vocabulary; only one active cloze sentence is stored
+- selected/rendered by flashcard study flow
+- persistence mapping should be explicit as `VocabularyEntity @OneToOne <-> VocabularyClozeSentenceEntity @OneToOne`
+- no ordering column is needed
 end note
 
 note left of FlashCardReviewEntity

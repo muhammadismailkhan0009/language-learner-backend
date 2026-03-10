@@ -13,6 +13,7 @@ public record Vocabulary(
         EntryKind entryKind,
         String notes,
         List<VocabularyExampleSentence> exampleSentences,
+        VocabularyClozeSentence clozeSentence,
         Instant createdAt
 ) {
 

@@ -10,6 +10,7 @@ class Vocabulary {
   +entryKind : EntryKind
   +notes : String?
   +exampleSentences : List<VocabularyExampleSentence>
+  +clozeSentence : VocabularyClozeSentence?
 }
 
 class VocabularyId {
@@ -30,6 +31,19 @@ class VocabularyExampleSentenceId {
   +id : String
 }
 
+class VocabularyClozeSentence {
+  +id : VocabularyClozeSentenceId
+  +clozeText : String
+  +hint : String
+  +answerTranslation : String
+  +answerText : String
+  +answerWords : List<String>
+}
+
+class VocabularyClozeSentenceId {
+  +id : String
+}
+
 class FlashCardReview {
   +id : FlashCardId
   +userId : UserId
@@ -40,16 +54,17 @@ class FlashCardReview {
 
 class VocabularyFlashCardData {
   +id : FlashCardId
-  +frontWordOrChunk : String
-  +backWordOrChunk : String
-  +sentences : List<SentenceData>
+  +clozeSentence : ClozeSentenceData
   +isReversed : boolean
 }
 
-class SentenceData {
+class ClozeSentenceData {
   +id : String
-  +sentence : String
-  +translation : String
+  +clozeText : String
+  +hint : String
+  +answerTranslation : String
+  +answerText : String
+  +answerWords : List<String>
 }
 
 class FsrsCardState {
@@ -67,25 +82,25 @@ class ContentId {
 Vocabulary --> VocabularyId
 Vocabulary --> UserId
 Vocabulary *-- "1..*" VocabularyExampleSentence : exampleSentences
+Vocabulary *-- "0..1" VocabularyClozeSentence : clozeSentence
 VocabularyExampleSentence --> VocabularyExampleSentenceId
+VocabularyClozeSentence --> VocabularyClozeSentenceId
 
 FlashCardReview --> FlashCardId
 FlashCardReview --> UserId
 FlashCardReview --> ContentId
 FlashCardReview --> FsrsCardState
 VocabularyFlashCardData --> FlashCardId
-VocabularyFlashCardData *-- "0..*" SentenceData
+VocabularyFlashCardData *-- "1" ClozeSentenceData
 
 note right of FlashCardReview
 Rendering contract:
-- isReversed = false:
-  front: vocabulary.surface (German)
-  back: vocabulary.translation (English)
-  + vocabulary.exampleSentences list (sentence + translation)
-- isReversed = true:
-  front: vocabulary.translation (English)
-  back: vocabulary.surface (German)
-  + vocabulary.exampleSentences list (sentence + translation)
+- flashcard identity and FSRS state remain vocabulary-based
+- active study rendering uses sentence cloze cards instead of raw vocabulary cards
+- active cloze study mode should bind to reversed vocabulary flashcards
+- each vocabulary contributes at most one active cloze sentence at a time
+- raw front/back vocabulary rendering is deprecated and should not be used by active study flows
+- GOOD review deletes the current cloze sentence so future generation can attach a new one
 
 Storage rule:
 - No vocabulary text/examples are stored in flashcard rows.
@@ -96,6 +111,9 @@ note right of VocabularyFlashCardData
 Single domain data flow point for vocabulary cards:
 - fetched vocabulary content -> VocabularyFlashCardData -> response view
 - no direct adapter-to-response mapping in service flow
+- front view: clozeText + hint
+- back view: answerWords only
+- hint is sentence-specific and must not be derived from vocabulary.translation
 end note
 
 note left of FlashCardReview
@@ -108,12 +126,13 @@ Module boundaries:
 end note
 
 note bottom of Vocabulary
-Vocabulary remains the single source of lexical content.
+Vocabulary remains the single source of lexical content and generated cloze study content.
 Flashcards keep references only.
 end note
 
 note bottom of FlashCardReview
 Private vocabulary cards are generated on vocabulary create/update.
+Sentence cloze study should reuse reversed vocabulary card refs.
 They are fetched via:
 GET /api/v1/vocabulary-flashcards/cards/*
 end note

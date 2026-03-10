@@ -6,11 +6,17 @@ import java.util.List;
 
 public record VocabularyFlashCardData(
         FlashCardReview.FlashCardId id,
-        String frontWordOrChunk,
-        String backWordOrChunk,
-        List<SentenceData> sentences,
+        ClozeSentenceData clozeSentence,
+        String vocabularyNotes,
         boolean isReversed
 ) {
-    public record SentenceData(String id, String sentence, String translation) {
+    public record ClozeSentenceData(
+            String id,
+            String clozeText,
+            String hint,
+            String answerText,
+            List<String> answerWords,
+            String answerTranslation
+    ) {
     }
 }

@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 
 import java.util.List;
@@ -763,4 +764,67 @@ public final class PromptsGenerator {
         config.quantity().sentenceCount());
   }
 
+  private static String formatVocabularyClozeSeeds(List<VocabularyClozeGenerationSeed> vocabulary) {
+    StringBuilder builder = new StringBuilder();
+
+    for (VocabularyClozeGenerationSeed v : vocabulary) {
+      builder.append(v.surface())
+          .append(" | ")
+          .append(v.translation())
+          .append("\n");
+    }
+
+    return builder.toString();
+  }
+
+  public static String vocabularyClozeSentences(
+      String topic,
+      List<VocabularyClozeGenerationSeed> vocabulary) {
+
+    String vocabList = formatVocabularyClozeSeeds(vocabulary);
+
+    return """
+                You are a German teacher creating sentence-cloze vocabulary exercise for B1.
+
+        Topic context: "%s"
+
+        Task
+        For each vocabulary entry, create exactly ONE German sentence containing a blank.
+
+        Vocabulary concept
+        Each vocabulary entry represents a lemma (base dictionary form).
+        The blank should normally require a natural surface form derived from that lemma.
+
+        Prefer:
+        - conjugated verb forms
+        - plural or case forms of nouns
+        - separable verb constructions
+        - adjective agreement forms
+
+        Avoid:
+        - using the base lemma when a natural sentence would use an inflected form
+        - sentences where the blank appears only as an infinitive unless grammar requires it
+
+        Cloze rules
+        - The sentence must contain exactly one blank written as "____".
+        - The blank must correspond to the provided vocabulary entry.
+        - Only one correct answer should fit the blank naturally.
+        - Avoid contexts where synonyms could also work.
+
+        Hint rules
+        - Provide the exact English meaning used in the sentence.
+        - The hint must be very short (1–3 words).
+        - The hint must not contain the German word.
+        - The hint must reflect the precise sense of the word in this sentence.
+
+        Sentence constraints
+        - Natural everyday German.
+        - 6–14 words.
+        - Prefer placing the blank in the middle of the sentence rather than the end.
+
+        Learner vocabulary (German | translation):
+        %s
+                """
+        .formatted(topic, vocabList);
+  }
 }

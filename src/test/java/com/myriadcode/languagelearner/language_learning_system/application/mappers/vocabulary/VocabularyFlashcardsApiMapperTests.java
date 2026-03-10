@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.mapp
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyClozeSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,7 +18,7 @@ public class VocabularyFlashcardsApiMapperTests {
     private static final VocabularyFlashcardsApiMapper MAPPER = VocabularyFlashcardsApiMapper.INSTANCE;
 
     @Test
-    @DisplayName("Maps vocabulary to private vocabulary contract shape excluding notes")
+    @DisplayName("Maps vocabulary to private vocabulary contract shape including notes")
     void mapsVocabularyToPrivateVocabularyRecord() {
         var vocabulary = new Vocabulary(
                 new Vocabulary.VocabularyId("v-1"),
@@ -38,6 +39,14 @@ public class VocabularyFlashcardsApiMapperTests {
                                 "We study together."
                         )
                 ),
+                new VocabularyClozeSentence(
+                        new VocabularyClozeSentence.VocabularyClozeSentenceId("c-1"),
+                        "Ich ___ Deutsch.",
+                        "learn",
+                        "lerne",
+                        List.of("lerne"),
+                        "learn"
+                ),
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 
@@ -48,9 +57,13 @@ public class VocabularyFlashcardsApiMapperTests {
         assertThat(mapped.surface()).isEqualTo("lernen");
         assertThat(mapped.translation()).isEqualTo("to learn");
         assertThat(mapped.entryKind()).isEqualTo("WORD");
+        assertThat(mapped.notes()).isEqualTo("verb");
         assertThat(mapped.exampleSentences())
                 .extracting(PrivateVocabularyRecord.ExampleSentenceRecord::sentence)
                 .containsExactly("Ich lerne Deutsch.", "Wir lernen zusammen.");
+        assertThat(mapped.clozeSentence()).isNotNull();
+        assertThat(mapped.clozeSentence().hint()).isEqualTo("learn");
+        assertThat(mapped.clozeSentence().answerWords()).containsExactly("lerne");
     }
 
     @Test
@@ -64,6 +77,7 @@ public class VocabularyFlashcardsApiMapperTests {
                 Vocabulary.EntryKind.WORD,
                 null,
                 List.of(),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 

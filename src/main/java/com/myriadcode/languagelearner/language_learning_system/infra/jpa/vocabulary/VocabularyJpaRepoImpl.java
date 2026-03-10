@@ -28,6 +28,9 @@ public class VocabularyJpaRepoImpl implements VocabularyRepo {
         for (int i = 0; i < entity.getExampleSentences().size(); i++) {
             entity.getExampleSentences().get(i).setDisplayOrder(i);
         }
+        if (entity.getClozeSentence() != null && entity.getClozeSentence().getCreatedAt() == null) {
+            entity.getClozeSentence().setCreatedAt(java.time.Instant.now());
+        }
         var saved = vocabularyEntityJpaRepo.save(entity);
         return VOCABULARY_JPA_MAPPER.toDomain(saved);
     }
@@ -63,5 +66,19 @@ public class VocabularyJpaRepoImpl implements VocabularyRepo {
         return vocabularyEntityJpaRepo.findAllByIdIn(vocabularyIds).stream()
                 .map(VOCABULARY_JPA_MAPPER::toDomain)
                 .toList();
+    }
+
+    @Override
+    @Transactional
+    public Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze) {
+        var entity = vocabularyEntityJpaRepo.findByIdAndUserId(vocabularyId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Vocabulary not found for this user"));
+        entity.setClozeSentence(vocabularyWithUpdatedCloze.clozeSentence() == null
+                ? null
+                : VOCABULARY_JPA_MAPPER.toClozeSentenceEntity(vocabularyWithUpdatedCloze.clozeSentence()));
+        if (entity.getClozeSentence() != null && entity.getClozeSentence().getCreatedAt() == null) {
+            entity.getClozeSentence().setCreatedAt(java.time.Instant.now());
+        }
+        return VOCABULARY_JPA_MAPPER.toDomain(vocabularyEntityJpaRepo.save(entity));
     }
 }

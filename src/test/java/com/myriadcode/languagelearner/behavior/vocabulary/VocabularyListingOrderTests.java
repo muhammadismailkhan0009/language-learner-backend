@@ -109,6 +109,7 @@ class VocabularyListingOrderTests {
                                 "Sentence " + index,
                                 "Translation " + index
                         )),
+                        null,
                         Instant.parse("2026-01-01T00:00:00Z").plusSeconds(index)
                 ))
                 .toList()
@@ -154,6 +155,11 @@ class VocabularyListingOrderTests {
             return vocabularies.stream()
                     .filter(vocabulary -> vocabularyIds.contains(vocabulary.id().id()))
                     .toList();
+        }
+
+        @Override
+        public Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze) {
+            throw new UnsupportedOperationException("replaceClozeSentence is not used in this test");
         }
     }
 }

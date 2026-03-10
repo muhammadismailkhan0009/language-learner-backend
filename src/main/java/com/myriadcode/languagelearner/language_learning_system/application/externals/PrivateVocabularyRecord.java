@@ -9,13 +9,25 @@ public record PrivateVocabularyRecord(
         String surface,
         String translation,
         String entryKind,
+        String notes,
         List<ExampleSentenceRecord> exampleSentences,
+        ClozeSentenceRecord clozeSentence,
         Instant createdAt
 ) {
     public record ExampleSentenceRecord(
             String id,
             String sentence,
             String translation
+    ) {
+    }
+
+    public record ClozeSentenceRecord(
+            String id,
+            String clozeText,
+            String hint,
+            String answerText,
+            List<String> answerWords,
+            String answerTranslation
     ) {
     }
 }

@@ -39,6 +39,7 @@ public class PublicVocabularyApiMapperTests {
                         "Ich gehe nach Hause.",
                         "I go home."
                 )),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 
@@ -63,6 +64,7 @@ public class PublicVocabularyApiMapperTests {
                 Vocabulary.EntryKind.WORD,
                 null,
                 List.of(),
+                null,
                 Instant.parse("2026-01-01T00:00:00Z")
         );
 

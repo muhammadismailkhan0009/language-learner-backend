@@ -11,26 +11,52 @@ System_Boundary(lms, "Language Learner System") {
   Container_Boundary(vocabulary_module, "Vocabulary Module (language_learning_system)") {
     Component(vocab_controller, "VocabularyController", "API Component", "Private vocabulary endpoints")
     Component(vocab_service, "VocabularyOrchestrationService", "Application Service", "Orchestrates add/update/fetch for private vocabulary")
+    Component(vocab_cloze_service, "VocabularyClozeGenerationService", "Application Service", "Selects vocabulary by flashcard ratio, builds topic context, and stores one cloze sentence per vocabulary")
     Component(vocab_domain_service, "VocabularyDomainService", "Domain Service", "Validates vocabulary invariants")
     Component(vocab_repo_port, "VocabularyRepo", "Domain Port", "Vocabulary persistence boundary")
     Component(vocab_repo_impl, "VocabularyJpaRepoImpl", "Infrastructure Adapter", "JPA adapter for vocabulary entries")
     Component(vocab_event_publisher, "VocabularyFlashCardPublisher", "Application Publisher", "Publishes CreateFlashCardEvent for private vocabulary cards")
+    Component(vocab_cloze_clear_handler, "ClearVocabularyClozeSentenceEventHandler", "Application Event Handler", "Clears the stored cloze sentence after a successful review")
     Component(vocab_cards_api, "FetchPrivateVocabularyApi", "Named Interface (language_learning_system_api)", "Exposes vocabulary data for flashcard rendering")
     Component(vocab_cards_api_impl, "VocabularyFlashcardsAdapter", "Application Adapter", "Implements FetchPrivateVocabularyApi via VocabularyRepo")
+    Component(reading_topics_api, "FetchRecentReadingTopicsApi", "Named Interface", "Loads recent reading practice topics")
+    Component(writing_topics_api, "FetchRecentWritingTopicsApi", "Named Interface", "Loads recent writing practice topics")
   }
 
   Container_Boundary(flashcards_module, "Flashcards Module (flashcards_study)") {
     Component(vocab_cards_controller, "VocabularyCardsStudyController", "API Component", "Vocabulary-only flashcard fetch/review endpoints")
     Component(cards_controller, "CardsStudyController", "API Component (Deprecated)", "Legacy mixed-deck card endpoints; to be removed after stability")
-    Component(cards_service, "CardStudyService", "Application Service", "Selects due cards and builds card views (explicit vocabulary flow)")
+    Component(cards_service, "CardStudyService", "Application Service", "Selects reversed vocabulary cards for active study and builds sentence-cloze views")
+    Component(cards_event_publisher, "EventPublisher", "Common Event Port", "Publishes cross-module domain events")
     Component(generic_flashcard_domain, "FlashCardReview", "Domain Model", "Shared flashcard reference + review shape")
     Component(vocab_card_data, "VocabularyFlashCardData", "Domain Data Model", "Single data flow point before response mapping")
     Component(vocab_card_handler, "CreateCardEventHandler", "Application Event Handler", "Creates/ensures flashcard refs by contentType + isReversed")
     Component(vocab_card_repo_port, "FlashCardRepo", "Domain Port", "Flashcard reference + review persistence boundary")
     Component(vocab_card_repo_impl, "CommonRepoImpl", "Infrastructure Adapter", "JPA adapter for flashcard review/reference rows")
+    Component(flashcard_reviews_api, "FetchVocabularyFlashcardReviewsApi", "Named Interface", "Exposes vocabulary flashcard reviews for ratio-based selection")
+    Component(flashcard_reviews_adapter, "VocabularyFlashcardReviewsAdapter", "Application Adapter", "Implements FetchVocabularyFlashcardReviewsApi")
   }
 
-  ContainerDb(app_db, "App Database", "PostgreSQL", "vocabulary_entries, vocabulary_example_sentences, flashcard_review")
+  Container_Boundary(reading_module, "Reading Practice Module (reading_practice)") {
+    Component(reading_topics_adapter, "ReadingPracticeTopicHistoryAdapter", "Application Adapter", "Implements FetchRecentReadingTopicsApi from reading sessions")
+    Component(reading_repo_port, "ReadingPracticeRepo", "Application Port", "Reading session persistence boundary")
+    Component(reading_repo_impl, "ReadingPracticeJpaRepoImpl", "Infrastructure Adapter", "JPA adapter for reading sessions")
+  }
+
+  Container_Boundary(writing_module, "Writing Practice Module (writing_practice)") {
+    Component(writing_topics_adapter, "WritingPracticeTopicHistoryAdapter", "Application Adapter", "Implements FetchRecentWritingTopicsApi from writing sessions")
+    Component(writing_repo_port, "WritingPracticeRepo", "Application Port", "Writing session persistence boundary")
+    Component(writing_repo_impl, "WritingPracticeJpaRepoImpl", "Infrastructure Adapter", "JPA adapter for writing sessions")
+  }
+
+  Container_Boundary(language_content_module, "Language Content Module (language_content)") {
+    Component(cloze_llm_api, "VocabularyClozeLlmApi", "Named Interface", "Generates batch cloze sentences in one request")
+    Component(cloze_llm_adapter, "VocabularyClozeLlmAdapter", "Application Adapter", "Implements VocabularyClozeLlmApi via LLMPort")
+    Component(llm_port, "LLMPort", "Application Port", "LLM boundary")
+    Component(llm_adapter, "LLMGenerator", "Infrastructure Adapter", "Calls external LLM")
+  }
+
+  ContainerDb(app_db, "App Database", "PostgreSQL", "vocabulary_entries, vocabulary_example_sentences, vocabulary_cloze_sentences, flashcard_review, reading_practice_*, writing_practice_*")
   Component(event_bus, "In-Process Domain Event Bus", "Spring Events", "Cross-module event delivery")
 }
 
@@ -58,8 +84,37 @@ Rel($index=Index(), vocab_card_repo_port, vocab_card_handler, "Done")
 Rel($index=Index(), vocab_service, vocab_controller, "Return vocabulary response")
 Rel($index=Index(), vocab_controller, client_app, "201/200")
 
-' Flow B: vocabulary-specific fetch resolves content through vocabulary reference
-Rel($index=SetIndex(1), learner, client_app, "Open private vocabulary flashcards")
+' Flow B: explicit cloze sentence generation stores derived study content on vocabulary
+Rel($index=SetIndex(1), learner, client_app, "Trigger cloze sentence generation")
+Rel($index=Index(), client_app, vocab_controller, "POST /api/v1/vocabularies/cloze-sentences/*")
+Rel($index=Index(), vocab_controller, vocab_cloze_service, "generateClozeSentences(userId)")
+Rel($index=Index(), vocab_cloze_service, flashcard_reviews_api, "getVocabularyFlashcardsByUser(userId)")
+Rel($index=Index(), flashcard_reviews_api, flashcard_reviews_adapter, "Dispatch to implementation")
+Rel($index=Index(), flashcard_reviews_adapter, vocab_card_repo_port, "findVocabularyFlashCardsByUser(userId)")
+Rel($index=Index(), vocab_cloze_service, vocab_cloze_service, "Use reading ratio policy and keep reversed cards for active cloze mode")
+Rel($index=Index(), vocab_cloze_service, vocab_cards_api, "getVocabularyRecords(vocabularyIds, userId)")
+Rel($index=Index(), vocab_cloze_service, reading_topics_api, "findRecentTopics(userId, limit)")
+Rel($index=Index(), reading_topics_api, reading_topics_adapter, "Dispatch to implementation")
+Rel($index=Index(), reading_topics_adapter, reading_repo_port, "findRecentTopicsByUserId")
+Rel($index=Index(), reading_repo_port, reading_repo_impl, "findRecentTopicsByUserId")
+Rel($index=Index(), reading_repo_impl, app_db, "Read reading_practice_session.topic")
+Rel($index=Index(), vocab_cloze_service, writing_topics_api, "findRecentTopics(userId, limit)")
+Rel($index=Index(), writing_topics_api, writing_topics_adapter, "Dispatch to implementation")
+Rel($index=Index(), writing_topics_adapter, writing_repo_port, "findRecentTopicsByUserId")
+Rel($index=Index(), writing_repo_port, writing_repo_impl, "findRecentTopicsByUserId")
+Rel($index=Index(), writing_repo_impl, app_db, "Read writing_practice_session.topic")
+Rel($index=Index(), vocab_cloze_service, vocab_cloze_service, "Skip vocabulary that already has a stored cloze and fill selection from other eligible vocab")
+Rel($index=Index(), vocab_cloze_service, cloze_llm_api, "generate batch cloze sentences(selected source vocab, recent topics or general fallback, with sentence-specific hint + exact answer words)")
+Rel($index=Index(), cloze_llm_api, cloze_llm_adapter, "Dispatch to implementation")
+Rel($index=Index(), cloze_llm_adapter, llm_port, "Invoke")
+Rel($index=Index(), llm_port, llm_adapter, "Single LLM request keyed by source vocabulary surface, not internal ids")
+Rel($index=Index(), vocab_cloze_service, vocab_repo_port, "replaceClozeSentence(vocabularyId, clozeSentence)")
+Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "save vocabulary + cloze child")
+Rel($index=Index(), vocab_repo_impl, app_db, "Persist vocabulary_cloze_sentences")
+Rel($index=Index(), vocab_controller, client_app, "202/200")
+
+' Flow C: active study fetch resolves sentence cloze cards through reversed vocabulary references
+Rel($index=SetIndex(1), learner, client_app, "Open sentence cloze flashcards")
 Rel($index=Index(), client_app, vocab_cards_controller, "GET /api/v1/vocabulary-flashcards/cards/next/v1")
 Rel($index=Index(), vocab_cards_controller, cards_service, "getNextPrivateVocabularyCardsToStudy(userId, count)")
 Rel($index=Index(), cards_service, vocab_card_repo_port, "findVocabularyFlashCardsByUser(userId)")
@@ -68,24 +123,26 @@ Rel($index=Index(), vocab_card_repo_impl, app_db, "Read flashcard_review (VOCABU
 Rel($index=Index(), app_db, vocab_card_repo_impl, "Return card refs + review state")
 Rel($index=Index(), vocab_card_repo_impl, vocab_card_repo_port, "Return domain reviews")
 Rel($index=Index(), vocab_card_repo_port, cards_service, "Return due cards")
+Rel($index=Index(), cards_service, cards_service, "Keep reversed cards for active cloze mode; leave legacy raw-vocabulary path unused")
 Rel($index=Index(), cards_service, vocab_cards_api, "getVocabularyRecord(vocabularyId, userId)")
 Rel($index=Index(), cards_service, generic_flashcard_domain, "Use FlashCardReview list (VOCABULARY content)")
 Rel($index=Index(), vocab_cards_api, vocab_cards_api_impl, "Dispatch to implementation")
 Rel($index=Index(), vocab_cards_api_impl, vocab_repo_port, "findByIdAndUserId(vocabularyId, userId)")
 Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "findByIdAndUserId")
-Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary + example sentences")
+Rel($index=Index(), vocab_repo_impl, app_db, "Read vocabulary + one cloze sentence (+ legacy examples if present)")
 Rel($index=Index(), app_db, vocab_repo_impl, "Return vocabulary aggregate")
 Rel($index=Index(), vocab_repo_impl, vocab_repo_port, "Return vocabulary")
 Rel($index=Index(), vocab_repo_port, vocab_cards_api_impl, "Return vocabulary")
 Rel($index=Index(), vocab_cards_api_impl, vocab_cards_api, "Return PrivateVocabularyRecord")
 Rel($index=Index(), vocab_cards_api, cards_service, "Return vocabulary content")
 Rel($index=Index(), cards_service, vocab_card_data, "Build VocabularyFlashCardData from review + fetched vocabulary")
+Rel($index=Index(), cards_service, cards_service, "Render sentence cloze card from vocabulary.clozeSentence; front=clozeText+hint, back=answerWords")
 Rel($index=Index(), vocab_card_data, cards_service, "Return normalized card data")
 Rel($index=Index(), cards_service, cards_service, "Map VocabularyFlashCardData -> VocabularyFlashCardView")
 Rel($index=Index(), cards_service, vocab_cards_controller, "Return VocabularyFlashCardView list")
 Rel($index=Index(), vocab_cards_controller, client_app, "200 + cards")
 
-' Flow C: vocabulary review updates FSRS state only
+' Flow D: vocabulary review updates FSRS state and clears cloze on GOOD
 Rel($index=SetIndex(1), learner, client_app, "Submit card rating")
 Rel($index=Index(), client_app, vocab_cards_controller, "POST /api/v1/vocabulary-flashcards/cards/{cardId}/review/v1")
 Rel($index=Index(), vocab_cards_controller, cards_service, "reviewVocabularyStudiedCard(cardId, rating)")
@@ -99,9 +156,15 @@ Rel($index=Index(), cards_service, cards_service, "FSRS reschedule")
 Rel($index=Index(), cards_service, vocab_card_repo_port, "saveVocabularyFlashCardState(updated)")
 Rel($index=Index(), vocab_card_repo_port, vocab_card_repo_impl, "saveVocabularyFlashCardState(updated)")
 Rel($index=Index(), vocab_card_repo_impl, app_db, "Update flashcard_review.card_json only")
+Rel($index=Index(), cards_service, cards_event_publisher, "publish ClearVocabularyClozeSentenceEvent when rating=GOOD")
+Rel($index=Index(), cards_event_publisher, event_bus, "publish(ClearVocabularyClozeSentenceEvent)")
+Rel($index=Index(), event_bus, vocab_cloze_clear_handler, "Handle ClearVocabularyClozeSentenceEvent")
+Rel($index=Index(), vocab_cloze_clear_handler, vocab_repo_port, "replaceClozeSentence(vocabularyId, null)")
+Rel($index=Index(), vocab_repo_port, vocab_repo_impl, "clear one-to-one cloze child")
+Rel($index=Index(), vocab_repo_impl, app_db, "Delete from vocabulary_cloze_sentences")
 Rel($index=Index(), vocab_cards_controller, client_app, "200 OK")
 
-' Flow D: legacy endpoint still available during migration (deprecated)
+' Flow E: legacy endpoint still available during migration (deprecated)
 Rel($index=SetIndex(1), learner, client_app, "Legacy card fetch path (temporary)")
 Rel($index=Index(), client_app, cards_controller, "GET /api/decks/{deckId}/cards/next/v1 [DEPRECATED]")
 Rel($index=Index(), cards_controller, cards_service, "getNextCardsToStudy(deckId, userId, count) [DEPRECATED]")
