@@ -784,47 +784,92 @@ public final class PromptsGenerator {
     String vocabList = formatVocabularyClozeSeeds(vocabulary);
 
     return """
-                You are a German teacher creating sentence-cloze vocabulary exercise for B1.
+                        You are a German teacher creating sentence-cloze vocabulary exercise for B1.
 
-        Topic context: "%s"
+                Topic context: "%s"
 
-        Task
-        For each vocabulary entry, create exactly ONE German sentence containing a blank.
+                Task
+                For each vocabulary entry, create exactly ONE German sentence containing a blank.
 
-        Vocabulary concept
-        Each vocabulary entry represents a lemma (base dictionary form).
-        The blank should normally require a natural surface form derived from that lemma.
+                Vocabulary concept
+                Each vocabulary entry represents a lemma (base dictionary form).
+                The blank should normally require a natural surface form derived from that lemma.
 
-        Prefer:
-        - conjugated verb forms
-        - plural or case forms of nouns
-        - separable verb constructions
-        - adjective agreement forms
+                Prefer:
+                - conjugated verb forms
+                - plural or case forms of nouns
+                - separable verb constructions
+                - adjective agreement forms
 
-        Avoid:
-        - using the base lemma when a natural sentence would use an inflected form
-        - sentences where the blank appears only as an infinitive unless grammar requires it
+                Avoid:
+                - using the base lemma when a natural sentence would use an inflected form
+                - sentences where the blank appears only as an infinitive unless grammar requires it
 
-        Cloze rules
-        - The sentence must contain exactly one blank written as "____".
-        - The blank must correspond to the provided vocabulary entry.
-        - Only one correct answer should fit the blank naturally.
-        - Avoid contexts where synonyms could also work.
+                Cloze rules
+                - The sentence must contain blanks representing the missing vocabulary.
+                - Each blank must be written as "____".
+                - If the vocabulary entry contains multiple words (e.g., "um zu", "immer noch"),
+                  the sentence must contain the SAME number of blanks as words.
+                - Example:
+                  vocabulary: "um zu" → cloze must contain "____ ____"
+                  vocabulary: "immer noch" → cloze must contain "____ ____"
+                - Do not merge multiple-word vocabulary into a single blank.
+                - The blanks must appear exactly where the vocabulary phrase would appear.
+                - Only one vocabulary entry may be blanked in each sentence.
+                - The number of blanks must equal the number of words in answerWords.
 
-        Hint rules
-        - Provide the exact English meaning used in the sentence.
-        - The hint must be very short (1–3 words).
-        - The hint must not contain the German word.
-        - The hint must reflect the precise sense of the word in this sentence.
+                Hint rules
+                - Provide the exact English meaning used in the sentence.
+                - The hint must be very short (1–3 words).
+                - The hint must not contain the German word.
+                - The hint must reflect the precise sense of the word in this sentence.
 
-        Sentence constraints
-        - Natural everyday German.
-        - 6–14 words.
-        - Prefer placing the blank in the middle of the sentence rather than the end.
+                Sentence constraints
+                - Natural everyday German.
+                - 6–14 words.
+                - Prefer placing the blank in the middle of the sentence rather than the end.
 
-        Learner vocabulary (German | translation):
-        %s
-                """
+                let me add my wording a bit:
+
+                Grammar variation
+                Use a wide range of natural German grammar when forming the sentence.
+
+                Prefer to vary grammatical structures across sentences, including but not limited to:
+
+                Verb forms
+                - present tense (Präsens)
+                - present perfect (Perfekt)
+                - simple past (Präteritum) when natural
+                - future constructions with "werden"
+                - imperative when natural
+
+                Verb constructions
+                - modal verb + infinitive (kann, muss, soll, will, darf)
+                - separable verbs in split form
+                - reflexive verbs
+                - verb + zu constructions
+                - um ... zu purpose clauses
+
+                Clause structures
+                - subordinate clauses with "weil", "wenn", "dass", "obwohl" (but not limited to)
+                - relative clauses
+                - simple coordinating clauses (und, aber, oder and others)
+
+                Noun grammar
+                - plural forms
+                - case variation (Akkusativ, Dativ, Genitiv where natural)
+
+                Adjective grammar
+                - adjective agreement
+                - comparative and superlative forms
+
+                Important
+                Do not force grammar variation artificially.
+                Use the structure that sounds most natural for the sentence.
+
+                Learner vocabulary (German | translation):
+                %s
+                        """
         .formatted(topic, vocabList);
   }
 }
