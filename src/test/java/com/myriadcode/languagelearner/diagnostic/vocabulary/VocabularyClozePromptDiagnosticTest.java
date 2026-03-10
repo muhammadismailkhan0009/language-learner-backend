@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Import(TestDbConfigs.class)
-// @EnabledIfEnvironmentVariable(named = "RUN_CLOZE_PROMPT_DIAGNOSTIC", matches = "true")
+@EnabledIfEnvironmentVariable(named = "RUN_CLOZE_PROMPT_DIAGNOSTIC", matches = "true")
 class VocabularyClozePromptDiagnosticTest {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
