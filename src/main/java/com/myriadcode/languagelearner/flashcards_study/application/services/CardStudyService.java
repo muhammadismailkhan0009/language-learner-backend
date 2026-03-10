@@ -26,7 +26,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -182,12 +184,13 @@ public class CardStudyService {
     }
 
     public List<VocabularyFlashCardView> getNextPrivateVocabularyCardsToStudy(String userId, int count) {
-        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId).stream()
-                .filter(FlashCardReview::isReversed)
-                .toList();
-        if (cards.isEmpty()) return List.of();
+        var clozeBackedCards = findClozeBackedReversedVocabularyCards(userId);
+        if (clozeBackedCards.isEmpty()) return List.of();
 
-        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
+        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(
+                userId,
+                clozeBackedCards.keySet().stream().toList()
+        );
         if (eligibleCards.isEmpty()) return List.of();
 
         var randomCards = FlashCardAlgorithmService.getRandomCards(eligibleCards, count);
@@ -197,22 +200,20 @@ public class CardStudyService {
         vocabularyFlashcardCooldownWindow.recordShown(userId, selectedCards);
 
         return selectedCards.stream()
-                .map(review -> toVocabularyFlashCardData(
-                        review,
-                        fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)
-                ))
+                .map(review -> toVocabularyFlashCardData(review, clozeBackedCards.get(review)))
                 .filter(java.util.Objects::nonNull)
                 .map(data -> toVocabularyFlashCardView(data, false))
                 .toList();
     }
 
     public List<VocabularyFlashCardView> getPrivateVocabularyCardsForRevision(String userId, int count) {
-        var cards = flashCardRepo.findVocabularyFlashCardsByUser(userId).stream()
-                .filter(FlashCardReview::isReversed)
-                .toList();
-        if (cards.isEmpty()) return List.of();
+        var clozeBackedCards = findClozeBackedReversedVocabularyCards(userId);
+        if (clozeBackedCards.isEmpty()) return List.of();
 
-        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(userId, cards);
+        var eligibleCards = vocabularyFlashcardCooldownWindow.filterEligible(
+                userId,
+                clozeBackedCards.keySet().stream().toList()
+        );
         if (eligibleCards.isEmpty()) return List.of();
 
         var revisionCards = FlashCardAlgorithmService.getCardsForRevision(eligibleCards, revisionSession, count);
@@ -224,7 +225,7 @@ public class CardStudyService {
         vocabularyFlashcardCooldownWindow.recordShown(userId, revisionCards);
 
         return revisionCards.stream()
-                .map(review -> toVocabularyFlashCardData(review, fetchPrivateVocabularyApi.getVocabularyRecord(review.contentId().id(), userId)))
+                .map(review -> toVocabularyFlashCardData(review, clozeBackedCards.get(review)))
                 .filter(java.util.Objects::nonNull)
                 .map(data -> toVocabularyFlashCardView(data, true))
                 .toList();
@@ -321,7 +322,7 @@ public class CardStudyService {
 
     private VocabularyFlashCardData toVocabularyFlashCardData(FlashCardReview review,
                                                               PrivateVocabularyRecord data) {
-        if (!review.isReversed() || data.clozeSentence() == null) {
+        if (!review.isReversed() || data == null || data.clozeSentence() == null) {
             return null;
         }
         var cloze = data.clozeSentence();
@@ -361,5 +362,38 @@ public class CardStudyService {
 
     private boolean shouldGenerateLanguageContent(DeckInfo deckId) {
         return DeckInfo.SENTENCES.equals(deckId) || DeckInfo.SENTENCES_REVISION.equals(deckId);
+    }
+
+    private Map<FlashCardReview, PrivateVocabularyRecord> findClozeBackedReversedVocabularyCards(String userId) {
+        var reversedCards = flashCardRepo.findVocabularyFlashCardsByUser(userId).stream()
+                .filter(FlashCardReview::isReversed)
+                .toList();
+        if (reversedCards.isEmpty()) {
+            return Map.of();
+        }
+
+        var vocabularyById = fetchPrivateVocabularyApi.getVocabularyRecords(
+                        reversedCards.stream().map(review -> review.contentId().id()).distinct().toList(),
+                        userId
+                ).stream()
+                .filter(record -> record.clozeSentence() != null)
+                .collect(Collectors.toMap(
+                        PrivateVocabularyRecord::id,
+                        record -> record,
+                        (first, ignored) -> first
+                ));
+
+        if (vocabularyById.isEmpty()) {
+            return Map.of();
+        }
+
+        var result = new LinkedHashMap<FlashCardReview, PrivateVocabularyRecord>();
+        for (var review : reversedCards) {
+            var vocabulary = vocabularyById.get(review.contentId().id());
+            if (vocabulary != null) {
+                result.put(review, vocabulary);
+            }
+        }
+        return result;
     }
 }
