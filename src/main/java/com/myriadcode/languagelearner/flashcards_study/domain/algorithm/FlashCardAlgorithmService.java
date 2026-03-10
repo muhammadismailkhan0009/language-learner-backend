@@ -89,6 +89,7 @@ public class FlashCardAlgorithmService {
 
             var candidates = bucket.stream()
                     .filter(r -> !r.id().id().equals(session.lastShown()))
+                    .filter(r -> !session.wasShownRecently(r.id().id()))
                     .filter(r -> session.shownTimes(r.id().id()) <= 2)
                     .toList();
 
@@ -97,8 +98,11 @@ public class FlashCardAlgorithmService {
             }
         }
 
-        // 5️⃣ Final fallback: ignore session guards, but keep eligibility
-        var fallback = eligible.stream().toList();
+        // 5️⃣ Final fallback: if every eligible card is inside the recent-review window,
+        // allow the pool to continue instead of going empty.
+        var fallback = eligible.stream()
+                .filter(r -> !r.id().id().equals(session.lastShown()))
+                .toList();
         if (fallback.isEmpty()) return List.of();
 
         return pickRandom(fallback, count);
