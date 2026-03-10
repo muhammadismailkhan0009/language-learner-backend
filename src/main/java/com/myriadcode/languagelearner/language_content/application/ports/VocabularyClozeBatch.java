@@ -9,9 +9,9 @@ public record VocabularyClozeBatch(
             String vocabSource,
             String clozeText,
             String hint,
-            String answerText,
+            String filledSentence,
             List<String> answerWords,
-            String answerTranslation
+            String filleSentenceTranslation
     ) {
     }
 }

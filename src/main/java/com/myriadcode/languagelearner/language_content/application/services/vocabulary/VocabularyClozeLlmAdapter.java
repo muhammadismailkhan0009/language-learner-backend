@@ -29,9 +29,9 @@ public class VocabularyClozeLlmAdapter implements VocabularyClozeLlmApi {
                         item.vocabSource(),
                         item.clozeText(),
                         item.hint(),
-                        item.answerText(),
+                        item.filledSentence(),
                         item.answerWords() == null ? List.of() : item.answerWords(),
-                        item.answerTranslation()
+                        item.filleSentenceTranslation()
                 ))
                 .toList();
     }
