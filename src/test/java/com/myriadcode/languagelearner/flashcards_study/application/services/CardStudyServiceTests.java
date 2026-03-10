@@ -1,6 +1,8 @@
 package com.myriadcode.languagelearner.flashcards_study.application.services;
 
 import com.myriadcode.fsrs.api.FsrsEngine;
+import com.myriadcode.fsrs.api.enums.State;
+import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.events.EventPublisher;
 import com.myriadcode.languagelearner.common.ids.ContentId;
@@ -64,6 +66,46 @@ class CardStudyServiceTests {
         assertThat(cards.getFirst().front().clozeText()).isEqualTo("Ich ___ Deutsch.");
     }
 
+    @Test
+    @DisplayName("Revision selection ignores reversed vocabulary cards without cloze sentences")
+    void revisionSelectionIgnoresReversedCardsWithoutClozeSentences() {
+        var flashCardRepo = mock(FlashCardRepo.class);
+        var fetchLanguageContentApi = mock(FetchLanguageContentApi.class);
+        var fetchPrivateVocabularyApi = mock(FetchPrivateVocabularyApi.class);
+        var eventPublisher = mock(EventPublisher.class);
+        var service = new CardStudyService(
+                flashCardRepo,
+                fetchLanguageContentApi,
+                fetchPrivateVocabularyApi,
+                eventPublisher,
+                new VocabularyFlashcardCooldownWindow()
+        );
+
+        var withoutCloze = revisionFlashcard("card-1", "vocab-1", true);
+        var withCloze = revisionFlashcard("card-2", "vocab-2", true);
+
+        when(flashCardRepo.findVocabularyFlashCardsByUser("user-1"))
+                .thenReturn(List.of(withoutCloze, withCloze));
+        when(fetchPrivateVocabularyApi.getVocabularyRecords(List.of("vocab-1", "vocab-2"), "user-1"))
+                .thenReturn(List.of(
+                        vocabulary("vocab-1", null),
+                        vocabulary("vocab-2", new PrivateVocabularyRecord.ClozeSentenceRecord(
+                                "cloze-2",
+                                "Wir ___ morgen.",
+                                "come",
+                                "kommen",
+                                List.of("kommen"),
+                                "come"
+                        ))
+                ));
+
+        var cards = service.getPrivateVocabularyCardsForRevision("user-1", 1);
+
+        assertThat(cards).hasSize(1);
+        assertThat(cards.getFirst().id()).isEqualTo("card-2");
+        assertThat(cards.getFirst().isRevision()).isTrue();
+    }
+
     private FlashCardReview flashcard(String flashcardId, String vocabularyId, boolean isReversed) {
         return new FlashCardReview(
                 new FlashCardReview.FlashCardId(flashcardId),
@@ -71,6 +113,29 @@ class CardStudyServiceTests {
                 new ContentId(vocabularyId),
                 ContentRefType.VOCABULARY,
                 fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60)),
+                isReversed
+        );
+    }
+
+    private FlashCardReview revisionFlashcard(String flashcardId, String vocabularyId, boolean isReversed) {
+        var now = Instant.now();
+        return new FlashCardReview(
+                new FlashCardReview.FlashCardId(flashcardId),
+                new UserId("user-1"),
+                new ContentId(vocabularyId),
+                ContentRefType.VOCABULARY,
+                new Card(
+                        5.0,
+                        now.plusSeconds(3600),
+                        0,
+                        0,
+                        now.minusSeconds(600),
+                        1,
+                        1,
+                        1,
+                        2.0,
+                        State.LEARNING
+                ),
                 isReversed
         );
     }
