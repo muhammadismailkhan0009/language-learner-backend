@@ -177,5 +177,67 @@ public class FlashCardAlgorithmService {
         return window.subList(0, Math.min(count, window.size()));
     }
 
+    public static List<FlashCardReview> getCardsForStudy(
+            List<FlashCardReview> cards,
+            int count
+    ) {
+        if (cards.isEmpty() || count <= 0) return List.of();
+
+        Instant now = Instant.now();
+        return cards.stream()
+                .sorted(studyPriorityComparator(now))
+                .limit(count)
+                .toList();
+    }
+
+    private static Comparator<FlashCardReview> studyPriorityComparator(Instant now) {
+        return Comparator
+                .comparing((FlashCardReview review) -> dueBucket(review, now))
+                .thenComparing(review -> overdueDurationOrZero(review, now), Comparator.reverseOrder())
+                .thenComparing(review -> timeUntilDueOrMax(review, now))
+                .thenComparing(review -> review.cardReviewData().stability())
+                .thenComparing(review -> review.cardReviewData().lastReview(), Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparing((FlashCardReview review) -> review.cardReviewData().lapses(), Comparator.reverseOrder())
+                .thenComparing((FlashCardReview review) -> review.cardReviewData().difficulty(), Comparator.reverseOrder())
+                .thenComparingInt(review -> statePriority(review.cardReviewData().state()))
+                .thenComparing(review -> review.id().id());
+    }
+
+    private static int dueBucket(FlashCardReview review, Instant now) {
+        var due = review.cardReviewData().due();
+        if (due == null) {
+            return 2;
+        }
+        return due.isAfter(now) ? 1 : 0;
+    }
+
+    private static java.time.Duration overdueDurationOrZero(FlashCardReview review, Instant now) {
+        var due = review.cardReviewData().due();
+        if (due == null || due.isAfter(now)) {
+            return java.time.Duration.ZERO;
+        }
+        return java.time.Duration.between(due, now);
+    }
+
+    private static java.time.Duration timeUntilDueOrMax(FlashCardReview review, Instant now) {
+        var due = review.cardReviewData().due();
+        if (due == null) {
+            return java.time.Duration.ofDays(36500);
+        }
+        return java.time.Duration.between(now, due).abs();
+    }
+
+    private static int statePriority(com.myriadcode.fsrs.api.enums.State state) {
+        if (state == null) {
+            return 4;
+        }
+        return switch (state) {
+            case RE_LEARNING -> 0;
+            case LEARNING -> 1;
+            case REVIEW -> 2;
+            case NEW -> 3;
+        };
+    }
+
 
 }

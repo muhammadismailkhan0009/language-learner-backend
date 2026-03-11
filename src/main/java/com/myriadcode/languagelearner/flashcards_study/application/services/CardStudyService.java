@@ -192,10 +192,10 @@ public class CardStudyService {
         );
         if (eligibleCards.isEmpty()) return List.of();
 
-        var randomCards = FlashCardAlgorithmService.getRandomCards(eligibleCards, count);
-        if (randomCards.isEmpty()) return List.of();
+        var studyCards = FlashCardAlgorithmService.getCardsForStudy(eligibleCards, count);
+        if (studyCards.isEmpty()) return List.of();
 
-        var selectedCards = randomCards.stream().limit(count).toList();
+        var selectedCards = studyCards.stream().limit(count).toList();
         vocabularyFlashcardCooldownWindow.recordShown(userId, selectedCards);
 
         return selectedCards.stream()

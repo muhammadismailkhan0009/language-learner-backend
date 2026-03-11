@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsC
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
+import com.myriadcode.languagelearner.flashcards_study.domain.views.VocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_content.application.externals.FetchLanguageContentApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
@@ -107,6 +108,41 @@ class CardStudyServiceTests {
         assertThat(cards.getFirst().isRevision()).isTrue();
     }
 
+    @Test
+    @DisplayName("Study selection prefers overdue lower-stability cards over upcoming ones")
+    void studySelectionPrefersOverdueLowerStabilityCards() {
+        var flashCardRepo = mock(FlashCardRepo.class);
+        var fetchLanguageContentApi = mock(FetchLanguageContentApi.class);
+        var fetchPrivateVocabularyApi = mock(FetchPrivateVocabularyApi.class);
+        var eventPublisher = mock(EventPublisher.class);
+        var service = new CardStudyService(
+                flashCardRepo,
+                fetchLanguageContentApi,
+                fetchPrivateVocabularyApi,
+                eventPublisher,
+                new VocabularyFlashcardCooldownWindow()
+        );
+
+        var now = Instant.now();
+        var overdueWeak = studyFlashcard("card-1", "vocab-1", now.minusSeconds(1200), 2.0, 5.0, 0, now.minusSeconds(7200));
+        var overdueStrong = studyFlashcard("card-2", "vocab-2", now.minusSeconds(1200), 7.0, 5.0, 0, now.minusSeconds(3600));
+        var upcoming = studyFlashcard("card-3", "vocab-3", now.plusSeconds(600), 1.0, 8.0, 1, now.minusSeconds(10800));
+
+        when(flashCardRepo.findVocabularyFlashCardsByUser("user-1"))
+                .thenReturn(List.of(overdueWeak, overdueStrong, upcoming));
+        when(fetchPrivateVocabularyApi.getVocabularyRecords(List.of("vocab-1", "vocab-2", "vocab-3"), "user-1"))
+                .thenReturn(List.of(
+                        vocabulary("vocab-1", cloze("cloze-1", "Ich ___ eins.", "one", "eins")),
+                        vocabulary("vocab-2", cloze("cloze-2", "Ich ___ zwei.", "two", "zwei")),
+                        vocabulary("vocab-3", cloze("cloze-3", "Ich ___ drei.", "three", "drei"))
+                ));
+
+        var cards = service.getNextPrivateVocabularyCardsToStudy("user-1", 2);
+
+        assertThat(cards).extracting(VocabularyFlashCardView::id)
+                .containsExactly("card-1", "card-2");
+    }
+
     private FlashCardReview flashcard(String flashcardId, String vocabularyId, boolean isReversed) {
         return new FlashCardReview(
                 new FlashCardReview.FlashCardId(flashcardId),
@@ -138,6 +174,48 @@ class CardStudyServiceTests {
                         State.LEARNING
                 ),
                 isReversed
+        );
+    }
+
+    private FlashCardReview studyFlashcard(String flashcardId,
+                                           String vocabularyId,
+                                           Instant due,
+                                           double stability,
+                                           double difficulty,
+                                           int lapses,
+                                           Instant lastReview) {
+        return new FlashCardReview(
+                new FlashCardReview.FlashCardId(flashcardId),
+                new UserId("user-1"),
+                new ContentId(vocabularyId),
+                ContentRefType.VOCABULARY,
+                new FsrsCard(
+                        difficulty,
+                        due,
+                        0,
+                        lapses,
+                        lastReview,
+                        1,
+                        1,
+                        1,
+                        stability,
+                        State.REVIEW
+                ),
+                true
+        );
+    }
+
+    private PrivateVocabularyRecord.ClozeSentenceRecord cloze(String id,
+                                                              String text,
+                                                              String answerTranslation,
+                                                              String answerText) {
+        return new PrivateVocabularyRecord.ClozeSentenceRecord(
+                id,
+                text,
+                answerTranslation,
+                answerText,
+                List.of(answerText),
+                answerTranslation
         );
     }
 
