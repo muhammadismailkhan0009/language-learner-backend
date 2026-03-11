@@ -839,6 +839,8 @@ This is a soft constraint and must never disturb natural German.
 - Combine multiple learner vocabulary words in the same sentence when natural.
 - Do not force vocabulary if it makes the sentence unnatural.
 - Prefer sentences that stay within the topic context when possible.
+- Prefer sentences where surrounding words give clear contextual clues for the missing word.
+- When natural, include small contextual details (e.g. time, place, situation) that help infer the meaning.
 
 Vocabulary Control
 - Prefer using the provided learner vocabulary whenever possible.
