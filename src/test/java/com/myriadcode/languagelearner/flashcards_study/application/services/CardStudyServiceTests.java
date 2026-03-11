@@ -2,12 +2,13 @@ package com.myriadcode.languagelearner.flashcards_study.application.services;
 
 import com.myriadcode.fsrs.api.FsrsEngine;
 import com.myriadcode.fsrs.api.enums.State;
-import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.events.EventPublisher;
 import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
+import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
 import com.myriadcode.languagelearner.language_content.application.externals.FetchLanguageContentApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
@@ -112,7 +113,7 @@ class CardStudyServiceTests {
                 new UserId("user-1"),
                 new ContentId(vocabularyId),
                 ContentRefType.VOCABULARY,
-                fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60)),
+                FsrsCardMapper.toDomain(fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60))),
                 isReversed
         );
     }
@@ -124,7 +125,7 @@ class CardStudyServiceTests {
                 new UserId("user-1"),
                 new ContentId(vocabularyId),
                 ContentRefType.VOCABULARY,
-                new Card(
+                new FsrsCard(
                         5.0,
                         now.plusSeconds(3600),
                         0,

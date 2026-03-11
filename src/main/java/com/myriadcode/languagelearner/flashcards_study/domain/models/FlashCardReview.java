@@ -1,6 +1,4 @@
 package com.myriadcode.languagelearner.flashcards_study.domain.models;
-
-import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
@@ -11,7 +9,7 @@ public record FlashCardReview(
         @NotNull UserId userId,
         @NotNull ContentId contentId,
         ContentRefType contentType,
-        Card cardReviewData,
+        FsrsCard cardReviewData,
         boolean isReversed
 ) {
 

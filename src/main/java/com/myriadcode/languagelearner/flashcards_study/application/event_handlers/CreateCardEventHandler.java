@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.events.CreateFlashCardEvent;
 import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
 import org.springframework.context.event.EventListener;
@@ -77,7 +78,7 @@ public class CreateCardEventHandler {
                 userId,
                 contentId,
                 event.getContentType(),
-                fsrsEngine.createEmptyCard(Instant.now()),
+                FsrsCardMapper.toDomain(fsrsEngine.createEmptyCard(Instant.now())),
                 isReversed
         );
         flashCardRepo.createFlashCard(flashcard);
@@ -99,7 +100,7 @@ public class CreateCardEventHandler {
                 userId,
                 vocabularyId,
                 ContentRefType.VOCABULARY,
-                fsrsEngine.createEmptyCard(Instant.now()),
+                FsrsCardMapper.toDomain(fsrsEngine.createEmptyCard(Instant.now())),
                 isReversed
         );
         flashCardRepo.createVocabularyFlashCard(flashcard);

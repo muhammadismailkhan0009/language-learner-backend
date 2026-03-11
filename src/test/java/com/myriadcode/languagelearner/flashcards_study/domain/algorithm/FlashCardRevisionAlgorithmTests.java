@@ -1,11 +1,11 @@
 package com.myriadcode.languagelearner.flashcards_study.domain.algorithm;
 
 import com.myriadcode.fsrs.api.enums.State;
-import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
+import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +59,7 @@ class FlashCardRevisionAlgorithmTests {
                     new UserId("user-1"),
                     new ContentId("content-" + index),
                     ContentRefType.VOCABULARY,
-                    new Card(
+                    new FsrsCard(
                             5.0,
                             now.plusSeconds(3600),
                             0,

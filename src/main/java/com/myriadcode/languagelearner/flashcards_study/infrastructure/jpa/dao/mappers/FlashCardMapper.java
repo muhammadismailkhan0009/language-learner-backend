@@ -1,7 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.dao.mappers;
 
-import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
+import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
 import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.entities.FlashCardReviewEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -23,7 +23,7 @@ public interface FlashCardMapper {
     FlashCardReviewEntity toEntity(FlashCardReview review);
 
     @Named("convertToJson")
-    default String convertToJson(Card review) {
+    default String convertToJson(FsrsCard review) {
         return review.toJson();
     }
 
@@ -38,7 +38,7 @@ public interface FlashCardMapper {
     FlashCardReview toModel(FlashCardReviewEntity review);
 
     @Named("convertToCard")
-    default Card convertToCard(String cardJson) {
-        return Card.fromJson(cardJson);
+    default FsrsCard convertToCard(String cardJson) {
+        return FsrsCard.fromJson(cardJson);
     }
 }

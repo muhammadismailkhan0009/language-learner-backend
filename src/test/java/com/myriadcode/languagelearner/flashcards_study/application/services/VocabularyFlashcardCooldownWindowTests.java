@@ -4,6 +4,7 @@ import com.myriadcode.fsrs.api.FsrsEngine;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.ids.ContentId;
 import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,7 +71,7 @@ class VocabularyFlashcardCooldownWindowTests {
                 new UserId("user-a"),
                 new ContentId(vocabularyId),
                 ContentRefType.VOCABULARY,
-                fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60)),
+                FsrsCardMapper.toDomain(fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60))),
                 isReversed
         );
     }

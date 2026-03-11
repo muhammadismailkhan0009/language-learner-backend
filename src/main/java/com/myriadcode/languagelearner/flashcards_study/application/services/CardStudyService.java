@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.flashcards_study.application.services;
 
 import com.myriadcode.fsrs.api.FsrsEngine;
 import com.myriadcode.fsrs.api.enums.Rating;
-import com.myriadcode.fsrs.api.models.Card;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.enums.DeckInfo;
 import com.myriadcode.languagelearner.common.events.ClearVocabularyClozeSentenceEvent;
@@ -10,6 +9,7 @@ import com.myriadcode.languagelearner.common.events.EventPublisher;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.concurnas_like_library.Value;
+import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.FlashCardAlgorithmService;
@@ -79,9 +79,8 @@ public class CardStudyService {
         var reviewData = flashCardRepo.findReviewInfoByCard(new FlashCardReview.FlashCardId(cardId));
         if (reviewData.isEmpty()) throw new RuntimeException("No card found");
 
-        Card state = reviewData.get().cardReviewData();
-
-        Card updated = scheduler.reSchedule(state, rating, Instant.now());
+        var state = FsrsCardMapper.toLibrary(reviewData.get().cardReviewData());
+        var updated = FsrsCardMapper.toDomain(scheduler.reSchedule(state, rating, Instant.now()));
 
         var updatedReview = new FlashCardReview(
                 new FlashCardReview.FlashCardId(cardId),
@@ -243,7 +242,9 @@ public class CardStudyService {
         );
         if (reviewData.isEmpty()) throw new RuntimeException("No vocabulary card found");
 
-        Card updated = scheduler.reSchedule(reviewData.get().cardReviewData(), rating, Instant.now());
+        var updated = FsrsCardMapper.toDomain(
+                scheduler.reSchedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData()), rating, Instant.now())
+        );
 
         var updatedReview = new FlashCardReview(
                 reviewData.get().id(),
