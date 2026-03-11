@@ -144,6 +144,7 @@ public class FlashCardAlgorithmService {
         return order;
     }
 
+    @Deprecated(since = "2026-03-1", forRemoval = true)
     public static List<FlashCardReview> getRandomCards(
             List<FlashCardReview> cards,
             int count
