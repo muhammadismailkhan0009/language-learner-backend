@@ -815,6 +815,7 @@ public final class PromptsGenerator {
                   vocabulary: "immer noch" → cloze must contain "____ ____"
                 - Do not merge multiple-word vocabulary into a single blank.
                 - The blanks must appear exactly where the vocabulary phrase would appear.
+                - You can use more than one words from provided vocabulary in single sentence. But only one vocabulary is to be tested.
                 - Only one vocabulary entry may be blanked in each sentence.
                 - The number of blanks must equal the number of words in answerWords.
 
