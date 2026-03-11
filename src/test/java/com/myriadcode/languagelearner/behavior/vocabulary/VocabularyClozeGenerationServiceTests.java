@@ -72,15 +72,15 @@ class VocabularyClozeGenerationServiceTests {
     }
 
     @Test
-    @DisplayName("generate: merges recent reading and writing topics and stores one cloze sentence per vocabulary")
+    @DisplayName("generate: uses the latest reading and writing topics and stores one cloze sentence per vocabulary")
     void generateStoresClozeSentencePerVocabulary() {
         var vocabulary = seedVocabulary("v-1", "user-1");
         vocabularyRepo.save(vocabulary);
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
                 .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of("Travel plans"));
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of("Office small talk"));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Office small talk"));
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans | Office small talk"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",
@@ -108,8 +108,8 @@ class VocabularyClozeGenerationServiceTests {
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
                 .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-2", "v-2", State.NEW, true)));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of());
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of());
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("General practice"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",
@@ -136,8 +136,8 @@ class VocabularyClozeGenerationServiceTests {
                         new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
                         new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, true)
                 ));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of("Daily routines"));
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 10)).thenReturn(List.of());
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Daily routines"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("Daily routines"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",

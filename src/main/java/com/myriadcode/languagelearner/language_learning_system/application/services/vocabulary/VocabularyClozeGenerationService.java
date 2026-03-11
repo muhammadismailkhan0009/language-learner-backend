@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @Service
 public class VocabularyClozeGenerationService {
 
-    private static final int RECENT_TOPIC_LIMIT = 10;
+    private static final int RECENT_TOPIC_LIMIT = 1;
     private static final String GENERAL_TOPIC = "General practice";
 
     private final VocabularyRepo vocabularyRepo;
