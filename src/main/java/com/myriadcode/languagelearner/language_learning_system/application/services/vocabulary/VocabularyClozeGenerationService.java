@@ -154,7 +154,12 @@ public class VocabularyClozeGenerationService {
                             review.flashcardId(),
                             review.vocabularyId(),
                             review.fsrsState(),
-                            createdAt
+                            createdAt,
+                            review.due(),
+                            review.stability(),
+                            review.difficulty(),
+                            review.lapses(),
+                            review.lastReview()
                     );
                 })
                 .filter(java.util.Objects::nonNull)

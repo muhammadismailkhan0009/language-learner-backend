@@ -5,18 +5,13 @@ import com.myriadcode.fsrs.api.enums.State;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class VocabularyClozeSelectionPolicy {
 
     public static final int MAX_WORDS = 20;
-    public static final int REVIEW_COUNT = 4;
-    public static final int RE_LEARNING_COUNT = 8;
-    public static final int LEARNING_COUNT = 4;
-    public static final int NEW_COUNT = 4;
+    public static final int MAX_NEW_CARDS = 3;
 
     public List<VocabularyClozeCandidate> selectCandidates(String userId,
                                                            List<VocabularyClozeCandidate> candidates,
@@ -25,59 +20,121 @@ public class VocabularyClozeSelectionPolicy {
             return List.of();
         }
 
-        var grouped = groupByState(candidates);
-        var selected = new ArrayList<VocabularyClozeCandidate>();
-
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.REVIEW), REVIEW_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.LEARNING), LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.NEW), NEW_COUNT));
-
-        if (selected.size() >= MAX_WORDS) {
-            return selected.subList(0, MAX_WORDS);
-        }
-
-        var remaining = candidates.stream()
-                .filter(candidate -> !selected.contains(candidate))
-                .sorted(Comparator.comparing(VocabularyClozeCandidate::vocabularyCreatedAt))
+        var ranked = candidates.stream()
+                .sorted(fsrsPriorityComparator(rotationHour))
                 .toList();
 
-        var needed = MAX_WORDS - selected.size();
-        if (remaining.isEmpty() || needed <= 0) {
+        var count = Math.min(MAX_WORDS, ranked.size());
+        var windowSize = Math.min(ranked.size(), Math.max(count * 3, count + 4));
+        var window = ranked.subList(0, windowSize);
+
+        return takeWithNewCap(window, count);
+    }
+
+    private Comparator<VocabularyClozeCandidate> fsrsPriorityComparator(Instant now) {
+        return Comparator
+                .comparing((VocabularyClozeCandidate candidate) -> dueBucket(candidate, now))
+                .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
+                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
+                .thenComparing(VocabularyClozeCandidate::stability)
+                .thenComparing(this::lastReviewOrEpoch)
+                .thenComparing(VocabularyClozeCandidate::lapses, Comparator.reverseOrder())
+                .thenComparing(VocabularyClozeCandidate::difficulty, Comparator.reverseOrder())
+                .thenComparingInt(candidate -> statePriority(candidate.state()))
+                .thenComparing(VocabularyClozeCandidate::vocabularyCreatedAt)
+                .thenComparing(VocabularyClozeCandidate::flashcardId);
+    }
+
+    private List<VocabularyClozeCandidate> takeWithNewCap(List<VocabularyClozeCandidate> candidates, int count) {
+        if (count <= 0 || candidates.isEmpty()) {
+            return List.of();
+        }
+
+        var maxNewCards = Math.min(MAX_NEW_CARDS, count);
+        var selected = new ArrayList<VocabularyClozeCandidate>(count);
+        var deferredNewCards = candidates.stream()
+                .filter(candidate -> candidate.state() == State.NEW)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        for (var candidate : candidates) {
+            if (selected.size() >= count) {
+                break;
+            }
+            if (candidate.state() == State.NEW) {
+                continue;
+            }
+            selected.add(candidate);
+        }
+
+        var selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        for (var candidate : deferredNewCards) {
+            if (selected.size() >= count || selectedNewCards >= maxNewCards) {
+                break;
+            }
+            selected.add(candidate);
+            selectedNewCards++;
+        }
+
+        if (selected.size() >= count) {
             return selected;
         }
 
-        selected.addAll(remaining.subList(0, Math.min(needed, remaining.size())));
+        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        for (var candidate : candidates) {
+            if (selected.size() >= count) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            if (candidate.state() == State.NEW && selectedNewCards >= maxNewCards) {
+                continue;
+            }
+            selected.add(candidate);
+            if (candidate.state() == State.NEW) {
+                selectedNewCards++;
+            }
+        }
+
         return selected;
     }
 
-    private Map<State, List<VocabularyClozeCandidate>> groupByState(List<VocabularyClozeCandidate> candidates) {
-        var grouped = new EnumMap<State, List<VocabularyClozeCandidate>>(State.class);
-        for (State state : State.values()) {
-            grouped.put(state, new ArrayList<>());
+    private int dueBucket(VocabularyClozeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return 2;
         }
-        for (var candidate : candidates) {
-            grouped.computeIfAbsent(candidate.state(), key -> new ArrayList<>()).add(candidate);
-        }
-        for (var entry : grouped.entrySet()) {
-            entry.getValue().sort(Comparator.comparing(VocabularyClozeCandidate::vocabularyCreatedAt));
-        }
-        return grouped;
+        return candidate.due().isAfter(now) ? 1 : 0;
     }
 
-    private List<VocabularyClozeCandidate> selectFromState(String userId,
-                                                           Instant rotationHour,
-                                                           List<VocabularyClozeCandidate> candidates,
-                                                           int count) {
-        if (candidates == null || candidates.isEmpty() || count <= 0) {
-            return List.of();
+    private java.time.Duration overdueDurationOrZero(VocabularyClozeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return java.time.Duration.ZERO;
         }
-        var size = candidates.size();
-        var windowSize = Math.min(size, count * 3);
-        var maxStart = Math.max(1, size - windowSize + 1);
-        var start = Math.floorMod(Objects.hash(userId, rotationHour.toString(), candidates.getFirst().state().name()),
-                maxStart);
-        var window = candidates.subList(start, start + windowSize);
-        return window.subList(0, Math.min(count, window.size()));
+        return candidate.due().isAfter(now)
+                ? java.time.Duration.ZERO
+                : java.time.Duration.between(candidate.due(), now);
+    }
+
+    private java.time.Duration timeUntilDueOrMax(VocabularyClozeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return java.time.Duration.ofDays(36500);
+        }
+        return java.time.Duration.between(now, candidate.due()).abs();
+    }
+
+    private Instant lastReviewOrEpoch(VocabularyClozeCandidate candidate) {
+        return candidate.lastReview() == null ? Instant.EPOCH : candidate.lastReview();
+    }
+
+    private int statePriority(State state) {
+        if (state == null) {
+            return 4;
+        }
+        return switch (state) {
+            case RE_LEARNING -> 0;
+            case LEARNING -> 1;
+            case REVIEW -> 2;
+            case NEW -> 3;
+        };
     }
 }

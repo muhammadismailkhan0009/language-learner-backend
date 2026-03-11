@@ -24,6 +24,11 @@ public class VocabularyFlashcardReviewsAdapter implements FetchVocabularyFlashca
                         review.id().id(),
                         review.contentId().id(),
                         review.cardReviewData().state(),
+                        review.cardReviewData().due(),
+                        review.cardReviewData().stability(),
+                        review.cardReviewData().difficulty(),
+                        review.cardReviewData().lapses(),
+                        review.cardReviewData().lastReview(),
                         review.isReversed()
                 ))
                 .toList();
