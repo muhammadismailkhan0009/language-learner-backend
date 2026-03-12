@@ -8,6 +8,11 @@ public record WritingPracticeCandidate(
         String flashCardId,
         String vocabularyId,
         State state,
-        Instant vocabularyCreatedAt
+        Instant vocabularyCreatedAt,
+        Instant due,
+        double stability,
+        double difficulty,
+        int lapses,
+        Instant lastReview
 ) {
 }

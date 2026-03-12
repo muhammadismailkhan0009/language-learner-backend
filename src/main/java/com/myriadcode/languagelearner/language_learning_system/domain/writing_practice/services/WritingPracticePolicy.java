@@ -8,15 +8,14 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class WritingPracticePolicy {
 
     public static final int MAX_WORDS = 20;
-    public static final int REVIEW_COUNT = 6;
-    public static final int RE_LEARNING_COUNT = 8;
-    public static final int LEARNING_COUNT = 4;
-    public static final int NEW_COUNT = 2;
+    public static final int REVIEW_COUNT = 15;
+    public static final int LEARNING_COUNT = 3;
+    public static final int RE_LEARNING_COUNT = 2;
+    public static final int MAX_FRAGILE_CARDS = 2;
 
     public List<WritingPracticeCandidate> selectCandidates(String userId,
                                                            List<WritingPracticeCandidate> candidates,
@@ -25,33 +24,32 @@ public class WritingPracticePolicy {
             return List.of();
         }
 
-        var grouped = groupByState(candidates);
-        var selected = new ArrayList<WritingPracticeCandidate>();
-
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.REVIEW), REVIEW_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.LEARNING), LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.NEW), NEW_COUNT));
-
-        if (selected.size() >= MAX_WORDS) {
-            return selected.subList(0, MAX_WORDS);
-        }
-
-        var remaining = candidates.stream()
-                .filter(candidate -> !selected.contains(candidate))
-                .sorted(Comparator.comparing(WritingPracticeCandidate::vocabularyCreatedAt))
+        var eligible = candidates.stream()
+                .filter(candidate -> candidate.state() != State.NEW)
                 .toList();
-
-        var needed = MAX_WORDS - selected.size();
-        if (remaining.isEmpty() || needed <= 0) {
-            return selected;
+        if (eligible.isEmpty()) {
+            return List.of();
         }
 
-        selected.addAll(remaining.subList(0, Math.min(needed, remaining.size())));
-        return selected;
+        var grouped = groupByState(eligible, rotationHour);
+        var selected = new ArrayList<WritingPracticeCandidate>(Math.min(MAX_WORDS, eligible.size()));
+
+        addCandidates(selected, grouped.get(State.REVIEW), REVIEW_COUNT);
+        addCandidates(selected, grouped.get(State.LEARNING), LEARNING_COUNT);
+        addCandidates(selected, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT);
+
+        var remainder = eligible.stream()
+                .filter(candidate -> !selected.contains(candidate))
+                .sorted(stabilityBiasedComparator(rotationHour))
+                .toList();
+        addCandidates(selected, remainder, Math.min(MAX_WORDS, eligible.size()) - selected.size());
+        addRemainingCandidates(selected, remainder, Math.min(MAX_WORDS, eligible.size()) - selected.size());
+
+        return selected.subList(0, Math.min(selected.size(), Math.min(MAX_WORDS, eligible.size())));
     }
 
-    private Map<State, List<WritingPracticeCandidate>> groupByState(List<WritingPracticeCandidate> candidates) {
+    private Map<State, List<WritingPracticeCandidate>> groupByState(List<WritingPracticeCandidate> candidates,
+                                                                    Instant now) {
         var grouped = new EnumMap<State, List<WritingPracticeCandidate>>(State.class);
         for (State state : State.values()) {
             grouped.put(state, new ArrayList<>());
@@ -60,24 +58,98 @@ public class WritingPracticePolicy {
             grouped.computeIfAbsent(candidate.state(), key -> new ArrayList<>()).add(candidate);
         }
         for (var entry : grouped.entrySet()) {
-            entry.getValue().sort(Comparator.comparing(WritingPracticeCandidate::vocabularyCreatedAt));
+            entry.getValue().sort(stabilityBiasedComparator(now));
         }
         return grouped;
     }
 
-    private List<WritingPracticeCandidate> selectFromState(String userId,
-                                                           Instant rotationHour,
-                                                           List<WritingPracticeCandidate> candidates,
-                                                           int count) {
-        if (candidates == null || candidates.isEmpty() || count <= 0) {
-            return List.of();
+    private Comparator<WritingPracticeCandidate> stabilityBiasedComparator(Instant now) {
+        return Comparator
+                .comparing((WritingPracticeCandidate candidate) -> dueBucket(candidate, now))
+                .thenComparing(WritingPracticeCandidate::stability, Comparator.reverseOrder())
+                .thenComparing(WritingPracticeCandidate::difficulty)
+                .thenComparing(WritingPracticeCandidate::lapses)
+                .thenComparing(this::lastReviewOrMax, Comparator.reverseOrder())
+                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
+                .thenComparingInt(candidate -> statePriority(candidate.state()))
+                .thenComparing(WritingPracticeCandidate::vocabularyCreatedAt)
+                .thenComparing(WritingPracticeCandidate::flashCardId);
+    }
+
+    private void addCandidates(List<WritingPracticeCandidate> selected,
+                               List<WritingPracticeCandidate> candidates,
+                               int targetCount) {
+        if (candidates == null || candidates.isEmpty() || targetCount <= 0) {
+            return;
         }
-        var size = candidates.size();
-        var windowSize = Math.min(size, count * 3);
-        var maxStart = Math.max(1, size - windowSize + 1);
-        var start = Math.floorMod(Objects.hash(userId, rotationHour.toString(), candidates.getFirst().state().name()),
-                maxStart);
-        var window = candidates.subList(start, start + windowSize);
-        return window.subList(0, Math.min(count, window.size()));
+        for (var candidate : candidates) {
+            if (selected.size() >= MAX_WORDS || targetCount <= 0) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            if (isFragile(candidate) && selectedFragileCount(selected) >= MAX_FRAGILE_CARDS) {
+                continue;
+            }
+            selected.add(candidate);
+            targetCount--;
+        }
+    }
+
+    private int selectedFragileCount(List<WritingPracticeCandidate> selected) {
+        return (int) selected.stream().filter(this::isFragile).count();
+    }
+
+    private void addRemainingCandidates(List<WritingPracticeCandidate> selected,
+                                        List<WritingPracticeCandidate> candidates,
+                                        int targetCount) {
+        if (candidates == null || candidates.isEmpty() || targetCount <= 0) {
+            return;
+        }
+        for (var candidate : candidates) {
+            if (selected.size() >= MAX_WORDS || targetCount <= 0) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            selected.add(candidate);
+            targetCount--;
+        }
+    }
+
+    private boolean isFragile(WritingPracticeCandidate candidate) {
+        return candidate.lapses() >= 2 || candidate.stability() <= 2.5;
+    }
+
+    private int dueBucket(WritingPracticeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return 1;
+        }
+        return candidate.due().isAfter(now) ? 1 : 0;
+    }
+
+    private java.time.Duration timeUntilDueOrMax(WritingPracticeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return java.time.Duration.ofDays(36500);
+        }
+        return java.time.Duration.between(now, candidate.due()).abs();
+    }
+
+    private Instant lastReviewOrMax(WritingPracticeCandidate candidate) {
+        return candidate.lastReview() == null ? Instant.MAX : candidate.lastReview();
+    }
+
+    private int statePriority(State state) {
+        if (state == null) {
+            return 3;
+        }
+        return switch (state) {
+            case REVIEW -> 0;
+            case LEARNING -> 1;
+            case RE_LEARNING -> 2;
+            case NEW -> 3;
+        };
     }
 }

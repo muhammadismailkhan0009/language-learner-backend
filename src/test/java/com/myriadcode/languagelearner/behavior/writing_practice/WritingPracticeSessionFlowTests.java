@@ -80,8 +80,8 @@ class WritingPracticeSessionFlowTests {
         assertThat(session.getSubmittedAnswer()).isNull();
         assertThat(session.getSubmittedAt()).isNull();
         assertThat(session.getSentencePairs()).hasSize(2);
-        assertThat(session.getVocabularyUsages()).hasSize(20);
-        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(20);
+        assertThat(session.getVocabularyUsages()).hasSize(18);
+        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(18);
     }
 
     @Test
@@ -109,7 +109,7 @@ class WritingPracticeSessionFlowTests {
     }
 
     @Test
-    @DisplayName("createSession: uses only reversed cards and respects 6/8/4/2 state ratio")
+    @DisplayName("createSession: uses only reversed cards and excludes new cards from the writing set")
     void createSessionUsesReversedCardsWithTargetRatio() {
         var reviews = new ArrayList<VocabularyFlashcardReviewRecord>();
         reviews.add(new VocabularyFlashcardReviewRecord("r-1", "v-r-1", State.REVIEW, true));
@@ -139,14 +139,14 @@ class WritingPracticeSessionFlowTests {
 
         var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
-        assertThat(persisted.getVocabularyUsages()).hasSize(20);
+        assertThat(persisted.getVocabularyUsages()).hasSize(18);
         var selectedCardIds = persisted.getVocabularyUsages().stream().map(usage -> usage.getFlashcardId()).toList();
 
         assertThat(selectedCardIds).doesNotContain("r-front", "n-front");
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(6);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(8);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(4);
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).hasSize(2);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).isEmpty();
     }
 
     @Test
@@ -159,7 +159,7 @@ class WritingPracticeSessionFlowTests {
         var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
 
-        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(20);
+        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(18);
         assertThat(persisted.getVocabularyUsages())
                 .extracting(usage -> usage.getVocabularyId())
                 .containsExactlyInAnyOrder("v-review-1", "v-learning-1");
@@ -200,7 +200,7 @@ class WritingPracticeSessionFlowTests {
 
         assertThat(listed).hasSize(2);
         assertThat(listed.getFirst().createdAt()).isAfter(listed.get(1).createdAt());
-        assertThat(listed).allMatch(summary -> summary.vocabCount() == 20);
+        assertThat(listed).allMatch(summary -> summary.vocabCount() == 18);
     }
 
     @Test
@@ -240,12 +240,12 @@ class WritingPracticeSessionFlowTests {
 
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
         assertThat(persisted.getVocabularyUsages()).noneMatch(saved -> saved.getFlashcardId().equals(flashcardId));
-        assertThat(persisted.getVocabularyUsages().size()).isEqualTo(19);
+        assertThat(persisted.getVocabularyUsages().size()).isEqualTo(17);
         assertThat(stubFetchPrivateVocabularyApi.getVocabularyRecord(vocabularyId, "user-1")).isNotNull();
 
         var response = writingPracticeService.getSession("user-1", sessionId);
         assertThat(response.vocabFlashcards()).noneMatch(card -> card.id().equals(flashcardId));
-        assertThat(response.vocabFlashcards().size()).isEqualTo(19);
+        assertThat(response.vocabFlashcards().size()).isEqualTo(17);
     }
 
     @Test
