@@ -8,15 +8,16 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class ReadingPracticePolicy {
 
     public static final int MAX_WORDS = 20;
-    public static final int REVIEW_COUNT = 6;
-    public static final int RE_LEARNING_COUNT = 8;
+    public static final int MAX_NEW_CARDS = 2;
+    public static final int REVIEW_COUNT = 8;
+    public static final int RE_LEARNING_COUNT = 4;
     public static final int LEARNING_COUNT = 4;
-    public static final int NEW_COUNT = 2;
+    public static final int FLEX_COUNT = 2;
+    public static final int MAX_VERY_WEAK_CARDS = 10;
 
     public List<ReadingPracticeCandidate> selectCandidates(String userId,
                                                            List<ReadingPracticeCandidate> candidates,
@@ -25,59 +26,128 @@ public class ReadingPracticePolicy {
             return List.of();
         }
 
-        var grouped = groupByState(candidates);
-        var selected = new ArrayList<ReadingPracticeCandidate>();
+        var grouped = groupByState(candidates, rotationHour);
+        var selected = new ArrayList<ReadingPracticeCandidate>(Math.min(MAX_WORDS, candidates.size()));
 
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.REVIEW), REVIEW_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.LEARNING), LEARNING_COUNT));
-        selected.addAll(selectFromState(userId, rotationHour, grouped.get(State.NEW), NEW_COUNT));
+        addCandidates(selected, grouped.get(State.REVIEW), REVIEW_COUNT);
+        addCandidates(selected, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT);
+        addCandidates(selected, grouped.get(State.LEARNING), LEARNING_COUNT);
+        addCandidates(selected, grouped.get(State.NEW), MAX_NEW_CARDS);
 
-        if (selected.size() >= MAX_WORDS) {
-            return selected.subList(0, MAX_WORDS);
-        }
-
-        var remaining = candidates.stream()
+        var remainder = candidates.stream()
                 .filter(candidate -> !selected.contains(candidate))
-                .sorted(Comparator.comparing(ReadingPracticeCandidate::vocabularyCreatedAt))
+                .sorted(fsrsPriorityComparator(rotationHour))
                 .toList();
 
-        var needed = MAX_WORDS - selected.size();
-        if (remaining.isEmpty() || needed <= 0) {
-            return selected;
-        }
+        addCandidates(selected, remainder, FLEX_COUNT);
+        addCandidates(selected, remainder, Math.min(MAX_WORDS, candidates.size()) - selected.size());
 
-        selected.addAll(remaining.subList(0, Math.min(needed, remaining.size())));
-        return selected;
+        return selected.subList(0, Math.min(selected.size(), Math.min(MAX_WORDS, candidates.size())));
     }
 
-    private Map<State, List<ReadingPracticeCandidate>> groupByState(List<ReadingPracticeCandidate> candidates) {
+    private Map<State, List<ReadingPracticeCandidate>> groupByState(List<ReadingPracticeCandidate> candidates,
+                                                                    Instant now) {
         var grouped = new EnumMap<State, List<ReadingPracticeCandidate>>(State.class);
         for (State state : State.values()) {
             grouped.put(state, new ArrayList<>());
         }
         for (var candidate : candidates) {
-            grouped.computeIfAbsent(candidate.state(), key -> new ArrayList<>()).add(candidate);
+            grouped.computeIfAbsent(candidate.state(), ignored -> new ArrayList<>()).add(candidate);
         }
         for (var entry : grouped.entrySet()) {
-            entry.getValue().sort(Comparator.comparing(ReadingPracticeCandidate::vocabularyCreatedAt));
+            entry.getValue().sort(fsrsPriorityComparator(now));
         }
         return grouped;
     }
 
-    private List<ReadingPracticeCandidate> selectFromState(String userId,
-                                                           Instant rotationHour,
-                                                           List<ReadingPracticeCandidate> candidates,
-                                                           int count) {
-        if (candidates == null || candidates.isEmpty() || count <= 0) {
-            return List.of();
+    private Comparator<ReadingPracticeCandidate> fsrsPriorityComparator(Instant now) {
+        return Comparator
+                .comparing((ReadingPracticeCandidate candidate) -> dueBucket(candidate, now))
+                .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
+                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
+                .thenComparing(ReadingPracticeCandidate::stability)
+                .thenComparing(this::lastReviewOrEpoch)
+                .thenComparing(ReadingPracticeCandidate::lapses, Comparator.reverseOrder())
+                .thenComparing(ReadingPracticeCandidate::difficulty, Comparator.reverseOrder())
+                .thenComparingInt(candidate -> statePriority(candidate.state()))
+                .thenComparing(ReadingPracticeCandidate::vocabularyCreatedAt)
+                .thenComparing(ReadingPracticeCandidate::flashCardId);
+    }
+
+    private void addCandidates(List<ReadingPracticeCandidate> selected,
+                               List<ReadingPracticeCandidate> candidates,
+                               int targetCount) {
+        if (targetCount <= 0 || candidates == null || candidates.isEmpty()) {
+            return;
         }
-        var size = candidates.size();
-        var windowSize = Math.min(size, count * 3);
-        var maxStart = Math.max(1, size - windowSize + 1);
-        var start = Math.floorMod(Objects.hash(userId, rotationHour.toString(), candidates.get(0).state().name()),
-                maxStart);
-        var window = candidates.subList(start, start + windowSize);
-        return window.subList(0, Math.min(count, window.size()));
+
+        for (var candidate : candidates) {
+            if (selected.size() >= MAX_WORDS) {
+                break;
+            }
+            if (targetCount <= 0) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            if (candidate.state() == State.NEW && selectedNewCount(selected) >= MAX_NEW_CARDS) {
+                continue;
+            }
+            if (isVeryWeak(candidate) && selectedVeryWeakCount(selected) >= MAX_VERY_WEAK_CARDS) {
+                continue;
+            }
+            selected.add(candidate);
+            targetCount--;
+        }
+    }
+
+    private int selectedNewCount(List<ReadingPracticeCandidate> selected) {
+        return (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+    }
+
+    private int selectedVeryWeakCount(List<ReadingPracticeCandidate> selected) {
+        return (int) selected.stream().filter(this::isVeryWeak).count();
+    }
+
+    private boolean isVeryWeak(ReadingPracticeCandidate candidate) {
+        return candidate.lapses() >= 2 || candidate.stability() <= 2.5;
+    }
+
+    private int dueBucket(ReadingPracticeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return 2;
+        }
+        return candidate.due().isAfter(now) ? 1 : 0;
+    }
+
+    private java.time.Duration overdueDurationOrZero(ReadingPracticeCandidate candidate, Instant now) {
+        if (candidate.due() == null || candidate.due().isAfter(now)) {
+            return java.time.Duration.ZERO;
+        }
+        return java.time.Duration.between(candidate.due(), now);
+    }
+
+    private java.time.Duration timeUntilDueOrMax(ReadingPracticeCandidate candidate, Instant now) {
+        if (candidate.due() == null) {
+            return java.time.Duration.ofDays(36500);
+        }
+        return java.time.Duration.between(now, candidate.due()).abs();
+    }
+
+    private Instant lastReviewOrEpoch(ReadingPracticeCandidate candidate) {
+        return candidate.lastReview() == null ? Instant.EPOCH : candidate.lastReview();
+    }
+
+    private int statePriority(State state) {
+        if (state == null) {
+            return 4;
+        }
+        return switch (state) {
+            case RE_LEARNING -> 0;
+            case LEARNING -> 1;
+            case REVIEW -> 2;
+            case NEW -> 3;
+        };
     }
 }

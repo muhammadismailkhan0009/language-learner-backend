@@ -208,11 +208,15 @@ public class ReadingPracticeService {
                             review.flashcardId(),
                             review.vocabularyId(),
                             review.fsrsState(),
-                            createdAt
+                            createdAt,
+                            review.due(),
+                            review.stability(),
+                            review.difficulty(),
+                            review.lapses(),
+                            review.lastReview()
                     );
                 })
                 .filter(candidate -> candidate != null)
-                .sorted(Comparator.comparing(ReadingPracticeCandidate::vocabularyCreatedAt))
                 .toList();
     }
 
