@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.flashcards_study.domain.models;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.myriadcode.fsrs.api.enums.State;
 
 import java.time.Instant;
@@ -20,7 +21,7 @@ public record FsrsCard(
 ) {
 
     private static final JsonMapper OBJECT_MAPPER = JsonMapper.builder()
-            .findAndAddModules()
+            .addModule(new JavaTimeModule())
             .build();
 
     public String toJson() {

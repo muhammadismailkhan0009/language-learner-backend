@@ -35,6 +35,31 @@ class FsrsCardBoundaryTests {
     }
 
     @Test
+    @DisplayName("Fsrs card json deserialization supports Instant fields without module auto-discovery")
+    void jsonDeserializationSupportsInstantFields() {
+        var json = """
+                {
+                  "difficulty": 6.5,
+                  "due": "2026-03-11T13:00:00Z",
+                  "elapsedDays": 3,
+                  "lapses": 1,
+                  "lastReview": "2026-03-11T12:00:00Z",
+                  "learningSteps": 2,
+                  "reps": 7,
+                  "scheduledDays": 5,
+                  "stability": 9.2,
+                  "state": "REVIEW"
+                }
+                """;
+
+        var restored = FsrsCard.fromJson(json);
+
+        assertThat(restored.due()).isEqualTo(Instant.parse("2026-03-11T13:00:00Z"));
+        assertThat(restored.lastReview()).isEqualTo(Instant.parse("2026-03-11T12:00:00Z"));
+        assertThat(restored.state()).isEqualTo(State.REVIEW);
+    }
+
+    @Test
     @DisplayName("Fsrs card library mapping round-trip preserves all mirrored fields")
     void libraryMappingRoundTripPreservesAllFields() {
         var now = Instant.parse("2026-03-11T12:00:00Z");
