@@ -1,8 +1,11 @@
 package com.myriadcode.languagelearner.behavior.vocabulary;
 
+import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.common.ids.UserId;
-import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
+import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
@@ -21,78 +24,93 @@ import static org.assertj.core.api.Assertions.assertThat;
 class VocabularyListingOrderTests {
 
     @Test
-    @DisplayName("fetchVocabularies: keeps each group internally sorted by newest creation first")
-    void fetchVocabulariesKeepsEachGroupInternallySortedByNewestCreationFirst() {
-        var repo = new InMemoryVocabularyRepo(seedVocabulary("user-a", 32));
+    @DisplayName("fetchVocabularies: orders weak vocabulary before learning and strong entries")
+    void fetchVocabulariesOrdersWeakLearningStrong() {
+        var vocabularies = seedVocabulary("user-a", 4);
         var service = new VocabularyOrchestrationService(
-                repo,
+                new InMemoryVocabularyRepo(vocabularies),
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
+                statsApi(List.of(
+                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 8.0, 2.0, 0, "2026-03-08T09:00:00Z"),
+                        review("card-new", "vocab-2", State.NEW, null, 0.0, 0.0, 0, null),
+                        review("card-learning", "vocab-3", State.LEARNING, "2026-03-09T13:00:00Z", 3.5, 6.0, 0, "2026-03-09T11:00:00Z"),
+                        review("card-weak", "vocab-4", State.REVIEW, "2026-03-09T11:00:00Z", 2.0, 7.5, 2, "2026-03-08T08:00:00Z")
+                )),
                 Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
         );
 
         var responses = service.fetchVocabularies("user-a");
-        var firstFourGroups = partitionIds(responses, 8);
 
-        assertThat(responses).hasSize(32);
-        assertThat(firstFourGroups.subList(0, 3))
-                .containsExactlyInAnyOrderElementsOf(List.of(
-                        List.of("vocab-32", "vocab-31", "vocab-30", "vocab-29", "vocab-28", "vocab-27", "vocab-26", "vocab-25"),
-                        List.of("vocab-24", "vocab-23", "vocab-22", "vocab-21", "vocab-20", "vocab-19", "vocab-18", "vocab-17"),
-                        List.of("vocab-16", "vocab-15", "vocab-14", "vocab-13", "vocab-12", "vocab-11", "vocab-10", "vocab-9")
-                ));
-        assertThat(firstFourGroups.get(3))
-                .containsExactly("vocab-8", "vocab-7", "vocab-6", "vocab-5", "vocab-4", "vocab-3", "vocab-2", "vocab-1");
+        assertThat(ids(responses))
+                .containsExactly("vocab-4", "vocab-3", "vocab-2", "vocab-1");
     }
 
     @Test
-    @DisplayName("fetchVocabularies: keeps the same first-three-group order within a minute and changes it next minute")
-    void fetchVocabulariesUsesMinuteBasedStatelessGroupShuffle() {
-        var vocabularies = seedVocabulary("user-a", 32);
-        var currentMinuteService = new VocabularyOrchestrationService(
+    @DisplayName("fetchVocabularies: uses the most urgent flashcard when a vocabulary has multiple cards")
+    void fetchVocabulariesUsesMostUrgentFlashcardPerVocabulary() {
+        var vocabularies = seedVocabulary("user-a", 3);
+        var service = new VocabularyOrchestrationService(
                 new InMemoryVocabularyRepo(vocabularies),
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
-                Clock.fixed(Instant.parse("2026-03-09T12:34:20Z"), ZoneOffset.UTC)
-        );
-        var sameMinuteService = new VocabularyOrchestrationService(
-                new InMemoryVocabularyRepo(vocabularies),
-                new VocabularyFlashCardPublisher(domainEvent -> {
-                }),
-                Clock.fixed(Instant.parse("2026-03-09T12:34:59Z"), ZoneOffset.UTC)
-        );
-        var nextMinuteService = new VocabularyOrchestrationService(
-                new InMemoryVocabularyRepo(vocabularies),
-                new VocabularyFlashCardPublisher(domainEvent -> {
-                }),
-                Clock.fixed(Instant.parse("2026-03-09T12:35:00Z"), ZoneOffset.UTC)
+                statsApi(List.of(
+                        review("card-a-front", "vocab-1", State.REVIEW, "2026-03-09T16:00:00Z", 7.0, 3.0, 0, "2026-03-08T10:00:00Z"),
+                        review("card-a-reverse", "vocab-1", State.REVIEW, "2026-03-09T11:30:00Z", 1.5, 8.0, 3, "2026-03-07T10:00:00Z"),
+                        review("card-b", "vocab-2", State.LEARNING, "2026-03-09T12:45:00Z", 4.5, 5.0, 0, "2026-03-08T11:00:00Z"),
+                        review("card-c", "vocab-3", State.REVIEW, "2026-03-09T17:00:00Z", 9.0, 1.0, 0, "2026-03-09T09:00:00Z")
+                )),
+                Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
         );
 
-        var currentMinuteOrder = currentMinuteService.fetchVocabularies("user-a").stream()
-                .map(response -> response.id())
-                .toList();
-        var sameMinuteOrder = sameMinuteService.fetchVocabularies("user-a").stream()
-                .map(response -> response.id())
-                .toList();
-        var nextMinuteOrder = nextMinuteService.fetchVocabularies("user-a").stream()
-                .map(response -> response.id())
-                .toList();
-
-        assertThat(currentMinuteOrder).isEqualTo(sameMinuteOrder);
-        assertThat(nextMinuteOrder).isNotEqualTo(currentMinuteOrder);
-        assertThat(nextMinuteOrder.subList(24, 32))
-                .containsExactly("vocab-8", "vocab-7", "vocab-6", "vocab-5", "vocab-4", "vocab-3", "vocab-2", "vocab-1");
+        assertThat(ids(service.fetchVocabularies("user-a")))
+                .containsExactly("vocab-1", "vocab-2", "vocab-3");
     }
 
-    private static List<List<String>> partitionIds(List<VocabularyResponse> responses, int size) {
-        var ids = responses.stream()
+    @Test
+    @DisplayName("fetchVocabularies: falls back to newest creation first when no flashcard stats exist")
+    void fetchVocabulariesFallsBackToNewestCreationFirstWithoutFlashcardStats() {
+        var service = new VocabularyOrchestrationService(
+                new InMemoryVocabularyRepo(seedVocabulary("user-a", 4)),
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                statsApi(List.of()),
+                Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
+        );
+
+        assertThat(ids(service.fetchVocabularies("user-a")))
+                .containsExactly("vocab-4", "vocab-3", "vocab-2", "vocab-1");
+    }
+
+    private static List<String> ids(List<VocabularyResponse> responses) {
+        return responses.stream()
                 .map(VocabularyResponse::id)
                 .toList();
-        var groups = new java.util.ArrayList<List<String>>();
-        for (int start = 0; start < ids.size(); start += size) {
-            groups.add(ids.subList(start, Math.min(start + size, ids.size())));
-        }
-        return groups;
+    }
+
+    private static FetchVocabularyFlashcardReviewsApi statsApi(List<VocabularyFlashcardReviewRecord> stats) {
+        return userId -> stats;
+    }
+
+    private static VocabularyFlashcardReviewRecord review(String flashcardId,
+                                                          String vocabularyId,
+                                                          State state,
+                                                          String due,
+                                                          double stability,
+                                                          double difficulty,
+                                                          int lapses,
+                                                          String lastReview) {
+        return new VocabularyFlashcardReviewRecord(
+                flashcardId,
+                vocabularyId,
+                state,
+                due == null ? null : Instant.parse(due),
+                stability,
+                difficulty,
+                lapses,
+                lastReview == null ? null : Instant.parse(lastReview),
+                false
+        );
     }
 
     private static List<Vocabulary> seedVocabulary(String userId, int count) {

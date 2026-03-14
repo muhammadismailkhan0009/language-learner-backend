@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.AddVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.vocabulary.VocabularyApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
@@ -21,26 +22,35 @@ public class VocabularyOrchestrationService {
     private static final VocabularyApiMapper VOCABULARY_API_MAPPER = VocabularyApiMapper.INSTANCE;
     private final VocabularyRepo vocabularyRepo;
     private final VocabularyFlashCardPublisher vocabularyFlashCardPublisher;
+    private final FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi;
     private final Clock clock;
 
     @Autowired
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
-                                          VocabularyFlashCardPublisher vocabularyFlashCardPublisher) {
-        this(vocabularyRepo, vocabularyFlashCardPublisher, Clock.systemUTC());
+                                          VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
+                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi) {
+        this(vocabularyRepo, vocabularyFlashCardPublisher, vocabularyFlashcardReviewsApi, Clock.systemUTC());
     }
 
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
                                           VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
+                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
                                           Clock clock) {
         this.vocabularyRepo = vocabularyRepo;
         this.vocabularyFlashCardPublisher = vocabularyFlashCardPublisher;
+        this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.clock = clock;
     }
 
     // Backward-compatible constructor for unit tests with fake repos.
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo) {
-        this(vocabularyRepo, new VocabularyFlashCardPublisher(domainEvent -> {
-        }), Clock.systemUTC());
+        this(
+                vocabularyRepo,
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                userId -> List.of(),
+                Clock.systemUTC()
+        );
     }
 
     public VocabularyResponse addVocabulary(String userId, AddVocabularyRequest request) {
@@ -84,7 +94,9 @@ public class VocabularyOrchestrationService {
     }
 
     public List<VocabularyResponse> fetchVocabularies(String userId) {
-        return VocabularyListingArranger.arrange(vocabularyRepo.findByUserId(userId), clock.instant()).stream()
+        var vocabularies = vocabularyRepo.findByUserId(userId);
+        var flashcardReviews = vocabularyFlashcardReviewsApi.getVocabularyFlashcardsByUser(userId);
+        return VocabularyListingArranger.arrange(vocabularies, flashcardReviews, clock.instant()).stream()
                 .map(VOCABULARY_API_MAPPER::toResponse)
                 .toList();
     }
