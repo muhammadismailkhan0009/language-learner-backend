@@ -68,6 +68,27 @@ class VocabularyListingOrderTests {
     }
 
     @Test
+    @DisplayName("fetchVocabularies: fragile review cards rise above new and strong vocabulary")
+    void fetchVocabulariesPromotesFragileReviewCards() {
+        var vocabularies = seedVocabulary("user-a", 4);
+        var service = new VocabularyOrchestrationService(
+                new InMemoryVocabularyRepo(vocabularies),
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                statsApi(List.of(
+                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 8.5, 2.0, 0, "2026-03-08T09:00:00Z"),
+                        review("card-new", "vocab-2", State.NEW, null, 0.0, 0.0, 0, null),
+                        review("card-fragile-a", "vocab-3", State.REVIEW, "2026-03-09T14:00:00Z", 5.5, 6.4, 0, "2026-03-09T10:30:00Z"),
+                        review("card-fragile-b", "vocab-4", State.REVIEW, "2026-03-09T15:00:00Z", 4.5, 6.8, 0, "2026-03-09T10:00:00Z")
+                )),
+                Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
+        );
+
+        assertThat(ids(service.fetchVocabularies("user-a")))
+                .containsExactly("vocab-4", "vocab-3", "vocab-2", "vocab-1");
+    }
+
+    @Test
     @DisplayName("fetchVocabularies: falls back to newest creation first when no flashcard stats exist")
     void fetchVocabulariesFallsBackToNewestCreationFirstWithoutFlashcardStats() {
         var service = new VocabularyOrchestrationService(

@@ -11,8 +11,10 @@ import java.util.stream.Collectors;
 
 final class VocabularyListingArranger {
 
-    private static final double WEAK_DIFFICULTY_THRESHOLD = 7.0;
-    private static final double WEAK_STABILITY_THRESHOLD = 3.0;
+    private static final double WEAK_DIFFICULTY_THRESHOLD = 6.0;
+    private static final double WEAK_STABILITY_THRESHOLD = 4.0;
+    private static final double FRAGILE_REVIEW_DIFFICULTY_THRESHOLD = 5.5;
+    private static final double FRAGILE_REVIEW_STABILITY_THRESHOLD = 6.0;
 
     private VocabularyListingArranger() {
     }
@@ -99,6 +101,7 @@ final class VocabularyListingArranger {
         return isDue(stat, referenceTime)
                 || stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.RE_LEARNING
                 || stat.lapses() > 0
+                || isFragileReview(stat)
                 || stat.difficulty() >= WEAK_DIFFICULTY_THRESHOLD
                 || (stat.stability() > 0.0 && stat.stability() <= WEAK_STABILITY_THRESHOLD);
     }
@@ -107,8 +110,18 @@ final class VocabularyListingArranger {
         if (stat == null) {
             return true;
         }
+        if (isFragileReview(stat)) {
+            return false;
+        }
         return stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.LEARNING
                 || stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.NEW;
+    }
+
+    private static boolean isFragileReview(VocabularyFlashcardReviewRecord stat) {
+        return stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.REVIEW
+                && stat.difficulty() >= FRAGILE_REVIEW_DIFFICULTY_THRESHOLD
+                && stat.stability() > 0.0
+                && stat.stability() <= FRAGILE_REVIEW_STABILITY_THRESHOLD;
     }
 
     private static double weaknessScore(VocabularyFlashcardReviewRecord stat, Instant referenceTime) {
