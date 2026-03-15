@@ -39,9 +39,7 @@ public class VocabularyClozeSelectionPolicy {
                 .thenComparing(VocabularyClozeCandidate::retrievability)
                 .thenComparing(this::lastReviewOrEpoch)
                 .thenComparing(VocabularyClozeCandidate::lapses, Comparator.reverseOrder())
-                .thenComparingInt(candidate -> statePriority(candidate.state()))
-                .thenComparing(VocabularyClozeCandidate::vocabularyCreatedAt)
-                .thenComparing(VocabularyClozeCandidate::flashcardId);
+                .thenComparingInt(candidate -> statePriority(candidate.state()));
     }
 
     private List<VocabularyClozeCandidate> takeWithNewCap(List<VocabularyClozeCandidate> candidates, int count) {

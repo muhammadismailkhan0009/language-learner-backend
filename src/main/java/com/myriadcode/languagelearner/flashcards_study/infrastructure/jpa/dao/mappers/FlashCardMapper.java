@@ -35,6 +35,9 @@ public interface FlashCardMapper {
         if (reviewLog == null) {
             return null;
         }
+        // FIXME: `review_log_json` currently stores only the latest review log as a single JSON object.
+        // Later we need a migration to store the full review history as a JSON array and map this boundary
+        // as a list of review-log objects instead of one ReviewLog.
         return reviewLog.toJson();
     }
 
@@ -63,6 +66,8 @@ public interface FlashCardMapper {
         if (reviewLogJson == null || reviewLogJson.isBlank()) {
             return null;
         }
+        // FIXME: This deserializes one review-log object because persistence currently keeps only the latest
+        // entry. After the review-log migration, convert this JSON payload to a list of review-log objects.
         return ReviewLog.fromJson(reviewLogJson);
     }
 }
