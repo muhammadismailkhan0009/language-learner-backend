@@ -11,10 +11,8 @@ import java.util.stream.Collectors;
 
 final class VocabularyListingArranger {
 
-    private static final double WEAK_DIFFICULTY_THRESHOLD = 6.0;
-    private static final double WEAK_STABILITY_THRESHOLD = 4.0;
-    private static final double FRAGILE_REVIEW_DIFFICULTY_THRESHOLD = 5.5;
-    private static final double FRAGILE_REVIEW_STABILITY_THRESHOLD = 6.0;
+    private static final double WEAK_RETRIEVABILITY_THRESHOLD = 0.90;
+    private static final double FRAGILE_REVIEW_RETRIEVABILITY_THRESHOLD = 0.92;
 
     private VocabularyListingArranger() {
     }
@@ -61,10 +59,9 @@ final class VocabularyListingArranger {
                 .thenComparing(ranked -> weaknessScore(ranked.representative(), referenceTime), Comparator.reverseOrder())
                 .thenComparing(ranked -> overdueDurationOrZero(ranked.representative(), referenceTime), Comparator.reverseOrder())
                 .thenComparing(ranked -> timeUntilDueOrMax(ranked.representative(), referenceTime))
-                .thenComparing(ranked -> stabilityOrMax(ranked.representative()))
+                .thenComparing(ranked -> retrievabilityOrMax(ranked.representative()))
                 .thenComparing(ranked -> lastReviewOrEpoch(ranked.representative()))
                 .thenComparing(ranked -> lapsesOrZero(ranked.representative()), Comparator.reverseOrder())
-                .thenComparing(ranked -> difficultyOrZero(ranked.representative()), Comparator.reverseOrder())
                 .thenComparing(ranked -> statePriority(ranked.representative(), referenceTime))
                 .thenComparing(ranked -> createdAtOrEpoch(ranked.vocabulary()), Comparator.reverseOrder())
                 .thenComparing(ranked -> ranked.vocabulary().id().id());
@@ -76,10 +73,9 @@ final class VocabularyListingArranger {
                 .thenComparing(stat -> weaknessScore(stat, referenceTime), Comparator.reverseOrder())
                 .thenComparing(stat -> overdueDurationOrZero(stat, referenceTime), Comparator.reverseOrder())
                 .thenComparing(stat -> timeUntilDueOrMax(stat, referenceTime))
-                .thenComparing(VocabularyListingArranger::stabilityOrMax)
+                .thenComparing(VocabularyListingArranger::retrievabilityOrMax)
                 .thenComparing(VocabularyListingArranger::lastReviewOrEpoch)
                 .thenComparing(VocabularyListingArranger::lapsesOrZero, Comparator.reverseOrder())
-                .thenComparing(VocabularyListingArranger::difficultyOrZero, Comparator.reverseOrder())
                 .thenComparing(stat -> statePriority(stat, referenceTime))
                 .thenComparing(VocabularyFlashcardReviewRecord::flashcardId);
     }
@@ -102,8 +98,7 @@ final class VocabularyListingArranger {
                 || stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.RE_LEARNING
                 || stat.lapses() > 0
                 || isFragileReview(stat)
-                || stat.difficulty() >= WEAK_DIFFICULTY_THRESHOLD
-                || (stat.stability() > 0.0 && stat.stability() <= WEAK_STABILITY_THRESHOLD);
+                || hasWeakRetrievability(stat);
     }
 
     private static boolean isLearning(VocabularyFlashcardReviewRecord stat) {
@@ -119,9 +114,8 @@ final class VocabularyListingArranger {
 
     private static boolean isFragileReview(VocabularyFlashcardReviewRecord stat) {
         return stat.fsrsState() == com.myriadcode.fsrs.api.enums.State.REVIEW
-                && stat.difficulty() >= FRAGILE_REVIEW_DIFFICULTY_THRESHOLD
-                && stat.stability() > 0.0
-                && stat.stability() <= FRAGILE_REVIEW_STABILITY_THRESHOLD;
+                && hasKnownRetrievability(stat)
+                && stat.retrievability() <= FRAGILE_REVIEW_RETRIEVABILITY_THRESHOLD;
     }
 
     private static double weaknessScore(VocabularyFlashcardReviewRecord stat, Instant referenceTime) {
@@ -139,9 +133,8 @@ final class VocabularyListingArranger {
             score += 20.0;
         }
         score += stat.lapses() * 10.0;
-        score += stat.difficulty();
-        if (stat.stability() > 0.0) {
-            score += Math.max(0.0, WEAK_STABILITY_THRESHOLD - stat.stability()) * 5.0;
+        if (hasKnownRetrievability(stat)) {
+            score += (1.0 - stat.retrievability()) * 50.0;
         }
         return score;
     }
@@ -164,8 +157,11 @@ final class VocabularyListingArranger {
         return java.time.Duration.between(referenceTime, stat.due()).abs();
     }
 
-    private static double stabilityOrMax(VocabularyFlashcardReviewRecord stat) {
-        return stat == null ? Double.MAX_VALUE : stat.stability();
+    private static double retrievabilityOrMax(VocabularyFlashcardReviewRecord stat) {
+        if (!hasKnownRetrievability(stat)) {
+            return Double.MAX_VALUE;
+        }
+        return stat.retrievability();
     }
 
     private static Instant lastReviewOrEpoch(VocabularyFlashcardReviewRecord stat) {
@@ -176,8 +172,12 @@ final class VocabularyListingArranger {
         return stat == null ? 0 : stat.lapses();
     }
 
-    private static double difficultyOrZero(VocabularyFlashcardReviewRecord stat) {
-        return stat == null ? 0.0 : stat.difficulty();
+    private static boolean hasWeakRetrievability(VocabularyFlashcardReviewRecord stat) {
+        return hasKnownRetrievability(stat) && stat.retrievability() <= WEAK_RETRIEVABILITY_THRESHOLD;
+    }
+
+    private static boolean hasKnownRetrievability(VocabularyFlashcardReviewRecord stat) {
+        return stat != null && !Double.isNaN(stat.retrievability());
     }
 
     private static int statePriority(VocabularyFlashcardReviewRecord stat, Instant referenceTime) {

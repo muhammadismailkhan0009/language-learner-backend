@@ -80,7 +80,7 @@ public class CardStudyService {
         if (reviewData.isEmpty()) throw new RuntimeException("No card found");
 
         var state = FsrsCardMapper.toLibrary(reviewData.get().cardReviewData());
-        var updated = FsrsCardMapper.toDomain(scheduler.reSchedule(state, rating, Instant.now()));
+        var updated = FsrsCardMapper.toDomain(scheduler.reschedule(state, rating, Instant.now()).card());
 
         var updatedReview = new FlashCardReview(
                 new FlashCardReview.FlashCardId(cardId),
@@ -243,7 +243,7 @@ public class CardStudyService {
         if (reviewData.isEmpty()) throw new RuntimeException("No vocabulary card found");
 
         var updated = FsrsCardMapper.toDomain(
-                scheduler.reSchedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData()), rating, Instant.now())
+                scheduler.reschedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData()), rating, Instant.now()).card()
         );
 
         var updatedReview = new FlashCardReview(

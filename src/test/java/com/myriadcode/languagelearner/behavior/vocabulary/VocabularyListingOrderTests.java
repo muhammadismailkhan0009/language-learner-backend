@@ -32,10 +32,10 @@ class VocabularyListingOrderTests {
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
                 statsApi(List.of(
-                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 8.0, 2.0, 0, "2026-03-08T09:00:00Z"),
-                        review("card-new", "vocab-2", State.NEW, null, 0.0, 0.0, 0, null),
-                        review("card-learning", "vocab-3", State.LEARNING, "2026-03-09T13:00:00Z", 3.5, 6.0, 0, "2026-03-09T11:00:00Z"),
-                        review("card-weak", "vocab-4", State.REVIEW, "2026-03-09T11:00:00Z", 2.0, 7.5, 2, "2026-03-08T08:00:00Z")
+                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 0.98, 8.0, 2.0, 0, "2026-03-08T09:00:00Z"),
+                        review("card-new", "vocab-2", State.NEW, null, Double.NaN, 0.0, 0.0, 0, null),
+                        review("card-learning", "vocab-3", State.LEARNING, "2026-03-09T13:00:00Z", 0.89, 3.5, 6.0, 0, "2026-03-09T11:00:00Z"),
+                        review("card-weak", "vocab-4", State.REVIEW, "2026-03-09T11:00:00Z", 0.52, 2.0, 7.5, 2, "2026-03-08T08:00:00Z")
                 )),
                 Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
         );
@@ -55,10 +55,10 @@ class VocabularyListingOrderTests {
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
                 statsApi(List.of(
-                        review("card-a-front", "vocab-1", State.REVIEW, "2026-03-09T16:00:00Z", 7.0, 3.0, 0, "2026-03-08T10:00:00Z"),
-                        review("card-a-reverse", "vocab-1", State.REVIEW, "2026-03-09T11:30:00Z", 1.5, 8.0, 3, "2026-03-07T10:00:00Z"),
-                        review("card-b", "vocab-2", State.LEARNING, "2026-03-09T12:45:00Z", 4.5, 5.0, 0, "2026-03-08T11:00:00Z"),
-                        review("card-c", "vocab-3", State.REVIEW, "2026-03-09T17:00:00Z", 9.0, 1.0, 0, "2026-03-09T09:00:00Z")
+                        review("card-a-front", "vocab-1", State.REVIEW, "2026-03-09T16:00:00Z", 0.97, 7.0, 3.0, 0, "2026-03-08T10:00:00Z"),
+                        review("card-a-reverse", "vocab-1", State.REVIEW, "2026-03-09T11:30:00Z", 0.48, 1.5, 8.0, 3, "2026-03-07T10:00:00Z"),
+                        review("card-b", "vocab-2", State.LEARNING, "2026-03-09T12:45:00Z", 0.88, 4.5, 5.0, 0, "2026-03-08T11:00:00Z"),
+                        review("card-c", "vocab-3", State.REVIEW, "2026-03-09T17:00:00Z", 0.99, 9.0, 1.0, 0, "2026-03-09T09:00:00Z")
                 )),
                 Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
         );
@@ -68,18 +68,18 @@ class VocabularyListingOrderTests {
     }
 
     @Test
-    @DisplayName("fetchVocabularies: fragile review cards rise above new and strong vocabulary")
-    void fetchVocabulariesPromotesFragileReviewCards() {
+    @DisplayName("fetchVocabularies: low-retrievability review cards rise above new and strong vocabulary")
+    void fetchVocabulariesPromotesLowRetrievabilityReviewCards() {
         var vocabularies = seedVocabulary("user-a", 4);
         var service = new VocabularyOrchestrationService(
                 new InMemoryVocabularyRepo(vocabularies),
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
                 statsApi(List.of(
-                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 8.5, 2.0, 0, "2026-03-08T09:00:00Z"),
-                        review("card-new", "vocab-2", State.NEW, null, 0.0, 0.0, 0, null),
-                        review("card-fragile-a", "vocab-3", State.REVIEW, "2026-03-09T14:00:00Z", 5.5, 6.4, 0, "2026-03-09T10:30:00Z"),
-                        review("card-fragile-b", "vocab-4", State.REVIEW, "2026-03-09T15:00:00Z", 4.5, 6.8, 0, "2026-03-09T10:00:00Z")
+                        review("card-strong", "vocab-1", State.REVIEW, "2026-03-12T15:00:00Z", 0.98, 8.5, 2.0, 0, "2026-03-08T09:00:00Z"),
+                        review("card-new", "vocab-2", State.NEW, null, Double.NaN, 0.0, 0.0, 0, null),
+                        review("card-fragile-a", "vocab-3", State.REVIEW, "2026-03-09T14:00:00Z", 0.91, 5.5, 6.4, 0, "2026-03-09T10:30:00Z"),
+                        review("card-fragile-b", "vocab-4", State.REVIEW, "2026-03-09T15:00:00Z", 0.85, 4.5, 6.8, 0, "2026-03-09T10:00:00Z")
                 )),
                 Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
         );
@@ -117,6 +117,7 @@ class VocabularyListingOrderTests {
                                                           String vocabularyId,
                                                           State state,
                                                           String due,
+                                                          double retrievability,
                                                           double stability,
                                                           double difficulty,
                                                           int lapses,
@@ -126,6 +127,7 @@ class VocabularyListingOrderTests {
                 vocabularyId,
                 state,
                 due == null ? null : Instant.parse(due),
+                retrievability,
                 stability,
                 difficulty,
                 lapses,
