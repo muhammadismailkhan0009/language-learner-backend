@@ -29,6 +29,10 @@ public class FlashCardReviewEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private String cardJson;
 
+    @Column(columnDefinition = "jsonb", name = "review_log_json")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String reviewLogJson;
+
     @Column(columnDefinition = "BOOLEAN DEFAULT false")
     private boolean isReversed;
 
@@ -78,5 +82,13 @@ public class FlashCardReviewEntity {
 
     public void setCardJson(String cardJson) {
         this.cardJson = cardJson;
+    }
+
+    public String getReviewLogJson() {
+        return reviewLogJson;
+    }
+
+    public void setReviewLogJson(String reviewLogJson) {
+        this.reviewLogJson = reviewLogJson;
     }
 }

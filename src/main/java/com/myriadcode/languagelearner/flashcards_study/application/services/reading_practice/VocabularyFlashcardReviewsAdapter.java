@@ -28,7 +28,7 @@ public class VocabularyFlashcardReviewsAdapter implements FetchVocabularyFlashca
                         review.contentId().id(),
                         review.cardReviewData().state(),
                         review.cardReviewData().due(),
-                        fsrsEngine.getRetrievability(FsrsCardMapper.toLibrary(review.cardReviewData()), java.time.Instant.now()),
+                        fsrsEngine.getRetrievability(FsrsCardMapper.toLibrary(review.cardReviewData().card()), java.time.Instant.now()),
                         review.cardReviewData().stability(),
                         review.cardReviewData().difficulty(),
                         review.cardReviewData().lapses(),

@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.concurnas_like_library.Value;
 import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
+import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsRescheduleResultMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.flashcards_study.domain.algorithm.FlashCardAlgorithmService;
@@ -79,8 +80,8 @@ public class CardStudyService {
         var reviewData = flashCardRepo.findReviewInfoByCard(new FlashCardReview.FlashCardId(cardId));
         if (reviewData.isEmpty()) throw new RuntimeException("No card found");
 
-        var state = FsrsCardMapper.toLibrary(reviewData.get().cardReviewData());
-        var updated = FsrsCardMapper.toDomain(scheduler.reschedule(state, rating, Instant.now()).card());
+        var state = FsrsCardMapper.toLibrary(reviewData.get().cardReviewData().card());
+        var updated = FsrsRescheduleResultMapper.toDomain(scheduler.reschedule(state, rating, Instant.now()));
 
         var updatedReview = new FlashCardReview(
                 new FlashCardReview.FlashCardId(cardId),
@@ -242,8 +243,8 @@ public class CardStudyService {
         );
         if (reviewData.isEmpty()) throw new RuntimeException("No vocabulary card found");
 
-        var updated = FsrsCardMapper.toDomain(
-                scheduler.reschedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData()), rating, Instant.now()).card()
+        var updated = FsrsRescheduleResultMapper.toDomain(
+                scheduler.reschedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData().card()), rating, Instant.now())
         );
 
         var updatedReview = new FlashCardReview(

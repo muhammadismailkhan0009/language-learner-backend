@@ -59,15 +59,7 @@ public class CommonRepoImpl implements FlashCardRepo {
     @Override
     @Deprecated(since = "2026-02-22", forRemoval = true)
     public void saveFlashCardState(FlashCardReview review) {
-
-        var reviewEntity = flashCardReviewJpaRepo.findById(review.id().id());
-        if (reviewEntity.isPresent()) {
-            var json = review.cardReviewData().toJson();
-            var entity = reviewEntity.get();
-            entity.setCardJson(json);
-            flashCardReviewJpaRepo.save(entity);
-        }
-
+        flashCardReviewJpaRepo.save(FlashCardMapper.INSTANCE.toEntity(review));
     }
 
     @Override
@@ -125,13 +117,7 @@ public class CommonRepoImpl implements FlashCardRepo {
 
     @Override
     public void saveVocabularyFlashCardState(FlashCardReview review) {
-        var reviewEntity = flashCardReviewJpaRepo.findById(review.id().id());
-        if (reviewEntity.isPresent()) {
-            var json = review.cardReviewData().toJson();
-            var entity = reviewEntity.get();
-            entity.setCardJson(json);
-            flashCardReviewJpaRepo.save(entity);
-        }
+        flashCardReviewJpaRepo.save(FlashCardMapper.INSTANCE.toEntity(review));
     }
 
     @Override

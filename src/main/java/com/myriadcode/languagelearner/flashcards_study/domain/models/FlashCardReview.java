@@ -9,9 +9,18 @@ public record FlashCardReview(
         @NotNull UserId userId,
         @NotNull ContentId contentId,
         ContentRefType contentType,
-        FsrsCard cardReviewData,
+        FsrsRescheduleResult cardReviewData,
         boolean isReversed
 ) {
+
+    public FlashCardReview(FlashCardId id,
+                           @NotNull UserId userId,
+                           @NotNull ContentId contentId,
+                           ContentRefType contentType,
+                           FsrsCard cardReviewData,
+                           boolean isReversed) {
+        this(id, userId, contentId, contentType, FsrsRescheduleResult.withCard(cardReviewData), isReversed);
+    }
 
     public record FlashCardId(String id) {
     }
