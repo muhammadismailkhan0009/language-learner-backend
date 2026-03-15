@@ -11,6 +11,7 @@ import java.util.Map;
 
 public class WritingPracticePolicy {
 
+    private static final double FRAGILE_RETRIEVABILITY_THRESHOLD = 0.90;
     public static final int MAX_WORDS = 20;
     public static final int REVIEW_COUNT = 15;
     public static final int LEARNING_COUNT = 3;
@@ -40,7 +41,7 @@ public class WritingPracticePolicy {
 
         var remainder = eligible.stream()
                 .filter(candidate -> !selected.contains(candidate))
-                .sorted(stabilityBiasedComparator(rotationHour))
+                .sorted(retrievabilityBiasedComparator(rotationHour))
                 .toList();
         addCandidates(selected, remainder, Math.min(MAX_WORDS, eligible.size()) - selected.size());
         addRemainingCandidates(selected, remainder, Math.min(MAX_WORDS, eligible.size()) - selected.size());
@@ -58,16 +59,15 @@ public class WritingPracticePolicy {
             grouped.computeIfAbsent(candidate.state(), key -> new ArrayList<>()).add(candidate);
         }
         for (var entry : grouped.entrySet()) {
-            entry.getValue().sort(stabilityBiasedComparator(now));
+            entry.getValue().sort(retrievabilityBiasedComparator(now));
         }
         return grouped;
     }
 
-    private Comparator<WritingPracticeCandidate> stabilityBiasedComparator(Instant now) {
+    private Comparator<WritingPracticeCandidate> retrievabilityBiasedComparator(Instant now) {
         return Comparator
                 .comparing((WritingPracticeCandidate candidate) -> dueBucket(candidate, now))
-                .thenComparing(WritingPracticeCandidate::stability, Comparator.reverseOrder())
-                .thenComparing(WritingPracticeCandidate::difficulty)
+                .thenComparing(WritingPracticeCandidate::retrievability, Comparator.reverseOrder())
                 .thenComparing(WritingPracticeCandidate::lapses)
                 .thenComparing(this::lastReviewOrMax, Comparator.reverseOrder())
                 .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
@@ -120,7 +120,9 @@ public class WritingPracticePolicy {
     }
 
     private boolean isFragile(WritingPracticeCandidate candidate) {
-        return candidate.lapses() >= 2 || candidate.stability() <= 2.5;
+        return candidate.lapses() >= 2
+                || (!Double.isNaN(candidate.retrievability())
+                && candidate.retrievability() <= FRAGILE_RETRIEVABILITY_THRESHOLD);
     }
 
     private int dueBucket(WritingPracticeCandidate candidate, Instant now) {

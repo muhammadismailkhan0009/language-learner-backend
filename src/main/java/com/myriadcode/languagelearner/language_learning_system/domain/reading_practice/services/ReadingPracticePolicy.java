@@ -11,6 +11,7 @@ import java.util.Map;
 
 public class ReadingPracticePolicy {
 
+    private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.90;
     public static final int MAX_WORDS = 20;
     public static final int MAX_NEW_CARDS = 2;
     public static final int REVIEW_COUNT = 8;
@@ -65,10 +66,9 @@ public class ReadingPracticePolicy {
                 .comparing((ReadingPracticeCandidate candidate) -> dueBucket(candidate, now))
                 .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
                 .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
-                .thenComparing(ReadingPracticeCandidate::stability)
+                .thenComparing(ReadingPracticeCandidate::retrievability)
                 .thenComparing(this::lastReviewOrEpoch)
                 .thenComparing(ReadingPracticeCandidate::lapses, Comparator.reverseOrder())
-                .thenComparing(ReadingPracticeCandidate::difficulty, Comparator.reverseOrder())
                 .thenComparingInt(candidate -> statePriority(candidate.state()))
                 .thenComparing(ReadingPracticeCandidate::vocabularyCreatedAt)
                 .thenComparing(ReadingPracticeCandidate::flashCardId);
@@ -111,7 +111,9 @@ public class ReadingPracticePolicy {
     }
 
     private boolean isVeryWeak(ReadingPracticeCandidate candidate) {
-        return candidate.lapses() >= 2 || candidate.stability() <= 2.5;
+        return candidate.lapses() >= 2
+                || (!Double.isNaN(candidate.retrievability())
+                && candidate.retrievability() <= VERY_WEAK_RETRIEVABILITY_THRESHOLD);
     }
 
     private int dueBucket(ReadingPracticeCandidate candidate, Instant now) {

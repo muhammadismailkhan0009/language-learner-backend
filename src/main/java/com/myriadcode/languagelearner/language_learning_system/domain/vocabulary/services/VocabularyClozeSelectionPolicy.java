@@ -36,10 +36,9 @@ public class VocabularyClozeSelectionPolicy {
                 .comparing((VocabularyClozeCandidate candidate) -> dueBucket(candidate, now))
                 .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
                 .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
-                .thenComparing(VocabularyClozeCandidate::stability)
+                .thenComparing(VocabularyClozeCandidate::retrievability)
                 .thenComparing(this::lastReviewOrEpoch)
                 .thenComparing(VocabularyClozeCandidate::lapses, Comparator.reverseOrder())
-                .thenComparing(VocabularyClozeCandidate::difficulty, Comparator.reverseOrder())
                 .thenComparingInt(candidate -> statePriority(candidate.state()))
                 .thenComparing(VocabularyClozeCandidate::vocabularyCreatedAt)
                 .thenComparing(VocabularyClozeCandidate::flashcardId);

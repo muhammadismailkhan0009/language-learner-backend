@@ -10,8 +10,7 @@ public record VocabularyClozeCandidate(
         State state,
         Instant vocabularyCreatedAt,
         Instant due,
-        double stability,
-        double difficulty,
+        double retrievability,
         int lapses,
         Instant lastReview
 ) {

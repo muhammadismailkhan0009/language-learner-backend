@@ -18,9 +18,9 @@ class ReadingPracticePolicyTests {
     void prioritizesDueCardsBeforeUpcomingCards() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
-                candidate("due-weak", State.REVIEW, "2026-01-01T00:00:00Z", rotationHour.minusSeconds(7200), 2.0, 5.0, 1, rotationHour.minusSeconds(86400)),
-                candidate("due-strong", State.REVIEW, "2026-01-01T00:01:00Z", rotationHour.minusSeconds(3600), 8.0, 4.0, 0, rotationHour.minusSeconds(3600)),
-                candidate("upcoming", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(600), 1.0, 7.0, 1, rotationHour.minusSeconds(7200))
+                candidate("due-weak", State.REVIEW, "2026-01-01T00:00:00Z", rotationHour.minusSeconds(7200), 0.52, 1, rotationHour.minusSeconds(86400)),
+                candidate("due-strong", State.REVIEW, "2026-01-01T00:01:00Z", rotationHour.minusSeconds(3600), 0.96, 0, rotationHour.minusSeconds(3600)),
+                candidate("upcoming", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(600), 0.84, 1, rotationHour.minusSeconds(7200))
         );
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
@@ -34,9 +34,9 @@ class ReadingPracticePolicyTests {
     void fallsBackToNearestDueUpcomingCards() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
-                candidate("later", State.REVIEW, "2026-01-01T00:00:00Z", rotationHour.plusSeconds(7200), 2.0, 5.0, 0, rotationHour.minusSeconds(7200)),
-                candidate("soon", State.REVIEW, "2026-01-01T00:01:00Z", rotationHour.plusSeconds(600), 4.0, 4.0, 0, rotationHour.minusSeconds(3600)),
-                candidate("middle", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(1800), 1.0, 6.0, 1, rotationHour.minusSeconds(10800))
+                candidate("later", State.REVIEW, "2026-01-01T00:00:00Z", rotationHour.plusSeconds(7200), 0.93, 0, rotationHour.minusSeconds(7200)),
+                candidate("soon", State.REVIEW, "2026-01-01T00:01:00Z", rotationHour.plusSeconds(600), 0.88, 0, rotationHour.minusSeconds(3600)),
+                candidate("middle", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(1800), 0.86, 1, rotationHour.minusSeconds(10800))
         );
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
@@ -58,8 +58,7 @@ class ReadingPracticePolicyTests {
                     State.REVIEW,
                     "2026-01-01T00:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(3600L * i),
-                    2.0 + i,
-                    5.0,
+                    0.95 - (i * 0.01),
                     0,
                     rotationHour.minusSeconds(7200L * i)
             ));
@@ -70,8 +69,7 @@ class ReadingPracticePolicyTests {
                     State.NEW,
                     "2026-01-01T01:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(1800L * i),
-                    1.0,
-                    8.0,
+                    Double.NaN,
                     0,
                     null
             ));
@@ -87,8 +85,7 @@ class ReadingPracticePolicyTests {
                                                State state,
                                                String createdAt,
                                                Instant due,
-                                               double stability,
-                                               double difficulty,
+                                               double retrievability,
                                                int lapses,
                                                Instant lastReview) {
         return new ReadingPracticeCandidate(
@@ -97,8 +94,7 @@ class ReadingPracticePolicyTests {
                 state,
                 Instant.parse(createdAt),
                 due,
-                stability,
-                difficulty,
+                retrievability,
                 lapses,
                 lastReview
         );

@@ -21,10 +21,10 @@ class VocabularyClozeSelectionPolicyTests {
     void prioritizesDueCardsBeforeUpcomingCards() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
-                candidate("due-weak", State.REVIEW, now.minusSeconds(7200), 2.0, 6.0, 1, now.minusSeconds(86400)),
-                candidate("due-strong", State.REVIEW, now.minusSeconds(3600), 8.0, 4.0, 0, now.minusSeconds(3600)),
-                candidate("upcoming-1", State.REVIEW, now.plusSeconds(900), 1.5, 5.0, 0, now.minusSeconds(7200)),
-                candidate("upcoming-2", State.LEARNING, now.plusSeconds(600), 1.0, 7.0, 1, now.minusSeconds(10800))
+                candidate("due-weak", State.REVIEW, now.minusSeconds(7200), 0.52, 1, now.minusSeconds(86400)),
+                candidate("due-strong", State.REVIEW, now.minusSeconds(3600), 0.96, 0, now.minusSeconds(3600)),
+                candidate("upcoming-1", State.REVIEW, now.plusSeconds(900), 0.88, 0, now.minusSeconds(7200)),
+                candidate("upcoming-2", State.LEARNING, now.plusSeconds(600), 0.84, 1, now.minusSeconds(10800))
         );
 
         var selected = policy.selectCandidates("user-1", candidates, now);
@@ -38,9 +38,9 @@ class VocabularyClozeSelectionPolicyTests {
     void selectsNearestDueUpcomingCardsWhenNothingIsDue() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
-                candidate("later", State.REVIEW, now.plusSeconds(7200), 2.0, 5.0, 0, now.minusSeconds(7200)),
-                candidate("soon", State.REVIEW, now.plusSeconds(600), 4.0, 4.0, 0, now.minusSeconds(3600)),
-                candidate("mid", State.LEARNING, now.plusSeconds(1800), 1.5, 6.0, 1, now.minusSeconds(10800))
+                candidate("later", State.REVIEW, now.plusSeconds(7200), 0.93, 0, now.minusSeconds(7200)),
+                candidate("soon", State.REVIEW, now.plusSeconds(600), 0.88, 0, now.minusSeconds(3600)),
+                candidate("mid", State.LEARNING, now.plusSeconds(1800), 0.86, 1, now.minusSeconds(10800))
         );
 
         var selected = policy.selectCandidates("user-1", candidates, now);
@@ -60,8 +60,7 @@ class VocabularyClozeSelectionPolicyTests {
                     "review-" + i,
                     State.REVIEW,
                     now.minusSeconds(3600L * i),
-                    2.0 + i,
-                    5.0,
+                    0.95 - (i * 0.01),
                     0,
                     now.minusSeconds(7200L * i)
             ));
@@ -71,8 +70,7 @@ class VocabularyClozeSelectionPolicyTests {
                     "new-" + i,
                     State.NEW,
                     now.minusSeconds(1800L * i),
-                    1.0,
-                    8.0,
+                    Double.NaN,
                     0,
                     null
             ));
@@ -87,8 +85,7 @@ class VocabularyClozeSelectionPolicyTests {
     private VocabularyClozeCandidate candidate(String flashcardId,
                                                State state,
                                                Instant due,
-                                               double stability,
-                                               double difficulty,
+                                               double retrievability,
                                                int lapses,
                                                Instant lastReview) {
         return new VocabularyClozeCandidate(
@@ -97,8 +94,7 @@ class VocabularyClozeSelectionPolicyTests {
                 state,
                 Instant.parse("2026-01-01T00:00:00Z"),
                 due,
-                stability,
-                difficulty,
+                retrievability,
                 lapses,
                 lastReview
         );

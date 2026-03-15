@@ -210,8 +210,7 @@ public class ReadingPracticeService {
                             review.fsrsState(),
                             createdAt,
                             review.due(),
-                            review.stability(),
-                            review.difficulty(),
+                            review.retrievability(),
                             review.lapses(),
                             review.lastReview()
                     );

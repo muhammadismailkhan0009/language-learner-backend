@@ -22,19 +22,19 @@ class WritingPracticePolicyTests {
 
         for (int i = 1; i <= 15; i++) {
             candidates.add(candidate("r" + i, State.REVIEW, "2026-01-01T00:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(3600L * i), 8.0, 3.0, 0, rotationHour.minusSeconds(1800L * i)));
+                    rotationHour.minusSeconds(3600L * i), 0.98, 0, rotationHour.minusSeconds(1800L * i)));
         }
         for (int i = 1; i <= 3; i++) {
             candidates.add(candidate("l" + i, State.LEARNING, "2026-01-01T01:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(1200L * i), 5.0, 4.0, 0, rotationHour.minusSeconds(1200L * i)));
+                    rotationHour.minusSeconds(1200L * i), 0.90, 0, rotationHour.minusSeconds(1200L * i)));
         }
         for (int i = 1; i <= 2; i++) {
             candidates.add(candidate("rl" + i, State.RE_LEARNING, "2026-01-01T02:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(900L * i), 4.0, 5.0, 1, rotationHour.minusSeconds(900L * i)));
+                    rotationHour.minusSeconds(900L * i), 0.82, 1, rotationHour.minusSeconds(900L * i)));
         }
         for (int i = 1; i <= 4; i++) {
             candidates.add(candidate("n" + i, State.NEW, "2026-01-01T03:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(600L * i), 2.0, 8.0, 0, null));
+                    rotationHour.minusSeconds(600L * i), Double.NaN, 0, null));
         }
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
@@ -47,16 +47,16 @@ class WritingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Writing selection prefers more stable cards inside the same bucket")
-    void prefersMoreStableCardsInsideBucket() {
+    @DisplayName("Writing selection prefers higher-retrievability cards inside the same bucket")
+    void prefersHigherRetrievabilityCardsInsideBucket() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
                 candidate("stable", State.REVIEW, "2026-01-01T00:00:00Z",
-                        rotationHour.minusSeconds(600), 8.0, 3.0, 0, rotationHour.minusSeconds(600)),
+                        rotationHour.minusSeconds(600), 0.97, 0, rotationHour.minusSeconds(600)),
                 candidate("fragile", State.REVIEW, "2026-01-01T00:01:00Z",
-                        rotationHour.minusSeconds(600), 2.0, 3.0, 0, rotationHour.minusSeconds(600)),
+                        rotationHour.minusSeconds(600), 0.61, 0, rotationHour.minusSeconds(600)),
                 candidate("learning", State.LEARNING, "2026-01-01T00:02:00Z",
-                        rotationHour.minusSeconds(300), 5.0, 4.0, 0, rotationHour.minusSeconds(300))
+                        rotationHour.minusSeconds(300), 0.89, 0, rotationHour.minusSeconds(300))
         );
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
@@ -73,17 +73,17 @@ class WritingPracticePolicyTests {
 
         for (int i = 1; i <= 20; i++) {
             candidates.add(candidate("stable-" + i, State.REVIEW, "2026-01-01T00:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(3600L * i), 7.0, 3.0, 0, rotationHour.minusSeconds(1800L * i)));
+                    rotationHour.minusSeconds(3600L * i), 0.98, 0, rotationHour.minusSeconds(1800L * i)));
         }
         for (int i = 1; i <= 10; i++) {
             candidates.add(candidate("fragile-" + i, State.REVIEW, "2026-01-01T01:%02d:00Z".formatted(i % 60),
-                    rotationHour.minusSeconds(300L * i), 2.0, 5.0, 2, rotationHour.minusSeconds(300L * i)));
+                    rotationHour.minusSeconds(300L * i), 0.72, 2, rotationHour.minusSeconds(300L * i)));
         }
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
 
         assertThat(selected).hasSize(20);
-        assertThat(selected.stream().filter(candidate -> candidate.lapses() >= 2 || candidate.stability() <= 2.5))
+        assertThat(selected.stream().filter(candidate -> candidate.lapses() >= 2 || candidate.retrievability() <= 0.90))
                 .hasSizeLessThanOrEqualTo(2);
     }
 
@@ -91,8 +91,7 @@ class WritingPracticePolicyTests {
                                                State state,
                                                String createdAt,
                                                Instant due,
-                                               double stability,
-                                               double difficulty,
+                                               double retrievability,
                                                int lapses,
                                                Instant lastReview) {
         return new WritingPracticeCandidate(
@@ -101,8 +100,7 @@ class WritingPracticePolicyTests {
                 state,
                 Instant.parse(createdAt),
                 due,
-                stability,
-                difficulty,
+                retrievability,
                 lapses,
                 lastReview
         );
