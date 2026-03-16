@@ -68,6 +68,8 @@ public interface FlashCardRepo {
 
     void saveVocabularyFlashCardState(FlashCardReview review);
 
+    void resetFlashCardState(FlashCardReview review);
+
     void createVocabularyFlashCard(FlashCardReview review);
 
     Optional<FlashCardReview> getVocabularyCardAgainstContentAndUserAndDirection(ContentId vocabularyId,

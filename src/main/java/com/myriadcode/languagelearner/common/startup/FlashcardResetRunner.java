@@ -4,6 +4,7 @@ import com.myriadcode.fsrs.api.FsrsEngine;
 import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsRescheduleResultMapper;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
+import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
 import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.dao.mappers.FlashCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.dao.repos.FlashCardReviewJpaRepo;
 import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.entities.FlashCardReviewEntity;
@@ -23,9 +24,12 @@ public class FlashcardResetRunner implements ApplicationRunner {
 
     private final FsrsEngine fsrsEngine = FsrsEngine.createDefault();
     private final FlashCardReviewJpaRepo flashCardReviewJpaRepo;
+    private final FlashCardRepo flashCardRepo;
 
-    public FlashcardResetRunner(FlashCardReviewJpaRepo flashCardReviewJpaRepo) {
+    public FlashcardResetRunner(FlashCardReviewJpaRepo flashCardReviewJpaRepo,
+                                FlashCardRepo flashCardRepo) {
         this.flashCardReviewJpaRepo = flashCardReviewJpaRepo;
+        this.flashCardRepo = flashCardRepo;
     }
 
     @Override
@@ -37,13 +41,7 @@ public class FlashcardResetRunner implements ApplicationRunner {
     private void resetAndReplaceReviewData(FlashCardReviewEntity existingEntity) {
         var existingReview = FlashCardMapper.INSTANCE.toModel(existingEntity);
         var resetReview = resetFlashcard(existingReview);
-        var replacementEntity = FlashCardMapper.INSTANCE.toEntity(resetReview);
-
-        // One-off migration behavior: replace stored card + logs after reset.
-        // Regular study flows must keep append semantics in CardStudyService.
-        existingEntity.setCardJson(replacementEntity.getCardJson());
-        existingEntity.setReviewLogs(replacementEntity.getReviewLogs());
-        flashCardReviewJpaRepo.save(existingEntity);
+        flashCardRepo.resetFlashCardState(resetReview);
     }
 
     private FlashCardReview resetFlashcard(FlashCardReview review) {
@@ -51,7 +49,7 @@ public class FlashcardResetRunner implements ApplicationRunner {
                 fsrsEngine.resetScheduling(
                         FsrsCardMapper.toLibrary(review.cardReviewData().card()),
                         Instant.now(),
-                        review.isReversed()
+                        true
                 )
         );
 
