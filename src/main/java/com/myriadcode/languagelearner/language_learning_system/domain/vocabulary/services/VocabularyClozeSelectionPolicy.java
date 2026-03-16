@@ -12,6 +12,7 @@ public class VocabularyClozeSelectionPolicy {
 
     public static final int MAX_WORDS = 20;
     public static final int MAX_NEW_CARDS = 3;
+    public static final int MAX_NEW_CARDS_UNDERFILLED = 10;
 
     public List<VocabularyClozeCandidate> selectCandidates(String userId,
                                                            List<VocabularyClozeCandidate> candidates,
@@ -91,6 +92,19 @@ public class VocabularyClozeSelectionPolicy {
             if (candidate.state() == State.NEW) {
                 selectedNewCards++;
             }
+        }
+
+        var maxNewCardsUnderfilled = Math.min(MAX_NEW_CARDS_UNDERFILLED, count);
+        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        for (var candidate : deferredNewCards) {
+            if (selected.size() >= count || selectedNewCards >= maxNewCardsUnderfilled) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            selected.add(candidate);
+            selectedNewCards++;
         }
 
         return selected;

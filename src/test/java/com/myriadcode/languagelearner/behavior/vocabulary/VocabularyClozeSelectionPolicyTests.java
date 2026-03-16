@@ -82,6 +82,29 @@ class VocabularyClozeSelectionPolicyTests {
         assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSizeLessThanOrEqualTo(3);
     }
 
+    @Test
+    @DisplayName("Cloze selection allows up to ten new cards when underfilled after base selection")
+    void allowsMoreNewCardsWhenUnderfilled() {
+        var now = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = new ArrayList<VocabularyClozeCandidate>();
+
+        for (int i = 1; i <= 30; i++) {
+            candidates.add(candidate(
+                    "new-" + i,
+                    State.NEW,
+                    now.minusSeconds(1800L * i),
+                    Double.NaN,
+                    0,
+                    null
+            ));
+        }
+
+        var selected = policy.selectCandidates("user-1", candidates, now);
+
+        assertThat(selected).hasSize(10);
+        assertThat(selected.stream().allMatch(candidate -> candidate.state() == State.NEW)).isTrue();
+    }
+
     private VocabularyClozeCandidate candidate(String flashcardId,
                                                State state,
                                                Instant due,
