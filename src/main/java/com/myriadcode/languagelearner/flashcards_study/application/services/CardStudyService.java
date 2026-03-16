@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,13 +83,17 @@ public class CardStudyService {
 
         var state = FsrsCardMapper.toLibrary(reviewData.get().cardReviewData().card());
         var updated = FsrsRescheduleResultMapper.toDomain(scheduler.reschedule(state, rating, Instant.now()));
+        var updatedHistory = appendReviewLogs(reviewData.get().cardReviewData().reviewLogs(), updated.reviewLogs());
 
         var updatedReview = new FlashCardReview(
                 new FlashCardReview.FlashCardId(cardId),
                 reviewData.get().userId(),
                 reviewData.get().contentId(),
                 reviewData.get().contentType(),
-                updated,
+                new com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsRescheduleResult(
+                        updated.card(),
+                        updatedHistory
+                ),
                 reviewData.get().isReversed());
 
         flashCardRepo.saveFlashCardState(updatedReview);
@@ -246,13 +251,17 @@ public class CardStudyService {
         var updated = FsrsRescheduleResultMapper.toDomain(
                 scheduler.reschedule(FsrsCardMapper.toLibrary(reviewData.get().cardReviewData().card()), rating, Instant.now())
         );
+        var updatedHistory = appendReviewLogs(reviewData.get().cardReviewData().reviewLogs(), updated.reviewLogs());
 
         var updatedReview = new FlashCardReview(
                 reviewData.get().id(),
                 reviewData.get().userId(),
                 reviewData.get().contentId(),
                 ContentRefType.VOCABULARY,
-                updated,
+                new com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsRescheduleResult(
+                        updated.card(),
+                        updatedHistory
+                ),
                 reviewData.get().isReversed()
         );
 
@@ -398,4 +407,20 @@ public class CardStudyService {
         }
         return result;
     }
+
+    private List<com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog> appendReviewLogs(
+            List<com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog> existingReviewLogs,
+            List<com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog> latestReviewLogs
+    ) {
+        if (latestReviewLogs == null || latestReviewLogs.isEmpty()) {
+            return existingReviewLogs == null ? List.of() : List.copyOf(existingReviewLogs);
+        }
+        var merged = new ArrayList<com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog>();
+        if (existingReviewLogs != null && !existingReviewLogs.isEmpty()) {
+            merged.addAll(existingReviewLogs);
+        }
+        merged.addAll(latestReviewLogs);
+        return Collections.unmodifiableList(merged);
+    }
+
 }

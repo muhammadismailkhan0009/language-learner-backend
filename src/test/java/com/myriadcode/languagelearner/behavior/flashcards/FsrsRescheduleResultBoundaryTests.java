@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -32,17 +33,19 @@ class FsrsRescheduleResultBoundaryTests {
                         3.7,
                         State.LEARNING
                 ),
-                new ReviewLog(
-                        4.2,
-                        now.plusSeconds(1800),
-                        2,
-                        1,
-                        1,
-                        ReviewLogRating.HARD,
-                        now,
-                        2,
-                        3.7,
-                        State.LEARNING
+                List.of(
+                        new ReviewLog(
+                                4.2,
+                                now.plusSeconds(1800),
+                                2,
+                                1,
+                                1,
+                                ReviewLogRating.HARD,
+                                now,
+                                2,
+                                3.7,
+                                State.LEARNING
+                        )
                 )
         );
 

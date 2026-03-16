@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.List;
+
 @Entity
 @Table(name = "flashcard_review",
         uniqueConstraints = {
@@ -31,7 +33,7 @@ public class FlashCardReviewEntity {
 
     @Column(columnDefinition = "jsonb", name = "review_log_json")
     @JdbcTypeCode(SqlTypes.JSON)
-    private String reviewLogJson;
+    private List<FlashCardReviewLogValue> reviewLogs;
 
     @Column(columnDefinition = "BOOLEAN DEFAULT false")
     private boolean isReversed;
@@ -84,11 +86,11 @@ public class FlashCardReviewEntity {
         this.cardJson = cardJson;
     }
 
-    public String getReviewLogJson() {
-        return reviewLogJson;
+    public List<FlashCardReviewLogValue> getReviewLogs() {
+        return reviewLogs;
     }
 
-    public void setReviewLogJson(String reviewLogJson) {
-        this.reviewLogJson = reviewLogJson;
+    public void setReviewLogs(List<FlashCardReviewLogValue> reviewLogs) {
+        this.reviewLogs = reviewLogs;
     }
 }

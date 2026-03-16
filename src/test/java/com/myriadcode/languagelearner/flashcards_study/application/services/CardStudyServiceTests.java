@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.flashcards_study.application.services;
 
 import com.myriadcode.fsrs.api.FsrsEngine;
+import com.myriadcode.fsrs.api.enums.Rating;
 import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.common.enums.ContentRefType;
 import com.myriadcode.languagelearner.common.events.EventPublisher;
@@ -9,6 +10,8 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.flashcards_study.application.mappers.FsrsCardMapper;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FlashCardReview;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
+import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsRescheduleResult;
+import com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog;
 import com.myriadcode.languagelearner.flashcards_study.domain.repos.FlashCardRepo;
 import com.myriadcode.languagelearner.flashcards_study.domain.views.VocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_content.application.externals.FetchLanguageContentApi;
@@ -21,7 +24,10 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CardStudyServiceTests {
@@ -141,6 +147,57 @@ class CardStudyServiceTests {
 
         assertThat(cards).extracting(VocabularyFlashCardView::id)
                 .containsExactly("card-1", "card-2");
+    }
+
+    @Test
+    @DisplayName("Vocabulary review appends the latest FSRS review log to existing history")
+    void vocabularyReviewAppendsLatestFsrsReviewLogToExistingHistory() {
+        var flashCardRepo = mock(FlashCardRepo.class);
+        var fetchLanguageContentApi = mock(FetchLanguageContentApi.class);
+        var fetchPrivateVocabularyApi = mock(FetchPrivateVocabularyApi.class);
+        var eventPublisher = mock(EventPublisher.class);
+        var service = new CardStudyService(
+                flashCardRepo,
+                fetchLanguageContentApi,
+                fetchPrivateVocabularyApi,
+                eventPublisher,
+                new VocabularyFlashcardCooldownWindow()
+        );
+
+        var existingReview = new FlashCardReview(
+                new FlashCardReview.FlashCardId("card-1"),
+                new UserId("user-1"),
+                new ContentId("vocab-1"),
+                ContentRefType.VOCABULARY,
+                new FsrsRescheduleResult(
+                        FsrsCardMapper.toDomain(fsrsEngine.createEmptyCard(Instant.now().minusSeconds(60))),
+                        List.of(new ReviewLog(
+                                4.0,
+                                Instant.parse("2026-03-11T13:00:00Z"),
+                                2,
+                                1,
+                                1,
+                                com.myriadcode.fsrs.api.enums.ReviewLogRating.GOOD,
+                                Instant.parse("2026-03-11T12:00:00Z"),
+                                3,
+                                5.0,
+                                State.REVIEW
+                        ))
+                ),
+                true
+        );
+
+        when(flashCardRepo.findVocabularyReviewInfoByCard(new FlashCardReview.FlashCardId("card-1")))
+                .thenReturn(java.util.Optional.of(existingReview));
+        doNothing().when(flashCardRepo).saveVocabularyFlashCardState(any(FlashCardReview.class));
+
+        service.reviewVocabularyStudiedCard("card-1", Rating.GOOD);
+
+        var reviewCaptor = org.mockito.ArgumentCaptor.forClass(FlashCardReview.class);
+        verify(flashCardRepo).saveVocabularyFlashCardState(reviewCaptor.capture());
+        assertThat(reviewCaptor.getValue().cardReviewData().reviewLogs()).hasSize(2);
+        assertThat(reviewCaptor.getValue().cardReviewData().reviewLogs().getFirst())
+                .isEqualTo(existingReview.cardReviewData().reviewLogs().getFirst());
     }
 
     private FlashCardReview flashcard(String flashcardId, String vocabularyId, boolean isReversed) {

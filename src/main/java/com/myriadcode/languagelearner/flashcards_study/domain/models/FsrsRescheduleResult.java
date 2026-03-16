@@ -3,14 +3,15 @@ package com.myriadcode.languagelearner.flashcards_study.domain.models;
 import com.myriadcode.fsrs.api.enums.State;
 
 import java.time.Instant;
+import java.util.List;
 
 public record FsrsRescheduleResult(
         FsrsCard card,
-        ReviewLog log
+        List<ReviewLog> reviewLogs
 ) {
 
     public static FsrsRescheduleResult withCard(FsrsCard card) {
-        return new FsrsRescheduleResult(card, null);
+        return new FsrsRescheduleResult(card, List.of());
     }
 
     public double difficulty() {

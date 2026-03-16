@@ -5,11 +5,14 @@ import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsCard;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.FsrsRescheduleResult;
 import com.myriadcode.languagelearner.flashcards_study.domain.models.ReviewLog;
 import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.entities.FlashCardReviewEntity;
+import com.myriadcode.languagelearner.flashcards_study.infrastructure.jpa.entities.FlashCardReviewLogValue;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Mappings;
 import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
+
+import java.util.List;
 
 @Mapper
 public interface FlashCardMapper {
@@ -21,7 +24,7 @@ public interface FlashCardMapper {
             @Mapping(source = "userId.id", target = "userId"),
             @Mapping(source = "contentId.id", target = "languageContentId"),
             @Mapping(source = "cardReviewData.card", target = "cardJson", qualifiedByName = "convertCardToJson"),
-            @Mapping(source = "cardReviewData.log", target = "reviewLogJson", qualifiedByName = "convertLogToJson")
+            @Mapping(source = "cardReviewData.reviewLogs", target = "reviewLogs", qualifiedByName = "toReviewLogValues")
     })
     FlashCardReviewEntity toEntity(FlashCardReview review);
 
@@ -30,15 +33,25 @@ public interface FlashCardMapper {
         return review.toJson();
     }
 
-    @Named("convertLogToJson")
-    default String convertLogToJson(ReviewLog reviewLog) {
-        if (reviewLog == null) {
-            return null;
+    @Named("toReviewLogValues")
+    default List<FlashCardReviewLogValue> toReviewLogValues(List<ReviewLog> reviewLogs) {
+        if (reviewLogs == null || reviewLogs.isEmpty()) {
+            return List.of();
         }
-        // FIXME: `review_log_json` currently stores only the latest review log as a single JSON object.
-        // Later we need a migration to store the full review history as a JSON array and map this boundary
-        // as a list of review-log objects instead of one ReviewLog.
-        return reviewLog.toJson();
+        return reviewLogs.stream()
+                .map(reviewLog -> new FlashCardReviewLogValue(
+                        reviewLog.difficulty(),
+                        reviewLog.due(),
+                        reviewLog.elapsedDays(),
+                        reviewLog.lastElapsedDays(),
+                        reviewLog.learningSteps(),
+                        reviewLog.rating(),
+                        reviewLog.review(),
+                        reviewLog.scheduledDays(),
+                        reviewLog.stability(),
+                        reviewLog.state()
+                ))
+                .toList();
     }
 
     @Mappings({
@@ -54,7 +67,7 @@ public interface FlashCardMapper {
     default FsrsRescheduleResult toCardReviewData(FlashCardReviewEntity review) {
         return new FsrsRescheduleResult(
                 convertToCard(review.getCardJson()),
-                convertToReviewLog(review.getReviewLogJson())
+                toDomainReviewLogs(review.getReviewLogs())
         );
     }
 
@@ -62,12 +75,23 @@ public interface FlashCardMapper {
         return FsrsCard.fromJson(cardJson);
     }
 
-    default ReviewLog convertToReviewLog(String reviewLogJson) {
-        if (reviewLogJson == null || reviewLogJson.isBlank()) {
-            return null;
+    default List<ReviewLog> toDomainReviewLogs(List<FlashCardReviewLogValue> reviewLogs) {
+        if (reviewLogs == null || reviewLogs.isEmpty()) {
+            return List.of();
         }
-        // FIXME: This deserializes one review-log object because persistence currently keeps only the latest
-        // entry. After the review-log migration, convert this JSON payload to a list of review-log objects.
-        return ReviewLog.fromJson(reviewLogJson);
+        return reviewLogs.stream()
+                .map(reviewLog -> new ReviewLog(
+                        reviewLog.difficulty(),
+                        reviewLog.due(),
+                        reviewLog.elapsedDays(),
+                        reviewLog.lastElapsedDays(),
+                        reviewLog.learningSteps(),
+                        reviewLog.rating(),
+                        reviewLog.review(),
+                        reviewLog.scheduledDays(),
+                        reviewLog.stability(),
+                        reviewLog.state()
+                ))
+                .toList();
     }
 }

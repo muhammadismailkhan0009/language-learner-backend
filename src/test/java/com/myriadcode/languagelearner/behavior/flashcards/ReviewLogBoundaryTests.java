@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -33,6 +34,42 @@ class ReviewLogBoundaryTests {
         var restored = ReviewLog.fromJson(reviewLog.toJson());
 
         assertThat(restored).isEqualTo(reviewLog);
+    }
+
+    @Test
+    @DisplayName("Review log json list round-trip preserves ordered review history")
+    void jsonListRoundTripPreservesOrderedReviewHistory() {
+        var now = Instant.parse("2026-03-11T12:00:00Z");
+        var reviewLogs = List.of(
+                new ReviewLog(
+                        6.5,
+                        now.plusSeconds(3600),
+                        3,
+                        1,
+                        2,
+                        ReviewLogRating.GOOD,
+                        now,
+                        5,
+                        9.2,
+                        State.REVIEW
+                ),
+                new ReviewLog(
+                        5.2,
+                        now.plusSeconds(7200),
+                        5,
+                        3,
+                        2,
+                        ReviewLogRating.EASY,
+                        now.plusSeconds(60),
+                        8,
+                        11.1,
+                        State.REVIEW
+                )
+        );
+
+        var restored = ReviewLog.listFromJson(ReviewLog.listToJson(reviewLogs));
+
+        assertThat(restored).containsExactlyElementsOf(reviewLogs);
     }
 
     @Test
