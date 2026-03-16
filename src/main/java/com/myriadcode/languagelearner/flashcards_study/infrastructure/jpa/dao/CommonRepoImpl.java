@@ -121,19 +121,6 @@ public class CommonRepoImpl implements FlashCardRepo {
     }
 
     @Override
-    public void resetFlashCardState(FlashCardReview review) {
-        var existingEntity = flashCardReviewJpaRepo.findById(review.id().id())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Flashcard not found for reset: " + review.id().id()));
-        var replacementEntity = FlashCardMapper.INSTANCE.toEntity(review);
-
-        // Reset flow must replace persisted logs, not append to historical logs.
-        existingEntity.setCardJson(replacementEntity.getCardJson());
-        existingEntity.setReviewLogs(replacementEntity.getReviewLogs());
-        flashCardReviewJpaRepo.save(existingEntity);
-    }
-
-    @Override
     public void createVocabularyFlashCard(FlashCardReview review) {
         var entity = FlashCardMapper.INSTANCE.toEntity(review);
         flashCardReviewJpaRepo.save(entity);

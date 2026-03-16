@@ -5,12 +5,6 @@ spring:
     generate-ddl: false # Flyway manages schema changes
     show-sql: true
 
-app:
-  fsrs:
-    vocabulary-reset-once:
-      enabled: false
-
-
 llm:
   model: gemini-2.5-flash
   base-url: https://generativelanguage.googleapis.com/v1beta/openai/
