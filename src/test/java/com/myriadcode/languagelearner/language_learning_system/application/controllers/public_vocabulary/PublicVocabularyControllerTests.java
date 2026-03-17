@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.language_learning_system.application.controllers.public_vocabulary;
 
 import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.application.services.public_vocabulary.PublicVocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.public_vocabulary.model.PublicVocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.public_vocabulary.repo.PublicVocabularyRepo;
@@ -35,7 +36,11 @@ public class PublicVocabularyControllerTests {
         var publicRepo = new FakePublicVocabularyRepo();
         vocabularyRepo.save(sampleVocabulary("vocab-1", "user-a"));
 
-        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var service = new PublicVocabularyOrchestrationService(
+                publicRepo,
+                vocabularyRepo,
+                new VocabularyFlashCardPublisher(domainEvent -> {})
+        );
         var controller = new PublicVocabularyController(service);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
@@ -64,7 +69,11 @@ public class PublicVocabularyControllerTests {
                 Instant.now()
         ));
 
-        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var service = new PublicVocabularyOrchestrationService(
+                publicRepo,
+                vocabularyRepo,
+                new VocabularyFlashCardPublisher(domainEvent -> {})
+        );
         var controller = new PublicVocabularyController(service);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
@@ -89,7 +98,11 @@ public class PublicVocabularyControllerTests {
                 Instant.now()
         ));
 
-        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var service = new PublicVocabularyOrchestrationService(
+                publicRepo,
+                vocabularyRepo,
+                new VocabularyFlashCardPublisher(domainEvent -> {})
+        );
         var controller = new PublicVocabularyController(service);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
@@ -119,7 +132,11 @@ public class PublicVocabularyControllerTests {
                 Instant.now()
         ));
 
-        var service = new PublicVocabularyOrchestrationService(publicRepo, vocabularyRepo);
+        var service = new PublicVocabularyOrchestrationService(
+                publicRepo,
+                vocabularyRepo,
+                new VocabularyFlashCardPublisher(domainEvent -> {})
+        );
         var controller = new PublicVocabularyController(service);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 

@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.public_vocabulary.PublicVocabularyApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.vocabulary.VocabularyApiMapper;
+import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.domain.public_vocabulary.model.PublicVocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.public_vocabulary.repo.PublicVocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.public_vocabulary.services.PublicVocabularyDomainService;
@@ -27,6 +28,7 @@ public class PublicVocabularyOrchestrationService {
 
     private final PublicVocabularyRepo publicVocabularyRepo;
     private final VocabularyRepo vocabularyRepo;
+    private final VocabularyFlashCardPublisher vocabularyFlashCardPublisher;
 
     public PublicVocabularyResponse publishVocabulary(String userId,
                                                       String vocabularyId,
@@ -87,6 +89,7 @@ public class PublicVocabularyOrchestrationService {
                 .findFirst();
 
         if (existing.isPresent()) {
+            vocabularyFlashCardPublisher.createPrivateVocabularyCards(existing.get());
             return VOCABULARY_API_MAPPER.toResponse(existing.get());
         }
 
@@ -106,6 +109,7 @@ public class PublicVocabularyOrchestrationService {
         );
 
         var saved = vocabularyRepo.save(copied);
+        vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
     }
 
