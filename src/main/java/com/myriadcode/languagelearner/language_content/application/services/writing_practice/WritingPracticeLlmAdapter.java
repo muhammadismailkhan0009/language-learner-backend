@@ -22,6 +22,9 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     public String selectTopicForWriting(List<WritingPracticeVocabularySeed> vocabulary,
                                         List<String> previousTopics,
                                         String difficultyLevel) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return null;
+        }
         var result = llmPort.selectWritingTopicForTextGeneration(vocabulary, previousTopics, difficultyLevel);
         return result == null ? null : result.topic();
     }
@@ -30,6 +33,9 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     public WritingPracticeBilingualContent generateBilingualContent(String topic,
                                                                     List<WritingPracticeVocabularySeed> vocabulary,
                                                                     String difficultyLevel) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return new WritingPracticeBilingualContent("", "");
+        }
         var result = llmPort.generateWritingBilingualContent(topic, vocabulary, difficultyLevel);
         if (result == null) {
             return new WritingPracticeBilingualContent("", "");
@@ -41,6 +47,9 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     public List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
                                                String englishParagraph,
                                                String germanParagraph) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return List.of();
+        }
         var result = llmPort.identifyUsedWritingVocabulary(vocabulary, englishParagraph, germanParagraph);
         if (result == null || result.usedSurfaces() == null) {
             return List.of();

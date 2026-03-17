@@ -20,6 +20,9 @@ public class VocabularyClozeLlmAdapter implements VocabularyClozeLlmApi {
     @Override
     public List<VocabularyClozeSentenceResult> generateClozeSentences(String topic,
                                                                       List<VocabularyClozeGenerationSeed> vocabulary) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return List.of();
+        }
         var result = llmPort.generateVocabularyClozeSentences(topic, vocabulary);
         if (result == null || result.clozeSentences() == null) {
             return List.of();

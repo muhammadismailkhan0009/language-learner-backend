@@ -80,6 +80,9 @@ public class WritingPracticeService {
                 .filter(record -> record != null)
                 .map(record -> new WritingPracticeVocabularySeed(record.surface(), record.translation()))
                 .toList();
+        if (selectedVocab.isEmpty()) {
+            throw new IllegalArgumentException("No vocabulary seeds found for writing practice");
+        }
 
         var previousTopics = writingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
         String topic;
@@ -96,12 +99,18 @@ public class WritingPracticeService {
             var bilingualContent = writingPracticeLlmApi.generateBilingualContent(topic, selectedVocab, DIFFICULTY_LEVEL);
             englishParagraph = sanitizeParagraph(bilingualContent.englishParagraph());
             germanParagraph = sanitizeParagraph(bilingualContent.germanParagraph());
+            if (englishParagraph.isBlank() || germanParagraph.isBlank()) {
+                throw new IllegalArgumentException("Unable to generate writing content");
+            }
             usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, englishParagraph, germanParagraph);
             sentencePairs = buildSentencePairs(
                     writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
                     englishParagraph,
                     germanParagraph
             );
+            if (sentencePairs.isEmpty()) {
+                throw new IllegalArgumentException("Unable to generate writing sentence pairs");
+            }
         }
 
         var usages = buildUsages(selected, vocabRecords, usedVocabularySurfaces);

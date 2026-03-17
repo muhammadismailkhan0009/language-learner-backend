@@ -113,6 +113,26 @@ class WritingPracticeServiceOrchestratorTests {
     }
 
     @Test
+    @DisplayName("createSession: does not save when generated writing content is empty")
+    void createSessionDoesNotSaveWhenGeneratedWritingContentIsEmpty() {
+        var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
+        when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
+                .thenReturn(List.of(vocab("v-1")));
+        when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
+        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq("B1"))).thenReturn("topic");
+        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq("B1")))
+                .thenReturn(new WritingPracticeBilingualContent("", ""));
+
+        assertThatThrownBy(() -> service.createSession("user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Unable to generate writing content");
+
+        verify(writingPracticeRepo, never()).save(any());
+    }
+
+    @Test
     @DisplayName("getSession: hydrates flashcards only for vocabulary records that exist")
     void getSessionHydratesOnlyExistingVocabulary() {
         var usage1 = new WritingVocabularyUsage(new WritingVocabularyUsage.WritingVocabularyUsageId("u-1"), "f-1", "v-1");

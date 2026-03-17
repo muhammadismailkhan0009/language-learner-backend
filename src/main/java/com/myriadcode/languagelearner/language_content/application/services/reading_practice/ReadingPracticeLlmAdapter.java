@@ -21,6 +21,9 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
                                                List<String> previousTopics,
                                                String difficultyLevel) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return null;
+        }
         return llmPort.selectReadingTopicForTextGeneration(vocabulary, previousTopics, difficultyLevel).topic();
     }
 
@@ -28,6 +31,9 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     public ReadingPracticeReadingContent generateReadingContent(String topic,
                                                                 List<ReadingPracticeVocabularySeed> vocabulary,
                                                                 String difficultyLevel) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return new ReadingPracticeReadingContent(List.of());
+        }
         var content = llmPort.generateReadingContent(topic, vocabulary, difficultyLevel);
         if (content == null || content.paragraphs() == null) {
             return new ReadingPracticeReadingContent(List.of());
@@ -44,6 +50,9 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     @Override
     public List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                                String readingText) {
+        if (vocabulary == null || vocabulary.isEmpty()) {
+            return List.of();
+        }
         var result = llmPort.identifyUsedReadingVocabulary(vocabulary, readingText);
         if (result == null || result.usedSurfaces() == null) {
             return List.of();

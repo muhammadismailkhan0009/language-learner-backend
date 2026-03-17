@@ -81,6 +81,9 @@ public class ReadingPracticeService {
                 .filter(record -> record != null)
                 .map(record -> new ReadingPracticeVocabularySeed(record.surface(), record.translation()))
                 .toList();
+        if (selectedVocab.isEmpty()) {
+            throw new IllegalArgumentException("No vocabulary seeds found for reading practice");
+        }
 
         var previousTopics = readingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
         String topic;
@@ -96,6 +99,9 @@ public class ReadingPracticeService {
             var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
             paragraphs = buildParagraphs(generated);
             readingText = joinParagraphs(paragraphs);
+            if (paragraphs.isEmpty() || readingText.isBlank()) {
+                throw new IllegalArgumentException("Unable to generate reading content");
+            }
             usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, readingText);
         }
 
