@@ -18,6 +18,12 @@ public class DaoRepo implements UserInfoRepo {
     private UserInfoJpaRepo userInfoJpaRepo;
 
     @Override
+    public Optional<UserInfo> findById(String userId) {
+        var entity = userInfoJpaRepo.findById(userId);
+        return entity.map(UserInfoEntityMapper.INSTANCE::toDomain);
+    }
+
+    @Override
     public Optional<UserInfo> findByUserName(String username) {
         var entity = userInfoJpaRepo.findByUsername(username);
         return entity.map(UserInfoEntityMapper.INSTANCE::toDomain);

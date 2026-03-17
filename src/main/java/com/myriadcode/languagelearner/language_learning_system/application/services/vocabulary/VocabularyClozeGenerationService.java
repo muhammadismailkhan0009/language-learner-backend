@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.serv
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeSentenceResult;
+import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchRecentReadingTopicsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchRecentWritingTopicsApi;
@@ -98,7 +99,10 @@ public class VocabularyClozeGenerationService {
         }
 
         var topic = determineTopic(userId);
-        var generated = vocabularyClozeLlmApi.generateClozeSentences(topic, seeds);
+        List<VocabularyClozeSentenceResult> generated;
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            generated = vocabularyClozeLlmApi.generateClozeSentences(topic, seeds);
+        }
         if (generated.isEmpty()) {
             throw new IllegalArgumentException("No cloze sentences generated");
         }

@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserRegistrationService implements UserInformationApi {
@@ -32,5 +33,10 @@ public class UserRegistrationService implements UserInformationApi {
     public List<String> userIds() {
         var users = userInfoRepo.findAll();
         return users.parallelStream().map(user -> user.id().id()).toList();
+    }
+
+    @Override
+    public Optional<String> findUsernameByUserId(String userId) {
+        return userInfoRepo.findById(userId).map(user -> user.username());
     }
 }

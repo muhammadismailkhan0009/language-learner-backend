@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingVocabularyFlashCardView;
@@ -82,15 +83,21 @@ public class ReadingPracticeService {
                 .toList();
 
         var previousTopics = readingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
-        var topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
-        if (topic == null || topic.isBlank()) {
-            topic = "General practice";
-        }
+        String topic;
+        List<ReadingPracticeParagraph> paragraphs;
+        String readingText;
+        Set<String> usedVocabularySurfaces;
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
+            if (topic == null || topic.isBlank()) {
+                topic = "General practice";
+            }
 
-        var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
-        var paragraphs = buildParagraphs(generated);
-        var readingText = joinParagraphs(paragraphs);
-        var usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, readingText);
+            var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
+            paragraphs = buildParagraphs(generated);
+            readingText = joinParagraphs(paragraphs);
+            usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, readingText);
+        }
 
         var usageRecords = buildUsageRecords(selected, vocabRecords, usedVocabularySurfaces);
 

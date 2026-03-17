@@ -1,17 +1,25 @@
 package com.myriadcode.languagelearner.language_content.infra.llm;
 
 import com.myriadcode.languagelearner.common.EnvVariableSupplierUtil;
+import com.myriadcode.languagelearner.user_management.application.externals.UserInformationApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 @Component
 @RequiredArgsConstructor
 public class LLMConfig {
 
+    private static final String PRIMARY_USER_EMAIL = "ismailkhan33302@gmail.com";
+
     private final EnvVariableSupplierUtil envVariableSupplierUtil;
+    private final UserInformationApi userInformationApi;
+
+    @Value("${llm.model_demo:${llm.model}}")
+    private String demoModel;
 
     public OpenAiChatModel chatModel() {
         OpenAiApi baseApiModel = OpenAiApi.builder()
@@ -20,10 +28,20 @@ public class LLMConfig {
                 .completionsPath(envVariableSupplierUtil.getCompletionsPath())
                 .build();
 
-        var chatOptions = OpenAiChatOptions.builder().model(envVariableSupplierUtil.getLLMModel()).build();
+        var chatOptions = OpenAiChatOptions.builder().model(resolveModel()).build();
         return OpenAiChatModel.builder()
                 .openAiApi(baseApiModel).defaultOptions(chatOptions).build();
 
 
+    }
+
+    private String resolveModel() {
+        var userEmail = LlmUserContextHolder.currentUserId()
+                .flatMap(userInformationApi::findUsernameByUserId)
+                .orElse("");
+        if (PRIMARY_USER_EMAIL.equalsIgnoreCase(userEmail)) {
+            return envVariableSupplierUtil.getLLMModel();
+        }
+        return demoModel;
     }
 }

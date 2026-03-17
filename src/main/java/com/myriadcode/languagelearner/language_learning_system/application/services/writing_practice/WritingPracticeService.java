@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Wri
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingVocabularyFlashCardView;
@@ -81,20 +82,27 @@ public class WritingPracticeService {
                 .toList();
 
         var previousTopics = writingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
-        var topic = writingPracticeLlmApi.selectTopicForWriting(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
-        if (topic == null || topic.isBlank()) {
-            topic = "General writing practice";
-        }
+        String topic;
+        String englishParagraph;
+        String germanParagraph;
+        Set<String> usedVocabularySurfaces;
+        List<WritingSentencePair> sentencePairs;
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            topic = writingPracticeLlmApi.selectTopicForWriting(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
+            if (topic == null || topic.isBlank()) {
+                topic = "General writing practice";
+            }
 
-        var bilingualContent = writingPracticeLlmApi.generateBilingualContent(topic, selectedVocab, DIFFICULTY_LEVEL);
-        var englishParagraph = sanitizeParagraph(bilingualContent.englishParagraph());
-        var germanParagraph = sanitizeParagraph(bilingualContent.germanParagraph());
-        var usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, englishParagraph, germanParagraph);
-        var sentencePairs = buildSentencePairs(
-                writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
-                englishParagraph,
-                germanParagraph
-        );
+            var bilingualContent = writingPracticeLlmApi.generateBilingualContent(topic, selectedVocab, DIFFICULTY_LEVEL);
+            englishParagraph = sanitizeParagraph(bilingualContent.englishParagraph());
+            germanParagraph = sanitizeParagraph(bilingualContent.germanParagraph());
+            usedVocabularySurfaces = findUsedVocabularySurfaces(selectedVocab, englishParagraph, germanParagraph);
+            sentencePairs = buildSentencePairs(
+                    writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
+                    englishParagraph,
+                    germanParagraph
+            );
+        }
 
         var usages = buildUsages(selected, vocabRecords, usedVocabularySurfaces);
 

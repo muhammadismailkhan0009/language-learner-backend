@@ -7,6 +7,8 @@ import java.util.Optional;
 
 public interface UserInfoRepo {
 
+    Optional<UserInfo> findById(String userId);
+
     Optional<UserInfo> findByUserName(String username);
 
     UserInfo save(UserInfo userInfo);
