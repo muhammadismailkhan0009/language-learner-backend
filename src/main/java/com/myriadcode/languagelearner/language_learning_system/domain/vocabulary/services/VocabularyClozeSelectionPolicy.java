@@ -12,7 +12,7 @@ public class VocabularyClozeSelectionPolicy {
 
     public static final int MAX_WORDS = 20;
     public static final int MAX_NEW_CARDS = 3;
-    public static final int MAX_NEW_CARDS_UNDERFILLED = 10;
+    public static final int MAX_NEW_CARDS_UNDERFILLED = 20;
 
     public List<VocabularyClozeCandidate> selectCandidates(String userId,
                                                            List<VocabularyClozeCandidate> candidates,

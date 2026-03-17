@@ -83,7 +83,7 @@ class VocabularyClozeSelectionPolicyTests {
     }
 
     @Test
-    @DisplayName("Cloze selection allows up to ten new cards when underfilled after base selection")
+    @DisplayName("Cloze selection allows up to twenty new cards when underfilled after base selection")
     void allowsMoreNewCardsWhenUnderfilled() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<VocabularyClozeCandidate>();
@@ -101,7 +101,7 @@ class VocabularyClozeSelectionPolicyTests {
 
         var selected = policy.selectCandidates("user-1", candidates, now);
 
-        assertThat(selected).hasSize(10);
+        assertThat(selected).hasSize(20);
         assertThat(selected.stream().allMatch(candidate -> candidate.state() == State.NEW)).isTrue();
     }
 
