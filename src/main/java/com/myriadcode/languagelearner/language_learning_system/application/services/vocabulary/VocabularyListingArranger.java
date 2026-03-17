@@ -47,7 +47,10 @@ final class VocabularyListingArranger {
         if (stats == null || stats.isEmpty()) {
             return null;
         }
-        return stats.stream()
+        var preferredStats = stats.stream().anyMatch(VocabularyFlashcardReviewRecord::isReversed)
+                ? stats.stream().filter(VocabularyFlashcardReviewRecord::isReversed).toList()
+                : stats;
+        return preferredStats.stream()
                 .sorted(statComparator(referenceTime))
                 .findFirst()
                 .orElse(null);

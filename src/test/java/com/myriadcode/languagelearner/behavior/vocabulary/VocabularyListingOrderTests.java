@@ -68,6 +68,26 @@ class VocabularyListingOrderTests {
     }
 
     @Test
+    @DisplayName("fetchVocabularies: prefers reversed card over front card for representative ranking")
+    void fetchVocabulariesPrefersReversedRepresentative() {
+        var vocabularies = seedVocabulary("user-a", 2);
+        var service = new VocabularyOrchestrationService(
+                new InMemoryVocabularyRepo(vocabularies),
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                statsApi(List.of(
+                        review("card-front-weak", "vocab-1", State.REVIEW, "2026-03-09T11:00:00Z", 0.50, 2.0, 8.0, 2, "2026-03-08T08:00:00Z"),
+                        review("card-reverse-strong", "vocab-1", State.REVIEW, "2026-03-09T16:00:00Z", 0.99, 9.0, 1.0, 0, "2026-03-09T09:00:00Z", true),
+                        review("card-other", "vocab-2", State.LEARNING, "2026-03-09T12:45:00Z", 0.88, 4.5, 5.0, 0, "2026-03-08T11:00:00Z")
+                )),
+                Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
+        );
+
+        assertThat(ids(service.fetchVocabularies("user-a")))
+                .containsExactly("vocab-2", "vocab-1");
+    }
+
+    @Test
     @DisplayName("fetchVocabularies: low-retrievability review cards rise above new and strong vocabulary")
     void fetchVocabulariesPromotesLowRetrievabilityReviewCards() {
         var vocabularies = seedVocabulary("user-a", 4);
@@ -133,6 +153,30 @@ class VocabularyListingOrderTests {
                 lapses,
                 lastReview == null ? null : Instant.parse(lastReview),
                 false
+        );
+    }
+
+    private static VocabularyFlashcardReviewRecord review(String flashcardId,
+                                                          String vocabularyId,
+                                                          State state,
+                                                          String due,
+                                                          double retrievability,
+                                                          double stability,
+                                                          double difficulty,
+                                                          int lapses,
+                                                          String lastReview,
+                                                          boolean isReversed) {
+        return new VocabularyFlashcardReviewRecord(
+                flashcardId,
+                vocabularyId,
+                state,
+                due == null ? null : Instant.parse(due),
+                retrievability,
+                stability,
+                difficulty,
+                lapses,
+                lastReview == null ? null : Instant.parse(lastReview),
+                isReversed
         );
     }
 
