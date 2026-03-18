@@ -825,6 +825,7 @@ Hint rules
 - The hint must be very short (1–3 words).
 - The hint must not contain the German word.
 - The hint must reflect the precise sense of the word in this sentence.
+- If applicable, the hint should be the exact meaning provided inside vocabulary input. Otherwise, hint should be what the word means in sentences, and as close as possible to provided meaning in given vocabulary.
 
 German Sentence constraints
 - Natural everyday German.
