@@ -3,12 +3,14 @@ package com.myriadcode.languagelearner.language_content.infra.llm;
 import com.myriadcode.languagelearner.common.EnvVariableSupplierUtil;
 import com.myriadcode.languagelearner.user_management.application.externals.UserInformationApi;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class LLMConfig {
@@ -39,9 +41,10 @@ public class LLMConfig {
         var userEmail = LlmUserContextHolder.currentUserId()
                 .flatMap(userInformationApi::findUsernameByUserId)
                 .orElse("");
-        if (PRIMARY_USER_EMAIL.equalsIgnoreCase(userEmail)) {
-            return envVariableSupplierUtil.getLLMModel();
-        }
-        return demoModel;
+        String selectedModel = PRIMARY_USER_EMAIL.equalsIgnoreCase(userEmail)
+                ? envVariableSupplierUtil.getLLMModel()
+                : demoModel;
+        log.info("Resolved LLM model '{}' for email '{}'", selectedModel, userEmail);
+        return selectedModel;
     }
 }
