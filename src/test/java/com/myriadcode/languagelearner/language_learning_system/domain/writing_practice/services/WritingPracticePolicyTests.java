@@ -66,8 +66,8 @@ class WritingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Writing selection limits fragile cards")
-    void limitsFragileCards() {
+    @DisplayName("Writing selection does not backfill when strict pass already has at least 20")
+    void doesNotBackfillWhenStrictPassAlreadyHasTwentyOrMore() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<WritingPracticeCandidate>();
 
@@ -82,9 +82,31 @@ class WritingPracticePolicyTests {
 
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
 
-        assertThat(selected).hasSize(20);
+        assertThat(selected).hasSize(22);
         assertThat(selected.stream().filter(candidate -> candidate.lapses() >= 2 || candidate.retrievability() <= 0.90))
                 .hasSizeLessThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Writing selection backfills only up to 20 when strict pass is below 20")
+    void backfillsOnlyUpToTwentyWhenStrictPassIsBelowTwenty() {
+        var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = new ArrayList<WritingPracticeCandidate>();
+
+        for (int i = 1; i <= 15; i++) {
+            candidates.add(candidate("stable-" + i, State.REVIEW, "2026-01-01T00:%02d:00Z".formatted(i % 60),
+                    rotationHour.minusSeconds(3600L * i), 0.98, 0, rotationHour.minusSeconds(1800L * i)));
+        }
+        for (int i = 1; i <= 10; i++) {
+            candidates.add(candidate("fragile-" + i, State.REVIEW, "2026-01-01T01:%02d:00Z".formatted(i % 60),
+                    rotationHour.minusSeconds(300L * i), 0.72, 2, rotationHour.minusSeconds(300L * i)));
+        }
+
+        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+
+        assertThat(selected).hasSize(20);
+        assertThat(selected.stream().filter(candidate -> candidate.lapses() >= 2 || candidate.retrievability() <= 0.90))
+                .hasSizeGreaterThan(2);
     }
 
     private WritingPracticeCandidate candidate(String cardId,

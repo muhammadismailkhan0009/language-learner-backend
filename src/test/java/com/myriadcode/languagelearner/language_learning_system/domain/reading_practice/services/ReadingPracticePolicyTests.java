@@ -47,8 +47,8 @@ class ReadingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Reading selection caps new cards when enough non-new candidates exist")
-    void capsNewCards() {
+    @DisplayName("Reading selection backfills to 20 when strict pass stays below 20")
+    void backfillsToTwentyWhenStrictPassIsBelowTwenty() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
 
@@ -78,7 +78,29 @@ class ReadingPracticePolicyTests {
         var selected = policy.selectCandidates("user-1", candidates, rotationHour);
 
         assertThat(selected).hasSize(20);
-        assertThat(selected.stream().filter(c -> c.state() == State.NEW)).hasSizeLessThanOrEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Reading selection does not backfill when strict pass already has at least 20")
+    void doesNotBackfillWhenStrictPassAlreadyHasTwentyOrMore() {
+        var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
+
+        for (int i = 1; i <= 30; i++) {
+            candidates.add(candidate(
+                    "review-stable-" + i,
+                    State.REVIEW,
+                    "2026-01-01T00:%02d:00Z".formatted(i % 60),
+                    rotationHour.minusSeconds(900L * i),
+                    0.97,
+                    0,
+                    rotationHour.minusSeconds(1200L * i)
+            ));
+        }
+
+        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+
+        assertThat(selected).hasSize(30);
     }
 
     private ReadingPracticeCandidate candidate(String cardId,

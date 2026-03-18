@@ -12,7 +12,8 @@ import java.util.Map;
 public class ReadingPracticePolicy {
 
     private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.90;
-    public static final int MAX_WORDS = 20;
+    public static final int MAX_WORDS = 50;
+    public static final int BACKFILL_TARGET_WORDS = 20;
     public static final int MAX_NEW_CARDS = 2;
     public static final int REVIEW_COUNT = 8;
     public static final int RE_LEARNING_COUNT = 4;
@@ -26,9 +27,10 @@ public class ReadingPracticePolicy {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
+        var maxSelectable = Math.min(MAX_WORDS, candidates.size());
 
         var grouped = groupByState(candidates, rotationHour);
-        var selected = new ArrayList<ReadingPracticeCandidate>(Math.min(MAX_WORDS, candidates.size()));
+        var selected = new ArrayList<ReadingPracticeCandidate>(maxSelectable);
 
         addCandidates(selected, grouped.get(State.REVIEW), REVIEW_COUNT);
         addCandidates(selected, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT);
@@ -41,9 +43,14 @@ public class ReadingPracticePolicy {
                 .toList();
 
         addCandidates(selected, remainder, FLEX_COUNT);
-        addCandidates(selected, remainder, Math.min(MAX_WORDS, candidates.size()) - selected.size());
+        addCandidates(selected, remainder, maxSelectable - selected.size());
 
-        return selected.subList(0, Math.min(selected.size(), Math.min(MAX_WORDS, candidates.size())));
+        var backfillTarget = Math.min(BACKFILL_TARGET_WORDS, maxSelectable);
+        if (selected.size() < backfillTarget) {
+            addRemainingCandidates(selected, remainder, backfillTarget);
+        }
+
+        return selected.subList(0, Math.min(selected.size(), maxSelectable));
     }
 
     private Map<State, List<ReadingPracticeCandidate>> groupByState(List<ReadingPracticeCandidate> candidates,
@@ -99,6 +106,23 @@ public class ReadingPracticePolicy {
             }
             selected.add(candidate);
             targetCount--;
+        }
+    }
+
+    private void addRemainingCandidates(List<ReadingPracticeCandidate> selected,
+                                        List<ReadingPracticeCandidate> candidates,
+                                        int targetSize) {
+        if (candidates == null || candidates.isEmpty() || targetSize <= selected.size()) {
+            return;
+        }
+        for (var candidate : candidates) {
+            if (selected.size() >= targetSize) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            selected.add(candidate);
         }
     }
 
