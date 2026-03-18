@@ -295,9 +295,17 @@ public final class PromptsGenerator {
 
         Vocabulary Usage:
         - Use the learner vocabulary as much as possible.
-        - Try to include most of the provided vocabulary in the text.
-        - Important words may appear more than once.
+        - Select a subset of the provided vocabulary that fits the topic naturally.
+        - Prefer reusing selected words multiple times across sentences instead of covering all vocabulary.
+        - Do NOT try to include most or all vocabulary items if it reduces repetition.
+        - Important words should appear multiple times when natural.
+        - Important vocabulary should appear across multiple different sentences, not just once or twice.
         - Combine multiple learner vocabulary words in the same sentence when natural.
+
+        Repetition Guidance:
+        - Words used only once are weak for learning.
+        - Prefer using fewer words multiple times rather than many words once.
+        - Reuse important vocabulary across different sentences when natural.
 
         Paragraph Guidelines:
         - Minimum paragraphs: 1
@@ -461,11 +469,19 @@ public final class PromptsGenerator {
         - Vary sentence structure when possible.
 
         Vocabulary Usage Rules:
-        - Use as many provided learner vocabulary words as possible.
-        - Use at least half of the provided learner vocabulary when natural.
+        - Use provided learner vocabulary when natural.
+        - Select a subset of vocabulary that fits the topic best.
+        - Prefer reusing selected words multiple times instead of covering many words once.
+        - Do NOT try to use a fixed portion (e.g. half) of the vocabulary.
         - Vocabulary may appear in any grammatical form (e.g., conjugated verbs, plural nouns).
         - Combine multiple learner vocabulary words in the same sentence when natural.
         - Do not force vocabulary if it makes the sentence unnatural.
+        - Important words should appear multiple times when natural.
+        - Important vocabulary should appear across multiple different sentences, not just once or twice.
+
+        Repetition Guidance:
+        - Prefer repeated usage of important vocabulary across sentences.
+        - Avoid using many words only once.
 
         Vocabulary Control:
         - Introduce at most 3–5 new content words not in the learner vocabulary list.
