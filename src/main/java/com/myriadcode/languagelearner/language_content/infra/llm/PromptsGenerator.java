@@ -800,7 +800,7 @@ public final class PromptsGenerator {
   String vocabList = formatVocabularyClozeSeeds(vocabulary);
 
   return """
-You are a German teacher creating sentence-cloze vocabulary exercise for B1.
+You are a German teacher creating sentence-cloze vocabulary exercise for A2.
 
 Topic context: "%s"
 
@@ -841,20 +841,31 @@ Hint rules
 - The hint MUST NOT be in German under any circumstance.
 - If the vocabulary meaning is in German, you MUST translate it into natural English.
 - The hint must represent the meaning of the word as used in the sentence.
+
+- The hint MUST be the most common, simplest, and most frequently used everyday meaning.
+- Prefer the shortest and most basic translation a beginner would learn first.
+- Avoid formal, rare, indirect, or descriptive meanings.
+- Avoid paraphrases such as "be familiar with" if "know" is possible.
+- Avoid phrases such as "perform" if "play" is more natural.
+- Avoid multi-word explanations when a single common word exists.
+
 - Do NOT copy the German lemma or phrase into the hint.
 - The hint must be very short (1–3 words).
-- The hint MUST match the EXACT meaning of the word as used in the sentence.
-- The hint MUST correspond directly to the correct answer_text meaning.
-- Do NOT provide a general dictionary meaning.
-- Do NOT provide alternative meanings of the word.
-- If the vocabulary input provides a meaning, you MUST use that exact meaning.
-- If multiple meanings exist, choose ONLY the meaning that fits the sentence.
+
+- If the vocabulary input provides a meaning:
+  → use that meaning ONLY IF it is simple and common.
+  → otherwise simplify it to the most common equivalent.
+
+- If multiple meanings exist:
+  → ALWAYS choose the most frequent and typical everyday meaning.
 
 
 Consistency Rule
 - The hint and the answer_text must align semantically.
 - A learner should be able to reconstruct the correct answer using ONLY the hint and sentence context.
 - If the hint would lead to a different valid word, it is INVALID.
+- The hint must lead to the MOST LIKELY answer a beginner would give.
+- If the hint could lead to a more common alternative word than the target answer, it is INVALID.
 
 German Sentence constraints
 - Natural everyday German.
@@ -916,6 +927,8 @@ Use the structure that sounds most natural for the sentence.
 Validation rule
 - Before finalizing, check:
   Does the hint uniquely lead to the correct answer in this sentence?
+  If not, regenerate.
+  - Check: Is this the simplest and most common translation a beginner would learn first?
   If not, regenerate.
 
 Learner vocabulary (German | translation):

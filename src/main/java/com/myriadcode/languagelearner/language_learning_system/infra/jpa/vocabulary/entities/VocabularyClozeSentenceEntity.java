@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
@@ -31,7 +30,6 @@ public class VocabularyClozeSentenceEntity {
     @Column(name = "answer_text", nullable = false, length = 500)
     private String answerText;
 
-    @Lob
     @Column(name = "answer_words_json", nullable = false, columnDefinition = "text")
     private String answerWordsJson;
 
