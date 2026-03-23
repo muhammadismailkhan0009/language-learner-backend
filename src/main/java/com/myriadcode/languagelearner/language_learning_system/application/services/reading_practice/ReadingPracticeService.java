@@ -210,7 +210,7 @@ public class ReadingPracticeService {
             Map<String, PrivateVocabularyRecord> vocabRecords
     ) {
         return flashcards.stream()
-                .filter(review -> !review.isReversed())
+                .filter(VocabularyFlashcardReviewRecord::isReversed)
                 .map(review -> {
                     var vocab = vocabRecords.get(review.vocabularyId());
                     if (vocab == null) {
@@ -250,7 +250,7 @@ public class ReadingPracticeService {
                 usage.flashCardId(),
                 new ReadingVocabularyFlashCardView.Front(front),
                 new ReadingVocabularyFlashCardView.Back(back, sentences),
-                false
+                true
         );
     }
 

@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Rea
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingVocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
@@ -91,7 +92,7 @@ class ReadingPracticeSessionFlowTests {
 
     @Test
     @DisplayName("getSession: hydrates flashcard view with reverse direction")
-    void getSessionHydratesNonReversedCard() {
+    void getSessionHydratesReversedCard() {
         readingPracticeService.createSession("user-1");
         var saved = readingPracticeSessionJpaRepo.findAll().getFirst();
 
@@ -99,34 +100,34 @@ class ReadingPracticeSessionFlowTests {
 
         assertThat(response.vocabFlashcards()).isNotEmpty();
         assertThat(response.vocabFlashcards())
-                .allMatch(card -> !card.isReversed());
+                .allMatch(ReadingVocabularyFlashCardView::isReversed);
         var first = response.vocabFlashcards().getFirst();
         assertThat(first.front().wordOrChunk()).startsWith("surface-");
         assertThat(first.back().wordOrChunk()).startsWith("translation-");
     }
 
     @Test
-    @DisplayName("createSession: uses only non-reversed cards and respects 3/4/2/1 state ratio")
-    void createSessionUsesNonReversedCardsWithTargetRatio() {
+    @DisplayName("createSession: uses only reversed cards and respects 4/3/2/1 state ratio")
+    void createSessionUsesReversedCardsWithTargetRatio() {
         var reviews = new ArrayList<VocabularyFlashcardReviewRecord>();
-        reviews.add(new VocabularyFlashcardReviewRecord("r-1", "v-r-1", State.REVIEW, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("r-2", "v-r-2", State.REVIEW, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("r-3", "v-r-3", State.REVIEW, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("r-reversed", "v-r-reversed", State.REVIEW, true));
-        reviews.add(new VocabularyFlashcardReviewRecord("rl-1", "v-rl-1", State.RE_LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("rl-2", "v-rl-2", State.RE_LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("rl-3", "v-rl-3", State.RE_LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("rl-4", "v-rl-4", State.RE_LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("rl-reversed", "v-rl-reversed", State.RE_LEARNING, true));
-        reviews.add(new VocabularyFlashcardReviewRecord("l-1", "v-l-1", State.LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("l-2", "v-l-2", State.LEARNING, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("l-reversed", "v-l-reversed", State.LEARNING, true));
-        reviews.add(new VocabularyFlashcardReviewRecord("n-1", "v-n-1", State.NEW, false));
-        reviews.add(new VocabularyFlashcardReviewRecord("n-reversed", "v-n-reversed", State.NEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("r-1", "v-r-1", State.REVIEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("r-2", "v-r-2", State.REVIEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("r-3", "v-r-3", State.REVIEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("r-4", "v-r-4", State.REVIEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("r-non-reversed", "v-r-non-reversed", State.REVIEW, false));
+        reviews.add(new VocabularyFlashcardReviewRecord("rl-1", "v-rl-1", State.RE_LEARNING, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("rl-2", "v-rl-2", State.RE_LEARNING, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("rl-3", "v-rl-3", State.RE_LEARNING, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("rl-non-reversed", "v-rl-non-reversed", State.RE_LEARNING, false));
+        reviews.add(new VocabularyFlashcardReviewRecord("l-1", "v-l-1", State.LEARNING, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("l-2", "v-l-2", State.LEARNING, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("l-non-reversed", "v-l-non-reversed", State.LEARNING, false));
+        reviews.add(new VocabularyFlashcardReviewRecord("n-1", "v-n-1", State.NEW, true));
+        reviews.add(new VocabularyFlashcardReviewRecord("n-non-reversed", "v-n-non-reversed", State.NEW, false));
         stubFetchVocabularyFlashcardReviewsApi.setReviewsForUser("user-1", reviews);
 
         var stateByCardId = reviews.stream()
-                .filter(review -> !review.isReversed())
+                .filter(VocabularyFlashcardReviewRecord::isReversed)
                 .collect(java.util.stream.Collectors.toMap(
                         VocabularyFlashcardReviewRecord::flashcardId,
                         VocabularyFlashcardReviewRecord::fsrsState
@@ -142,9 +143,9 @@ class ReadingPracticeSessionFlowTests {
                 .map(usage -> usage.getFlashcardId())
                 .toList();
 
-        assertThat(selectedCardIds).doesNotContain("r-reversed", "rl-reversed", "l-reversed", "n-reversed");
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(3);
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(4);
+        assertThat(selectedCardIds).doesNotContain("r-non-reversed", "rl-non-reversed", "l-non-reversed", "n-non-reversed");
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(4);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(3);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(2);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).hasSize(1);
     }
@@ -337,15 +338,15 @@ class ReadingPracticeSessionFlowTests {
             reviewsByUser.clear();
             var defaults = new ArrayList<VocabularyFlashcardReviewRecord>();
             for (int i = 1; i <= 4; i++) {
-                defaults.add(new VocabularyFlashcardReviewRecord("r-" + i, "v-r-" + i, State.REVIEW, false));
+                defaults.add(new VocabularyFlashcardReviewRecord("r-" + i, "v-r-" + i, State.REVIEW, true));
             }
             for (int i = 1; i <= 3; i++) {
-                defaults.add(new VocabularyFlashcardReviewRecord("rl-" + i, "v-rl-" + i, State.RE_LEARNING, false));
+                defaults.add(new VocabularyFlashcardReviewRecord("rl-" + i, "v-rl-" + i, State.RE_LEARNING, true));
             }
             for (int i = 1; i <= 2; i++) {
-                defaults.add(new VocabularyFlashcardReviewRecord("l-" + i, "v-l-" + i, State.LEARNING, false));
+                defaults.add(new VocabularyFlashcardReviewRecord("l-" + i, "v-l-" + i, State.LEARNING, true));
             }
-            defaults.add(new VocabularyFlashcardReviewRecord("n-1", "v-n-1", State.NEW, false));
+            defaults.add(new VocabularyFlashcardReviewRecord("n-1", "v-n-1", State.NEW, true));
             reviewsByUser.put("user-1", defaults);
             reviewsByUser.put("user-2", defaults);
         }

@@ -8,17 +8,16 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ReadingPracticePolicy {
 
     private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.90;
     public static final int MAX_WORDS = 50;
-    public static final int BACKFILL_TARGET_WORDS = 20;
-    public static final int MAX_NEW_CARDS = 2;
-    public static final int REVIEW_COUNT = 8;
-    public static final int RE_LEARNING_COUNT = 4;
-    public static final int LEARNING_COUNT = 4;
-    public static final int FLEX_COUNT = 2;
+    public static final double REVIEW_RATIO = 0.40;
+    public static final double RE_LEARNING_RATIO = 0.30;
+    public static final double LEARNING_RATIO = 0.20;
+    public static final double NEW_RATIO = 0.10;
     public static final int MAX_VERY_WEAK_CARDS = 10;
 
     public List<ReadingPracticeCandidate> selectCandidates(String userId,
@@ -31,24 +30,12 @@ public class ReadingPracticePolicy {
 
         var grouped = groupByState(candidates, rotationHour);
         var selected = new ArrayList<ReadingPracticeCandidate>(maxSelectable);
+        var targets = calculateRatioTargets(maxSelectable);
 
-        addCandidates(selected, grouped.get(State.REVIEW), REVIEW_COUNT);
-        addCandidates(selected, grouped.get(State.RE_LEARNING), RE_LEARNING_COUNT);
-        addCandidates(selected, grouped.get(State.LEARNING), LEARNING_COUNT);
-        addCandidates(selected, grouped.get(State.NEW), MAX_NEW_CARDS);
-
-        var remainder = candidates.stream()
-                .filter(candidate -> !selected.contains(candidate))
-                .sorted(fsrsPriorityComparator(rotationHour))
-                .toList();
-
-        addCandidates(selected, remainder, FLEX_COUNT);
-        addCandidates(selected, remainder, maxSelectable - selected.size());
-
-        var backfillTarget = Math.min(BACKFILL_TARGET_WORDS, maxSelectable);
-        if (selected.size() < backfillTarget) {
-            addRemainingCandidates(selected, remainder, backfillTarget);
-        }
+        addCandidates(selected, grouped.get(State.REVIEW), targets.getOrDefault(State.REVIEW, 0));
+        addCandidates(selected, grouped.get(State.RE_LEARNING), targets.getOrDefault(State.RE_LEARNING, 0));
+        addCandidates(selected, grouped.get(State.LEARNING), targets.getOrDefault(State.LEARNING, 0));
+        addCandidates(selected, grouped.get(State.NEW), targets.getOrDefault(State.NEW, 0));
 
         return selected.subList(0, Math.min(selected.size(), maxSelectable));
     }
@@ -98,36 +85,12 @@ public class ReadingPracticePolicy {
             if (selected.contains(candidate)) {
                 continue;
             }
-            if (candidate.state() == State.NEW && selectedNewCount(selected) >= MAX_NEW_CARDS) {
-                continue;
-            }
             if (isVeryWeak(candidate) && selectedVeryWeakCount(selected) >= MAX_VERY_WEAK_CARDS) {
                 continue;
             }
             selected.add(candidate);
             targetCount--;
         }
-    }
-
-    private void addRemainingCandidates(List<ReadingPracticeCandidate> selected,
-                                        List<ReadingPracticeCandidate> candidates,
-                                        int targetSize) {
-        if (candidates == null || candidates.isEmpty() || targetSize <= selected.size()) {
-            return;
-        }
-        for (var candidate : candidates) {
-            if (selected.size() >= targetSize) {
-                break;
-            }
-            if (selected.contains(candidate)) {
-                continue;
-            }
-            selected.add(candidate);
-        }
-    }
-
-    private int selectedNewCount(List<ReadingPracticeCandidate> selected) {
-        return (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
     }
 
     private int selectedVeryWeakCount(List<ReadingPracticeCandidate> selected) {
@@ -175,5 +138,46 @@ public class ReadingPracticePolicy {
             case REVIEW -> 2;
             case NEW -> 3;
         };
+    }
+
+    private Map<State, Integer> calculateRatioTargets(int count) {
+        var rawTargets = new EnumMap<State, Double>(State.class);
+        rawTargets.put(State.REVIEW, REVIEW_RATIO * count);
+        rawTargets.put(State.RE_LEARNING, RE_LEARNING_RATIO * count);
+        rawTargets.put(State.LEARNING, LEARNING_RATIO * count);
+        rawTargets.put(State.NEW, NEW_RATIO * count);
+
+        var targets = new EnumMap<State, Integer>(State.class);
+        int assigned = 0;
+        for (var entry : rawTargets.entrySet()) {
+            int base = (int) Math.floor(entry.getValue());
+            targets.put(entry.getKey(), base);
+            assigned += base;
+        }
+
+        int remaining = count - assigned;
+        if (remaining <= 0) {
+            return targets;
+        }
+
+        var byRemainder = rawTargets.entrySet().stream()
+                .sorted(Comparator
+                        .comparingDouble((Map.Entry<State, Double> entry) -> entry.getValue() - Math.floor(entry.getValue()))
+                        .reversed()
+                        .thenComparing(entry -> statePriority(entry.getKey())))
+                .collect(Collectors.toList());
+
+        int index = 0;
+        while (remaining > 0 && index < byRemainder.size()) {
+            var state = byRemainder.get(index).getKey();
+            targets.put(state, targets.getOrDefault(state, 0) + 1);
+            remaining--;
+            index++;
+            if (index >= byRemainder.size()) {
+                index = 0;
+            }
+        }
+
+        return targets;
     }
 }

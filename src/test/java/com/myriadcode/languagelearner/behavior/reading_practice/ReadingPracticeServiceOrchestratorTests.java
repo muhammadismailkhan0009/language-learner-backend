@@ -68,14 +68,14 @@ class ReadingPracticeServiceOrchestratorTests {
     }
 
     @Test
-    @DisplayName("createSession: fails when no valid vocabulary candidates can be built")
+    @DisplayName("createSession: fails when only non-reversed reviews are available")
     void createSessionFailsWhenNoCandidates() {
-        var onlyReversed = List.of(
-                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
-                new VocabularyFlashcardReviewRecord("f-2", "v-2", State.NEW, true)
+        var onlyNonReversed = List.of(
+                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, false),
+                new VocabularyFlashcardReviewRecord("f-2", "v-2", State.NEW, false)
         );
 
-        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(onlyReversed);
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(onlyNonReversed);
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1", "v-2"), "user-1"))
                 .thenReturn(List.of(vocab("v-1"), vocab("v-2")));
 
@@ -91,7 +91,7 @@ class ReadingPracticeServiceOrchestratorTests {
     @DisplayName("createSession: falls back to general topic when LLM returns no topic")
     void createSessionUsesGeneralTopicFallback() {
         var reviews = List.of(
-                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, false)
+                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)
         );
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
@@ -121,7 +121,7 @@ class ReadingPracticeServiceOrchestratorTests {
     @DisplayName("createSession: does not save when generated reading content is empty")
     void createSessionDoesNotSaveWhenGeneratedReadingContentIsEmpty() {
         var reviews = List.of(
-                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, false)
+                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)
         );
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
@@ -189,7 +189,7 @@ class ReadingPracticeServiceOrchestratorTests {
         assertThat(response.vocabFlashcards().getFirst().front().wordOrChunk()).isEqualTo("Wort");
         assertThat(response.vocabFlashcards().getFirst().back().wordOrChunk()).isEqualTo("word");
         assertThat(response.vocabFlashcards().getFirst().back().sentences()).hasSize(1);
-        assertThat(response.vocabFlashcards().getFirst().isReversed()).isFalse();
+        assertThat(response.vocabFlashcards().getFirst().isReversed()).isTrue();
     }
 
     @Test
