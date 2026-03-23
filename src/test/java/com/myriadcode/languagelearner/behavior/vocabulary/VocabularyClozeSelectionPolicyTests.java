@@ -50,7 +50,7 @@ class VocabularyClozeSelectionPolicyTests {
     }
 
     @Test
-    @DisplayName("Cloze selection caps new cards even when many new cards rank highly")
+    @DisplayName("Cloze selection forces available new cards even when non-new cards are sufficient")
     void capsNewCards() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<VocabularyClozeCandidate>();
@@ -79,11 +79,11 @@ class VocabularyClozeSelectionPolicyTests {
         var selected = policy.selectCandidates("user-1", candidates, now);
 
         assertThat(selected).hasSize(50);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(5);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(6);
     }
 
     @Test
-    @DisplayName("Cloze selection allows up to twenty new cards when underfilled after base selection")
+    @DisplayName("Cloze selection fills remaining slots with new cards when only new cards exist")
     void allowsMoreNewCardsWhenUnderfilled() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<VocabularyClozeCandidate>();
@@ -101,8 +101,41 @@ class VocabularyClozeSelectionPolicyTests {
 
         var selected = policy.selectCandidates("user-1", candidates, now);
 
-        assertThat(selected).hasSize(20);
+        assertThat(selected).hasSize(50);
         assertThat(selected.stream().allMatch(candidate -> candidate.state() == State.NEW)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Cloze selection enforces ten new cards when enough new cards are available")
+    void enforcesTenNewCardsWhenAvailable() {
+        var now = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = new ArrayList<VocabularyClozeCandidate>();
+
+        for (int i = 1; i <= 80; i++) {
+            candidates.add(candidate(
+                    "review-" + i,
+                    State.REVIEW,
+                    now.minusSeconds(3600L * i),
+                    0.95 - (i * 0.005),
+                    0,
+                    now.minusSeconds(7200L * i)
+            ));
+        }
+        for (int i = 1; i <= 20; i++) {
+            candidates.add(candidate(
+                    "new-" + i,
+                    State.NEW,
+                    now.minusSeconds(1800L * i),
+                    Double.NaN,
+                    0,
+                    null
+            ));
+        }
+
+        var selected = policy.selectCandidates("user-1", candidates, now);
+
+        assertThat(selected).hasSize(50);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(10);
     }
 
     @Test

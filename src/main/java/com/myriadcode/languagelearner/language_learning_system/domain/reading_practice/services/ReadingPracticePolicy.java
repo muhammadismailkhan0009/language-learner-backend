@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ReadingPracticePolicy {
@@ -28,7 +29,7 @@ public class ReadingPracticePolicy {
         }
         var maxSelectable = Math.min(MAX_WORDS, candidates.size());
 
-        var grouped = groupByState(candidates, rotationHour);
+        var grouped = groupByState(candidates, rotationHour, userId);
         var selected = new ArrayList<ReadingPracticeCandidate>(maxSelectable);
         var targets = calculateRatioTargets(maxSelectable);
 
@@ -41,7 +42,8 @@ public class ReadingPracticePolicy {
     }
 
     private Map<State, List<ReadingPracticeCandidate>> groupByState(List<ReadingPracticeCandidate> candidates,
-                                                                    Instant now) {
+                                                                    Instant now,
+                                                                    String userId) {
         var grouped = new EnumMap<State, List<ReadingPracticeCandidate>>(State.class);
         for (State state : State.values()) {
             grouped.put(state, new ArrayList<>());
@@ -51,8 +53,29 @@ public class ReadingPracticePolicy {
         }
         for (var entry : grouped.entrySet()) {
             entry.getValue().sort(fsrsPriorityComparator(now));
+            rotateBucket(entry.getValue(), userId, now, entry.getKey());
         }
         return grouped;
+    }
+
+    private void rotateBucket(List<ReadingPracticeCandidate> bucket,
+                              String userId,
+                              Instant now,
+                              State state) {
+        if (bucket == null || bucket.size() <= 1) {
+            return;
+        }
+        long timeSeed = now == null ? 0L : now.getEpochSecond();
+        int seed = Objects.hash(userId == null ? "" : userId, timeSeed, state == null ? "NULL" : state.name());
+        int offset = Math.floorMod(seed, bucket.size());
+        if (offset == 0) {
+            return;
+        }
+        var rotated = new ArrayList<ReadingPracticeCandidate>(bucket.size());
+        rotated.addAll(bucket.subList(offset, bucket.size()));
+        rotated.addAll(bucket.subList(0, offset));
+        bucket.clear();
+        bucket.addAll(rotated);
     }
 
     private Comparator<ReadingPracticeCandidate> fsrsPriorityComparator(Instant now) {

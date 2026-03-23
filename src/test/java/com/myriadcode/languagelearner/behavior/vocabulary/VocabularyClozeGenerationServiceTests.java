@@ -79,8 +79,8 @@ class VocabularyClozeGenerationServiceTests {
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
                 .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Travel plans"));
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Office small talk"));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Office small talk"));
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans | Office small talk"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",
@@ -108,8 +108,8 @@ class VocabularyClozeGenerationServiceTests {
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
                 .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-2", "v-2", State.NEW, true)));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("General practice"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",
@@ -136,8 +136,8 @@ class VocabularyClozeGenerationServiceTests {
                         new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
                         new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, true)
                 ));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Daily routines"));
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Daily routines"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("Daily routines"), any()))
                 .thenReturn(List.of(new VocabularyClozeSentenceResult(
                         "gehen",
@@ -186,8 +186,8 @@ class VocabularyClozeGenerationServiceTests {
                         new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
                         new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, true)
                 ));
-        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Travel plans"));
-        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
         when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans"), any()))
                 .thenReturn(List.of(
                         new VocabularyClozeSentenceResult(
@@ -208,6 +208,106 @@ class VocabularyClozeGenerationServiceTests {
                                 "come"
                         )
                 ));
+
+        var response = service.generate("user-1");
+
+        assertThat(response.generatedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("generate: skips invalid generated rows and persists valid rows in the same batch")
+    void generateSkipsInvalidRowsAndPersistsValidRows() {
+        vocabularyRepo.save(seedVocabulary("v-1", "user-1"));
+        vocabularyRepo.save(seedVocabulary("v-2", "user-1"));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
+                .thenReturn(List.of(
+                        new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
+                        new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, true)
+                ));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
+        when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans"), any()))
+                .thenReturn(List.of(
+                        new VocabularyClozeSentenceResult(
+                                "gehen",
+                                "Wir ____ ____ nach Hause.",
+                                "go",
+                                "gehen",
+                                List.of("gehen"),
+                                "go"
+                        ),
+                        new VocabularyClozeSentenceResult(
+                                "gehen",
+                                "Ich ___ nach Hause.",
+                                "go",
+                                "gehe",
+                                List.of("gehe"),
+                                "go"
+                        )
+                ));
+
+        var response = service.generate("user-1");
+
+        assertThat(response.generatedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("generate: persists only one sentence when duplicate rows target the same vocabulary")
+    void generatePersistsOnlyOnceForDuplicateVocabularyRows() {
+        vocabularyRepo.save(seedVocabulary("v-1", "user-1"));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
+                .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Office small talk"));
+        when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans | Office small talk"), any()))
+                .thenReturn(List.of(
+                        new VocabularyClozeSentenceResult(
+                                "gehen",
+                                "Ich ___ nach Hause.",
+                                "go",
+                                "gehe",
+                                List.of("gehe"),
+                                "go"
+                        ),
+                        new VocabularyClozeSentenceResult(
+                                "gehen",
+                                "Ich ___ später.",
+                                "go",
+                                "gehe",
+                                List.of("gehe"),
+                                "go"
+                        )
+                ));
+
+        var response = service.generate("user-1");
+
+        assertThat(response.generatedCount()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("generate: uses multiple recent topics with deduplication and context cap")
+    void generateUsesExpandedRecentTopicContext() {
+        vocabularyRepo.save(seedVocabulary("v-1", "user-1"));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
+                .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3))
+                .thenReturn(List.of("Travel plans", "Office small talk", "Shopping"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3))
+                .thenReturn(List.of("Office small talk", "Gym", "Weather"));
+        when(vocabularyClozeLlmApi.generateClozeSentences(
+                eq("Travel plans | Office small talk | Shopping | Gym | Weather"),
+                any()
+        )).thenReturn(List.of(new VocabularyClozeSentenceResult(
+                "gehen",
+                "Ich ___ nach Hause.",
+                "go",
+                "gehe",
+                List.of("gehe"),
+                "go"
+        )));
 
         var response = service.generate("user-1");
 

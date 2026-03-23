@@ -24,13 +24,17 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class VocabularyClozeGenerationService {
 
-    private static final int RECENT_TOPIC_LIMIT = 1;
+    private static final int RECENT_READING_TOPIC_LIMIT = 3;
+    private static final int RECENT_WRITING_TOPIC_LIMIT = 3;
+    private static final int MAX_TOPIC_CONTEXT = 5;
     private static final String GENERAL_TOPIC = "General practice";
+    private static final Pattern CLOZE_BLANK_PATTERN = Pattern.compile("_{3,}");
 
     private final VocabularyRepo vocabularyRepo;
     private final FetchVocabularyFlashcardReviewsApi flashcardReviewsApi;
@@ -119,22 +123,29 @@ public class VocabularyClozeGenerationService {
                         LinkedHashMap::new
                 ));
 
-        var generatedByVocabularySurface = generated.stream()
-                .filter(result -> result.vocabSource() != null && !result.vocabSource().isBlank())
-                .collect(Collectors.toMap(
-                        result -> result.vocabSource().trim(),
-                        this::toDomainClozeSentence,
-                        (first, ignored) -> first,
-                        LinkedHashMap::new
-                ));
-
         var generatedCount = 0;
-        for (var entry : generatedByVocabularySurface.entrySet()) {
-            var vocabulary = selectedBySurface.get(entry.getKey());
+        for (var result : generated) {
+            if (result == null || isBlank(result.vocabSource())) {
+                continue;
+            }
+            var vocabulary = selectedBySurface.get(result.vocabSource().trim());
             if (vocabulary == null) {
                 continue;
             }
-            var updated = VocabularyDomainService.withClozeSentence(vocabulary, entry.getValue());
+
+            var latest = vocabularyRepo.findByIdAndUserId(vocabulary.id().id(), userId).orElse(null);
+            if (latest == null || latest.clozeSentence() != null) {
+                continue;
+            }
+
+            VocabularyClozeSentence sentence;
+            try {
+                sentence = toDomainClozeSentence(result);
+            } catch (RuntimeException ignored) {
+                continue;
+            }
+
+            var updated = VocabularyDomainService.withClozeSentence(latest, sentence);
             vocabularyRepo.replaceClozeSentence(vocabulary.id().id(), userId, updated);
             generatedCount++;
         }
@@ -171,12 +182,19 @@ public class VocabularyClozeGenerationService {
 
     private String determineTopic(String userId) {
         var topics = new ArrayList<String>();
-        topics.addAll(recentReadingTopicsApi.findRecentTopics(userId, RECENT_TOPIC_LIMIT));
-        topics.addAll(recentWritingTopicsApi.findRecentTopics(userId, RECENT_TOPIC_LIMIT));
+        var readingTopics = recentReadingTopicsApi.findRecentTopics(userId, RECENT_READING_TOPIC_LIMIT);
+        if (readingTopics != null) {
+            topics.addAll(readingTopics);
+        }
+        var writingTopics = recentWritingTopicsApi.findRecentTopics(userId, RECENT_WRITING_TOPIC_LIMIT);
+        if (writingTopics != null) {
+            topics.addAll(writingTopics);
+        }
         var merged = topics.stream()
                 .filter(topic -> topic != null && !topic.isBlank())
                 .map(String::trim)
                 .distinct()
+                .limit(MAX_TOPIC_CONTEXT)
                 .toList();
         return merged.isEmpty() ? GENERAL_TOPIC : String.join(" | ", merged);
     }
@@ -204,9 +222,43 @@ public class VocabularyClozeGenerationService {
         if (result.answerWords() == null || result.answerWords().isEmpty()) {
             throw new IllegalArgumentException("Generated cloze sentence must contain answer words");
         }
+        var normalizedWords = result.answerWords().stream()
+                .map(word -> word == null ? "" : word.trim())
+                .filter(word -> !word.isBlank())
+                .toList();
+        if (normalizedWords.isEmpty()) {
+            throw new IllegalArgumentException("Generated cloze sentence answer words must be non-blank");
+        }
+        if (countBlanks(result.clozeText()) != normalizedWords.size()) {
+            throw new IllegalArgumentException("Generated cloze sentence blank count must match answer words");
+        }
+        var normalizedAnswerText = normalize(result.answerText());
+        var joinedAnswerWords = normalize(String.join(" ", normalizedWords));
+        if (!normalizedAnswerText.equals(joinedAnswerWords)) {
+            throw new IllegalArgumentException("Generated cloze sentence answer text must match answer words");
+        }
     }
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private int countBlanks(String clozeText) {
+        if (clozeText == null || clozeText.isBlank()) {
+            return 0;
+        }
+        int count = 0;
+        var matcher = CLOZE_BLANK_PATTERN.matcher(clozeText);
+        while (matcher.find()) {
+            count++;
+        }
+        return count;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.trim().replaceAll("\\s+", " ");
     }
 }

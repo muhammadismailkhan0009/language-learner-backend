@@ -6,14 +6,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class VocabularyClozeSelectionPolicy {
 
     public static final int MAX_WORDS = 50;
-    public static final int MIN_NEW_CARDS = 5;
-    public static final int MAX_NEW_CARDS = 10;
-    public static final int MAX_NEW_CARDS_UNDERFILLED = 20;
+    public static final int FORCED_NEW_CARD_COUNT = (int) (MAX_WORDS * 0.20);
 
     public List<VocabularyClozeCandidate> selectCandidates(String userId,
                                                            List<VocabularyClozeCandidate> candidates,
@@ -27,10 +24,7 @@ public class VocabularyClozeSelectionPolicy {
                 .toList();
 
         var count = Math.min(MAX_WORDS, ranked.size());
-        var windowSize = Math.min(ranked.size(), Math.max(count * 3, count + 4));
-        var window = ranked.subList(0, windowSize);
-
-        return takeWithNewCap(window, count);
+        return takeWithNewCap(ranked, count);
     }
 
     private Comparator<VocabularyClozeCandidate> fsrsPriorityComparator(Instant now) {
@@ -49,14 +43,12 @@ public class VocabularyClozeSelectionPolicy {
             return List.of();
         }
 
-        var minNewCards = Math.min(MIN_NEW_CARDS, count);
         var selected = new ArrayList<VocabularyClozeCandidate>(count);
-        var deferredNewCards = candidates.stream()
-                .filter(candidate -> candidate.state() == State.NEW)
-                .collect(Collectors.toCollection(ArrayList::new));
-        var minNewTarget = Math.min(minNewCards, deferredNewCards.size());
-        var maxNewCards = Math.max(minNewTarget, Math.min(MAX_NEW_CARDS, count));
+        int availableNewCards = (int) candidates.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        int forcedNewTarget = Math.min(Math.min(FORCED_NEW_CARD_COUNT, availableNewCards), count);
+        int selectedNewCards = 0;
 
+        // Prefer generation for already-learned states first.
         for (var candidate : candidates) {
             if (selected.size() >= count) {
                 break;
@@ -67,55 +59,31 @@ public class VocabularyClozeSelectionPolicy {
             selected.add(candidate);
         }
 
-        var selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
-        for (var candidate : deferredNewCards) {
-            if (selected.size() >= count || selectedNewCards >= maxNewCards) {
-                break;
-            }
-            selected.add(candidate);
-            selectedNewCards++;
-        }
-
-        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        // Add NEW cards up to forced target when slots are still available.
         for (var candidate : candidates) {
-            if (selected.size() >= count) {
+            if (selected.size() >= count || selectedNewCards >= forcedNewTarget) {
                 break;
             }
             if (selected.contains(candidate)) {
                 continue;
             }
-            if (candidate.state() == State.NEW && selectedNewCards >= maxNewCards) {
-                continue;
-            }
-            selected.add(candidate);
-            if (candidate.state() == State.NEW) {
-                selectedNewCards++;
-            }
-        }
-
-        var maxNewCardsUnderfilled = Math.min(MAX_NEW_CARDS_UNDERFILLED, count);
-        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
-        for (var candidate : deferredNewCards) {
-            if (selected.size() >= count || selectedNewCards >= maxNewCardsUnderfilled) {
-                break;
-            }
-            if (selected.contains(candidate)) {
+            if (candidate.state() != State.NEW) {
                 continue;
             }
             selected.add(candidate);
             selectedNewCards++;
         }
 
-        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
-        if (selectedNewCards < minNewTarget && !deferredNewCards.isEmpty()) {
-            for (var candidate : deferredNewCards) {
-                if (selectedNewCards >= minNewTarget) {
+        // If full already, replace lowest-priority non-NEW entries to satisfy forced NEW target.
+        if (selectedNewCards < forcedNewTarget && selected.size() >= count) {
+            for (var candidate : candidates) {
+                if (selectedNewCards >= forcedNewTarget) {
                     break;
                 }
-                if (selected.contains(candidate)) {
+                if (candidate.state() != State.NEW || selected.contains(candidate)) {
                     continue;
                 }
-                var replacementIndex = lastNonNewIndex(selected);
+                int replacementIndex = lastNonNewIndex(selected);
                 if (replacementIndex < 0) {
                     break;
                 }
@@ -124,13 +92,24 @@ public class VocabularyClozeSelectionPolicy {
             }
         }
 
+        // Fill remaining slots with best-ranked remaining cards.
+        for (var candidate : candidates) {
+            if (selected.size() >= count) {
+                break;
+            }
+            if (selected.contains(candidate)) {
+                continue;
+            }
+            selected.add(candidate);
+        }
+
         return selected;
     }
 
     private int lastNonNewIndex(List<VocabularyClozeCandidate> selected) {
-        for (int index = selected.size() - 1; index >= 0; index--) {
-            if (selected.get(index).state() != State.NEW) {
-                return index;
+        for (int i = selected.size() - 1; i >= 0; i--) {
+            if (selected.get(i).state() != State.NEW) {
+                return i;
             }
         }
         return -1;
