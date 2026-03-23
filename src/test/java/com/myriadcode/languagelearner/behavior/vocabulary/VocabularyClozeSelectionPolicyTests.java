@@ -34,7 +34,7 @@ class VocabularyClozeSelectionPolicyTests {
     }
 
     @Test
-    @DisplayName("Cloze selection falls back to nearest due upcoming cards when nothing is due")
+    @DisplayName("Cloze selection prioritizes lower retrievability before nearest due when nothing is due")
     void selectsNearestDueUpcomingCardsWhenNothingIsDue() {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
@@ -46,7 +46,7 @@ class VocabularyClozeSelectionPolicyTests {
         var selected = policy.selectCandidates("user-1", candidates, now);
 
         assertThat(selected).extracting(VocabularyClozeCandidate::flashcardId)
-                .containsExactly("soon", "mid", "later");
+                .containsExactly("mid", "soon", "later");
     }
 
     @Test
@@ -55,7 +55,7 @@ class VocabularyClozeSelectionPolicyTests {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<VocabularyClozeCandidate>();
 
-        for (int i = 1; i <= 20; i++) {
+        for (int i = 1; i <= 60; i++) {
             candidates.add(candidate(
                     "review-" + i,
                     State.REVIEW,
@@ -78,8 +78,8 @@ class VocabularyClozeSelectionPolicyTests {
 
         var selected = policy.selectCandidates("user-1", candidates, now);
 
-        assertThat(selected).hasSize(20);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSizeLessThanOrEqualTo(3);
+        assertThat(selected).hasSize(50);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(5);
     }
 
     @Test
@@ -88,7 +88,7 @@ class VocabularyClozeSelectionPolicyTests {
         var now = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<VocabularyClozeCandidate>();
 
-        for (int i = 1; i <= 30; i++) {
+        for (int i = 1; i <= 60; i++) {
             candidates.add(candidate(
                     "new-" + i,
                     State.NEW,
@@ -103,6 +103,21 @@ class VocabularyClozeSelectionPolicyTests {
 
         assertThat(selected).hasSize(20);
         assertThat(selected.stream().allMatch(candidate -> candidate.state() == State.NEW)).isTrue();
+    }
+
+    @Test
+    @DisplayName("Cloze selection prioritizes lower retrievability before nearest due for upcoming cards")
+    void prioritizesLowerRetrievabilityBeforeNearestDueForUpcomingCards() {
+        var now = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = List.of(
+                candidate("near-high-retrievability", State.REVIEW, now.plusSeconds(600), 0.97, 0, now.minusSeconds(3600)),
+                candidate("far-low-retrievability", State.REVIEW, now.plusSeconds(3600), 0.55, 0, now.minusSeconds(3600))
+        );
+
+        var selected = policy.selectCandidates("user-1", candidates, now);
+
+        assertThat(selected).extracting(VocabularyClozeCandidate::flashcardId)
+                .containsExactly("far-low-retrievability", "near-high-retrievability");
     }
 
     private VocabularyClozeCandidate candidate(String flashcardId,

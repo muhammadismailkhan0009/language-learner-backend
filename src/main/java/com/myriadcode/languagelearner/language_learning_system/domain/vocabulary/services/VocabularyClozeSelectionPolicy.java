@@ -10,8 +10,9 @@ import java.util.stream.Collectors;
 
 public class VocabularyClozeSelectionPolicy {
 
-    public static final int MAX_WORDS = 20;
-    public static final int MAX_NEW_CARDS = 3;
+    public static final int MAX_WORDS = 50;
+    public static final int MIN_NEW_CARDS = 5;
+    public static final int MAX_NEW_CARDS = 10;
     public static final int MAX_NEW_CARDS_UNDERFILLED = 20;
 
     public List<VocabularyClozeCandidate> selectCandidates(String userId,
@@ -36,8 +37,8 @@ public class VocabularyClozeSelectionPolicy {
         return Comparator
                 .comparing((VocabularyClozeCandidate candidate) -> dueBucket(candidate, now))
                 .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
-                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
                 .thenComparing(VocabularyClozeCandidate::retrievability)
+                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
                 .thenComparing(this::lastReviewOrEpoch)
                 .thenComparing(VocabularyClozeCandidate::lapses, Comparator.reverseOrder())
                 .thenComparingInt(candidate -> statePriority(candidate.state()));
@@ -48,11 +49,13 @@ public class VocabularyClozeSelectionPolicy {
             return List.of();
         }
 
-        var maxNewCards = Math.min(MAX_NEW_CARDS, count);
+        var minNewCards = Math.min(MIN_NEW_CARDS, count);
         var selected = new ArrayList<VocabularyClozeCandidate>(count);
         var deferredNewCards = candidates.stream()
                 .filter(candidate -> candidate.state() == State.NEW)
                 .collect(Collectors.toCollection(ArrayList::new));
+        var minNewTarget = Math.min(minNewCards, deferredNewCards.size());
+        var maxNewCards = Math.max(minNewTarget, Math.min(MAX_NEW_CARDS, count));
 
         for (var candidate : candidates) {
             if (selected.size() >= count) {
@@ -71,10 +74,6 @@ public class VocabularyClozeSelectionPolicy {
             }
             selected.add(candidate);
             selectedNewCards++;
-        }
-
-        if (selected.size() >= count) {
-            return selected;
         }
 
         selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
@@ -107,7 +106,34 @@ public class VocabularyClozeSelectionPolicy {
             selectedNewCards++;
         }
 
+        selectedNewCards = (int) selected.stream().filter(candidate -> candidate.state() == State.NEW).count();
+        if (selectedNewCards < minNewTarget && !deferredNewCards.isEmpty()) {
+            for (var candidate : deferredNewCards) {
+                if (selectedNewCards >= minNewTarget) {
+                    break;
+                }
+                if (selected.contains(candidate)) {
+                    continue;
+                }
+                var replacementIndex = lastNonNewIndex(selected);
+                if (replacementIndex < 0) {
+                    break;
+                }
+                selected.set(replacementIndex, candidate);
+                selectedNewCards++;
+            }
+        }
+
         return selected;
+    }
+
+    private int lastNonNewIndex(List<VocabularyClozeCandidate> selected) {
+        for (int index = selected.size() - 1; index >= 0; index--) {
+            if (selected.get(index).state() != State.NEW) {
+                return index;
+            }
+        }
+        return -1;
     }
 
     private int dueBucket(VocabularyClozeCandidate candidate, Instant now) {
