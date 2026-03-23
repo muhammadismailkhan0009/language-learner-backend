@@ -837,14 +837,19 @@ the sentence must contain the SAME number of blanks as words.
 - The number of blanks must equal the number of words in answerWords.
 
 Hint rules
+- The hint MUST be in English only.
+- The hint MUST NOT be in German under any circumstance.
+- If the vocabulary meaning is in German, you MUST translate it into natural English.
+- The hint must represent the meaning of the word as used in the sentence.
+- Do NOT copy the German lemma or phrase into the hint.
+- The hint must be very short (1–3 words).
 - The hint MUST match the EXACT meaning of the word as used in the sentence.
 - The hint MUST correspond directly to the correct answer_text meaning.
 - Do NOT provide a general dictionary meaning.
 - Do NOT provide alternative meanings of the word.
 - If the vocabulary input provides a meaning, you MUST use that exact meaning.
 - If multiple meanings exist, choose ONLY the meaning that fits the sentence.
-- The hint must be very short (1–3 words).
-- The hint must not contain the German word.
+
 
 Consistency Rule
 - The hint and the answer_text must align semantically.
