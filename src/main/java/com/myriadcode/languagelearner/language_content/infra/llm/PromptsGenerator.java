@@ -827,8 +827,8 @@ Cloze rules
 - If the vocabulary entry contains multiple words (e.g., "um zu", "immer noch"),
 the sentence must contain the SAME number of blanks as words.
 - Example:
-vocabulary: "um zu" → cloze must contain "____ ____"
-vocabulary: "immer noch" → cloze must contain "____ ____"
+  vocabulary: "immer noch" → cloze must contain "____ ____"
+
 - Do not merge multiple-word vocabulary into a single blank.
 - The blanks must appear exactly where the vocabulary phrase would appear.
 - You may use multiple learner vocabulary words in the same sentence.
@@ -837,10 +837,19 @@ vocabulary: "immer noch" → cloze must contain "____ ____"
 - The number of blanks must equal the number of words in answerWords.
 
 Hint rules
-- Must be the exact meaning provided inside vocabulary input. Otherwise, hint should be what the word means in sentences, and as close as possible to provided meaning in given vocabulary.
-- Provide the exact English meaning used in the sentence.
+- The hint MUST match the EXACT meaning of the word as used in the sentence.
+- The hint MUST correspond directly to the correct answer_text meaning.
+- Do NOT provide a general dictionary meaning.
+- Do NOT provide alternative meanings of the word.
+- If the vocabulary input provides a meaning, you MUST use that exact meaning.
+- If multiple meanings exist, choose ONLY the meaning that fits the sentence.
 - The hint must be very short (1–3 words).
 - The hint must not contain the German word.
+
+Consistency Rule
+- The hint and the answer_text must align semantically.
+- A learner should be able to reconstruct the correct answer using ONLY the hint and sentence context.
+- If the hint would lead to a different valid word, it is INVALID.
 
 German Sentence constraints
 - Natural everyday German.
@@ -899,8 +908,14 @@ Important
 Do not force grammar variation artificially.
 Use the structure that sounds most natural for the sentence.
 
+Validation rule
+- Before finalizing, check:
+  Does the hint uniquely lead to the correct answer in this sentence?
+  If not, regenerate.
+
 Learner vocabulary (German | translation):
 %s
 """.formatted(topic, vocabList);
 }
+
 }

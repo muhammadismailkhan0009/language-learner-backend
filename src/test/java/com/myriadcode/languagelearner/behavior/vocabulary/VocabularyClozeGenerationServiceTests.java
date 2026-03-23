@@ -175,6 +175,45 @@ class VocabularyClozeGenerationServiceTests {
         verify(vocabularyClozeLlmApi, never()).generateClozeSentences(any(), any());
     }
 
+    @Test
+    @DisplayName("generate: returns exact persisted cloze count when only part of LLM output matches selected vocabulary")
+    void generateReturnsExactPersistedCountForPartialMatches() {
+        vocabularyRepo.save(seedVocabulary("v-1", "user-1"));
+        vocabularyRepo.save(seedVocabulary("v-2", "user-1"));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
+                .thenReturn(List.of(
+                        new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true),
+                        new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, true)
+                ));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of("Travel plans"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 1)).thenReturn(List.of());
+        when(vocabularyClozeLlmApi.generateClozeSentences(eq("Travel plans"), any()))
+                .thenReturn(List.of(
+                        new VocabularyClozeSentenceResult(
+                                "gehen",
+                                "Ich ___ nach Hause.",
+                                "go",
+                                "gehe",
+                                List.of("gehe"),
+                                "go"
+                        ),
+                        // Not in selected seeds; should not count.
+                        new VocabularyClozeSentenceResult(
+                                "non-existent-surface",
+                                "Wir ___ morgen.",
+                                "come",
+                                "kommen",
+                                List.of("kommen"),
+                                "come"
+                        )
+                ));
+
+        var response = service.generate("user-1");
+
+        assertThat(response.generatedCount()).isEqualTo(1);
+    }
+
     private Vocabulary seedVocabulary(String vocabularyId, String userId) {
         return new Vocabulary(
                 new Vocabulary.VocabularyId(vocabularyId),
