@@ -15,7 +15,6 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyClozeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyClozeSelectionPolicy;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -31,7 +30,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
-@Slf4j
 public class VocabularyClozeGenerationService {
 
     private static final int RECENT_READING_TOPIC_LIMIT = 3;
@@ -114,12 +112,6 @@ public class VocabularyClozeGenerationService {
         if (generated.isEmpty()) {
             throw new IllegalArgumentException("No cloze sentences generated");
         }
-        log.info("Cloze generation LLM raw output userId={} topic='{}' seeds={} generated={}",
-                userId, topic, seeds.size(), generated.size());
-        for (int index = 0; index < generated.size(); index++) {
-            var row = generated.get(index);
-            log.info("Cloze generation LLM row[{}] userId={} row={}", index, userId, row);
-        }
 
         // FIXME: This matches generated LLM results back to vocabulary by exact surface text.
         // If we ever introduce normalization here, we must align vocabulary persistence/uniqueness rules too;
@@ -133,68 +125,36 @@ public class VocabularyClozeGenerationService {
                         LinkedHashMap::new
                 ));
 
-        var filteredOutRows = new ArrayList<FilteredOutClozeRow>();
         var rowsToPersist = new ArrayList<PersistableClozeRow>();
         Set<String> queuedVocabularyIds = new HashSet<>();
         for (var result : generated) {
             if (result == null || isBlank(result.vocabSource())) {
-                filteredOutRows.add(new FilteredOutClozeRow("missing_vocab_source", null, result));
                 continue;
             }
             var vocabulary = selectedBySurface.get(result.vocabSource().trim());
             if (vocabulary == null) {
-                filteredOutRows.add(new FilteredOutClozeRow("source_not_matched_to_selected_seed",
-                        result.vocabSource().trim(), result));
                 continue;
             }
 
             var latest = vocabularyRepo.findByIdAndUserId(vocabulary.id().id(), userId).orElse(null);
             if (latest == null || latest.clozeSentence() != null) {
-                filteredOutRows.add(new FilteredOutClozeRow("vocabulary_missing_or_already_has_cloze",
-                        vocabulary.id().id(), result));
                 continue;
             }
             VocabularyClozeSentence sentence;
             try {
                 sentence = toDomainClozeSentence(result);
-            } catch (RuntimeException exception) {
-                filteredOutRows.add(new FilteredOutClozeRow(
-                        "invalid_generated_row_" + exception.getMessage(),
-                        vocabulary.id().id(),
-                        result
-                ));
+            } catch (RuntimeException ignored) {
                 continue;
             }
             if (!queuedVocabularyIds.add(vocabulary.id().id())) {
-                filteredOutRows.add(new FilteredOutClozeRow("duplicate_generated_row_for_same_vocabulary",
-                        vocabulary.id().id(), result));
                 continue;
             }
 
             rowsToPersist.add(new PersistableClozeRow(
                     vocabulary.id().id(),
                     latest,
-                    sentence,
-                    result
+                    sentence
             ));
-        }
-
-        if (!filteredOutRows.isEmpty()) {
-            log.info("Cloze generation filtered out rows userId={} count={}", userId, filteredOutRows.size());
-            for (int index = 0; index < filteredOutRows.size(); index++) {
-                var row = filteredOutRows.get(index);
-                log.info("Cloze generation filtered row[{}] userId={} reason={} key={} raw={}",
-                        index, userId, row.reason(), row.key(), row.raw());
-            }
-        } else {
-            log.info("Cloze generation filtered out rows userId={} count=0", userId);
-        }
-
-        log.info("Cloze generation rows ready for persistence userId={} count={}", userId, rowsToPersist.size());
-        for (int index = 0; index < rowsToPersist.size(); index++) {
-            var row = rowsToPersist.get(index);
-            log.info("Cloze generation persist row[{}] userId={} vocabularyId={} vocabSource={} cloze='{}'",
-                    index, userId, row.vocabularyId(), row.raw().vocabSource(), row.sentence().clozeText());
         }
 
         var generatedCount = 0;
@@ -304,18 +264,10 @@ public class VocabularyClozeGenerationService {
         return count;
     }
 
-    private record FilteredOutClozeRow(
-            String reason,
-            String key,
-            VocabularyClozeSentenceResult raw
-    ) {
-    }
-
     private record PersistableClozeRow(
             String vocabularyId,
             Vocabulary latestVocabulary,
-            VocabularyClozeSentence sentence,
-            VocabularyClozeSentenceResult raw
+            VocabularyClozeSentence sentence
     ) {
     }
 }
