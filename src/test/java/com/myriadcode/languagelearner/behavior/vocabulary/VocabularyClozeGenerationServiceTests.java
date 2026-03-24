@@ -253,6 +253,34 @@ class VocabularyClozeGenerationServiceTests {
     }
 
     @Test
+    @DisplayName("generate: accepts rows where answerText is a full sentence when vocabSource and answerWords are valid")
+    void generateAcceptsFullSentenceAnswerText() {
+        vocabularyRepo.save(seedVocabulary("v-1", "user-1"));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1"))
+                .thenReturn(List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true)));
+        when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Daily routines"));
+        when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of());
+        when(vocabularyClozeLlmApi.generateClozeSentences(eq("Daily routines"), any()))
+                .thenReturn(List.of(new VocabularyClozeSentenceResult(
+                        "gehen",
+                        "Lasst uns das ____ machen.",
+                        "together",
+                        "Lasst uns das zusammen machen.",
+                        List.of("zusammen"),
+                        "Let's do that together."
+                )));
+
+        var response = service.generate("user-1");
+
+        assertThat(response.generatedCount()).isEqualTo(1);
+        var saved = vocabularyRepo.findByIdAndUserId("v-1", "user-1").orElseThrow().clozeSentence();
+        assertThat(saved).isNotNull();
+        assertThat(saved.answerWords()).containsExactly("zusammen");
+        assertThat(saved.answerText()).isEqualTo("Lasst uns das zusammen machen.");
+    }
+
+    @Test
     @DisplayName("generate: persists only one sentence when duplicate rows target the same vocabulary")
     void generatePersistsOnlyOnceForDuplicateVocabularyRows() {
         vocabularyRepo.save(seedVocabulary("v-1", "user-1"));

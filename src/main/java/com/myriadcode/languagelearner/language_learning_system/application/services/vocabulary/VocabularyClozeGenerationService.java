@@ -265,6 +265,10 @@ public class VocabularyClozeGenerationService {
         );
     }
 
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
     private void validate(VocabularyClozeSentenceResult result) {
         if (result == null) {
             throw new IllegalArgumentException("Cloze sentence result is required");
@@ -286,15 +290,6 @@ public class VocabularyClozeGenerationService {
         if (countBlanks(result.clozeText()) != normalizedWords.size()) {
             throw new IllegalArgumentException("Generated cloze sentence blank count must match answer words");
         }
-        var normalizedAnswerText = normalize(result.answerText());
-        var joinedAnswerWords = normalize(String.join(" ", normalizedWords));
-        if (!normalizedAnswerText.equals(joinedAnswerWords)) {
-            throw new IllegalArgumentException("Generated cloze sentence answer text must match answer words");
-        }
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
     }
 
     private int countBlanks(String clozeText) {
@@ -307,13 +302,6 @@ public class VocabularyClozeGenerationService {
             count++;
         }
         return count;
-    }
-
-    private String normalize(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.trim().replaceAll("\\s+", " ");
     }
 
     private record FilteredOutClozeRow(
