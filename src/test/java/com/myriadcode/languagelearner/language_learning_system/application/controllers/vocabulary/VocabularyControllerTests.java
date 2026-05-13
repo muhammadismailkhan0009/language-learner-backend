@@ -1,7 +1,11 @@
 package com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary;
 
+import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
+import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
@@ -13,7 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -148,6 +155,129 @@ public class VocabularyControllerTests {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response.generatedCount").value(3));
+    }
+
+    @Test
+    @DisplayName("Song vocab selection API: applies 5:2:3 split oldest-first with fallback fill")
+    void fetchSongVocabulariesAppliesConfiguredSplit() throws Exception {
+        var repo = new FakeVocabularyRepo();
+        seedSeries(repo, "user-a", "new-", 25, State.NEW, Instant.parse("2026-01-01T00:00:00Z"));
+        seedSeries(repo, "user-a", "learning-", 10, State.LEARNING, Instant.parse("2026-02-01T00:00:00Z"));
+        seedSeries(repo, "user-a", "relearning-", 5, State.RE_LEARNING, Instant.parse("2026-03-01T00:00:00Z"));
+
+        var fetchReviewsApi = buildReviewsApi(repo.findByUserId("user-a"), Map.of(
+                "new-", State.NEW,
+                "learning-", State.LEARNING,
+                "relearning-", State.RE_LEARNING
+        ));
+
+        var service = new VocabularyOrchestrationService(
+                repo,
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                fetchReviewsApi,
+                Clock.fixed(Instant.parse("2026-04-01T00:00:00Z"), ZoneOffset.UTC)
+        );
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/api/v1/vocabularies/songs-selection/v1")
+                        .queryParam("userId", "user-a")
+                        .queryParam("limit", "50")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.length()").value(40))
+                .andExpect(jsonPath("$.response[0].id").value("new-1"))
+                .andExpect(jsonPath("$.response[24].id").value("new-25"))
+                .andExpect(jsonPath("$.response[25].id").value("learning-1"))
+                .andExpect(jsonPath("$.response[34].id").value("learning-10"))
+                .andExpect(jsonPath("$.response[35].id").value("relearning-1"))
+                .andExpect(jsonPath("$.response[39].id").value("relearning-5"));
+    }
+
+    @Test
+    @DisplayName("Song vocab selection API: defaults to 50 and caps requested limit at 300")
+    void fetchSongVocabulariesDefaultAndCapLimit() throws Exception {
+        var repo = new FakeVocabularyRepo();
+        seedSeries(repo, "user-a", "new-", 220, State.NEW, Instant.parse("2026-01-01T00:00:00Z"));
+        seedSeries(repo, "user-a", "learning-", 120, State.LEARNING, Instant.parse("2026-02-01T00:00:00Z"));
+        seedSeries(repo, "user-a", "relearning-", 120, State.RE_LEARNING, Instant.parse("2026-03-01T00:00:00Z"));
+
+        var fetchReviewsApi = buildReviewsApi(repo.findByUserId("user-a"), Map.of(
+                "new-", State.NEW,
+                "learning-", State.LEARNING,
+                "relearning-", State.RE_LEARNING
+        ));
+        var service = new VocabularyOrchestrationService(
+                repo,
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                fetchReviewsApi,
+                Clock.fixed(Instant.parse("2026-04-01T00:00:00Z"), ZoneOffset.UTC)
+        );
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/api/v1/vocabularies/songs-selection/v1")
+                        .queryParam("userId", "user-a")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.length()").value(50));
+
+        mockMvc.perform(get("/api/v1/vocabularies/songs-selection/v1")
+                        .queryParam("userId", "user-a")
+                        .queryParam("limit", "500")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.length()").value(300));
+    }
+
+    private FetchVocabularyFlashcardReviewsApi buildReviewsApi(List<Vocabulary> vocabularies,
+                                                               Map<String, State> stateByPrefix) {
+        return userId -> {
+            var result = new ArrayList<VocabularyFlashcardReviewRecord>();
+            for (var vocabulary : vocabularies) {
+                var state = stateByPrefix.entrySet().stream()
+                        .filter(entry -> vocabulary.id().id().startsWith(entry.getKey()))
+                        .map(Map.Entry::getValue)
+                        .findFirst()
+                        .orElse(State.REVIEW);
+                result.add(new VocabularyFlashcardReviewRecord(
+                        "card-" + vocabulary.id().id(),
+                        vocabulary.id().id(),
+                        state,
+                        true
+                ));
+            }
+            return result;
+        };
+    }
+
+    private void seedSeries(FakeVocabularyRepo repo,
+                            String userId,
+                            String prefix,
+                            int size,
+                            State state,
+                            Instant baseCreatedAt) {
+        for (int i = 1; i <= size; i++) {
+            var id = prefix + i;
+            var createdAt = baseCreatedAt.plusSeconds(i);
+            repo.save(new Vocabulary(
+                    new Vocabulary.VocabularyId(id),
+                    new UserId(userId),
+                    "surface-" + id,
+                    "translation-" + id,
+                    Vocabulary.EntryKind.WORD,
+                    "state:" + state.name(),
+                    List.of(new VocabularyExampleSentence(
+                            new VocabularyExampleSentence.VocabularyExampleSentenceId("ex-" + id),
+                            "Sentence " + id,
+                            "Translation " + id
+                    )),
+                    null,
+                    createdAt
+            ));
+        }
     }
 
     private Vocabulary sampleVocabulary(String id, String userId) {

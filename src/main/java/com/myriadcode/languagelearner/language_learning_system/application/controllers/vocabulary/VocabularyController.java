@@ -61,6 +61,15 @@ public class VocabularyController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
+    @GetMapping("songs-selection/v1")
+    public ResponseEntity<ApiResponse<List<VocabularyResponse>>> fetchSongVocabularies(
+            @RequestParam String userId,
+            @RequestParam(required = false) Integer limit
+    ) {
+        var response = vocabularyOrchestrationService.fetchSongVocabularies(userId, limit);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
     @GetMapping("{vocabularyId}/v1")
     public ResponseEntity<ApiResponse<VocabularyResponse>> fetchVocabulary(
             @RequestParam String userId,
