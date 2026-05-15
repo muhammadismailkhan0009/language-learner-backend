@@ -3,8 +3,6 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.readin
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "reading_paragraph_cloze_paragraph")
@@ -29,10 +27,6 @@ public class ReadingParagraphClozeParagraphEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @OneToMany(mappedBy = "paragraph", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("createdAt ASC")
-    private Set<ReadingParagraphClozeCardEntity> cards = new LinkedHashSet<>();
-
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public ReadingParagraphClozeSessionEntity getSession() { return session; }
@@ -45,7 +39,4 @@ public class ReadingParagraphClozeParagraphEntity {
     public void setClozeParagraph(String clozeParagraph) { this.clozeParagraph = clozeParagraph; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Set<ReadingParagraphClozeCardEntity> getCards() { return cards; }
-    public void setCards(Set<ReadingParagraphClozeCardEntity> cards) { this.cards = cards; }
 }
-

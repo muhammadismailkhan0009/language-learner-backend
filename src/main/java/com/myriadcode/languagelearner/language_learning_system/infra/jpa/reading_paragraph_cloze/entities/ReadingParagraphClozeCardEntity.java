@@ -15,9 +15,12 @@ public class ReadingParagraphClozeCardEntity {
     @JoinColumn(name = "session_id", nullable = false)
     private ReadingParagraphClozeSessionEntity session;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "paragraph_id")
     private ReadingParagraphClozeParagraphEntity paragraph;
+
+    @Column(name = "paragraph_id", insertable = false, updatable = false)
+    private String paragraphId;
 
     @Column(name = "flashcard_id", nullable = false)
     private String flashcardId;
@@ -34,6 +37,7 @@ public class ReadingParagraphClozeCardEntity {
     public void setSession(ReadingParagraphClozeSessionEntity session) { this.session = session; }
     public ReadingParagraphClozeParagraphEntity getParagraph() { return paragraph; }
     public void setParagraph(ReadingParagraphClozeParagraphEntity paragraph) { this.paragraph = paragraph; }
+    public String getParagraphId() { return paragraphId; }
     public String getFlashcardId() { return flashcardId; }
     public void setFlashcardId(String flashcardId) { this.flashcardId = flashcardId; }
     public String getVocabularyId() { return vocabularyId; }

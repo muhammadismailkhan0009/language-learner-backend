@@ -33,12 +33,11 @@ public interface ReadingParagraphClozeJpaMapper {
     ReadingParagraphClozeCardEntity toCardEntity(ReadingParagraphClozeCard card);
 
     @Mapping(target = "id.id", source = "id")
-    @Mapping(target = "paragraphId", source = "paragraph.id")
+    @Mapping(target = "paragraphId", source = "paragraphId")
     ReadingParagraphClozeCard toCardDomain(ReadingParagraphClozeCardEntity entity);
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "session", ignore = true)
-    @Mapping(target = "cards", ignore = true)
     ReadingParagraphClozeParagraphEntity toParagraphEntity(ReadingParagraphClozeParagraph paragraph);
 
     @Mapping(target = "id.id", source = "id")

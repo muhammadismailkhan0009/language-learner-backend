@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.readin
 import jakarta.persistence.*;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
+import org.springframework.data.domain.Persistable;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -10,7 +11,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "reading_paragraph_cloze_session")
-public class ReadingParagraphClozeSessionEntity {
+public class ReadingParagraphClozeSessionEntity implements Persistable<String> {
 
     @Id
     private String id;
@@ -26,6 +27,9 @@ public class ReadingParagraphClozeSessionEntity {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
+
+    @Transient
+    private boolean isNew = true;
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("createdAt ASC")
@@ -44,8 +48,18 @@ public class ReadingParagraphClozeSessionEntity {
         }
     }
 
+    @PostPersist
+    @PostLoad
+    public void markNotNew() {
+        this.isNew = false;
+    }
+
+    @Override
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+    @Override
+    public boolean isNew() { return isNew; }
+    public void markExisting() { this.isNew = false; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getTopic() { return topic; }
