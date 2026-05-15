@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
@@ -107,6 +108,16 @@ public class LLMGenerator implements LLMPort {
 
         var paragraphList = buildReadingContent(paragraphs, sentenceSplit);
         return new ReadingContent(paragraphList);
+    }
+
+    @Override
+    public ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
+                                                                         List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                         String difficultyLevel) {
+        var prompt = PromptsGenerator.readingParagraphCloze(topic, vocabulary, difficultyLevel);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<ReadingParagraphClozeGeneration>() {
+        });
     }
 
     @Override

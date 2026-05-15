@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.language_set
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 
@@ -31,6 +32,9 @@ public interface LLMPort {
     ReadingContent generateReadingContent(String topic,
                                           List<ReadingPracticeVocabularySeed> vocabulary,
                                           String difficultyLevel);
+    ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
+                                                                  List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                  String difficultyLevel);
 
     ReadingUsedVocabularySelection identifyUsedReadingVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                                                  String readingText);

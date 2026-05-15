@@ -344,6 +344,50 @@ public final class PromptsGenerator {
                 """.formatted(difficultyLevel, topic, vocabList);
   }
 
+  public static String readingParagraphCloze(
+      String topic,
+      List<ReadingPracticeVocabularySeed> vocabulary,
+      String difficultyLevel) {
+    String vocabList = formatVocabulary(vocabulary);
+
+    return """
+        You are an expert German teacher creating a paragraph-based cloze exercise.
+
+        CEFR Level: %s
+        Topic: "%s"
+
+        Goal:
+        Generate ONE natural German reading paragraph with multiple blanks, and a mapping for used learner vocabulary.
+
+        Output contract:
+        - `clozeParagraph`: one German paragraph containing blanks.
+        - `items`: list of blanked learner vocabulary mappings.
+        - Each item must include:
+          - `vocabSource`: exact learner vocabulary `surface` used as source
+          - `hint`: short English meaning (1-4 words)
+          - `answerWords`: exact missing words that fill the blank in context (can be inflected forms)
+          - `blankToken`: blank marker string matching answerWords count (e.g., "___" or "___ ___")
+
+        Mandatory rules:
+        - Use only learner vocabulary surfaces provided below as `vocabSource`.
+        - `vocabSource` must exactly match one provided surface value (case-sensitive).
+        - `answerWords` may be inflected forms naturally used in sentence context.
+        - `blankToken` must contain the same number of `___` blocks as `answerWords` length.
+        - Place blanks directly in `clozeParagraph` where answer words should appear.
+        - Paragraph must read naturally and coherently (not isolated sentences).
+        - Keep paragraph understandable and context-rich for inference.
+        - Avoid adding many new thematic words.
+
+        Quality:
+        - 7-16 sentences worth of paragraph content length in natural prose.
+        - Prioritize real-life, clear context.
+        - Reuse important learner words when natural.
+
+        Learner Vocabulary (German - translation):
+        %s
+        """.formatted(difficultyLevel, topic, vocabList);
+  }
+
   public static String readingUsedVocabularySelection(
       List<ReadingPracticeVocabularySeed> vocabulary,
       String readingText) {

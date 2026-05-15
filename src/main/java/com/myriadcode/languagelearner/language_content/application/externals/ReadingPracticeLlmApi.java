@@ -12,6 +12,10 @@ public interface ReadingPracticeLlmApi {
                                                          List<ReadingPracticeVocabularySeed> vocabulary,
                                                          String difficultyLevel);
 
+    ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
+                                                                  List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                  String difficultyLevel);
+
     List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                         String readingText);
 }
