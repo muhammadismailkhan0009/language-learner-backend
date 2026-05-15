@@ -29,6 +29,9 @@ public class ReadingParagraphClozeService {
     private static final int RECENT_WRITING_TOPIC_LIMIT = 3;
     private static final int MAX_TOPIC_CONTEXT = 5;
     private static final String GENERAL_TOPIC = "General practice";
+    private static final int MIN_SENTENCES_PER_PARAGRAPH = 5;
+    private static final int MAX_SENTENCES_PER_PARAGRAPH = 7;
+    private static final int MAX_CLOZE_ITEMS_PER_PARAGRAPH = 4;
 
     private final ReadingParagraphClozeRepo repo;
     private final FetchVocabularyFlashcardReviewsApi flashcardReviewsApi;
@@ -102,19 +105,18 @@ public class ReadingParagraphClozeService {
                 .map(v -> new ReadingPracticeVocabularySeed(v.surface(), v.translation()))
                 .toList();
 
-        var topic = determineTopic(userId);
-        com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration clozeGenerated;
-        try (var ignored = LlmUserContextHolder.scoped(userId)) {
-            clozeGenerated = readingPracticeLlmApi.generateReadingParagraphCloze(topic, seeds, DIFFICULTY_LEVEL);
-        }
-        if (clozeGenerated == null || clozeGenerated.clozeParagraph() == null || clozeGenerated.clozeParagraph().isBlank()) {
-            throw new IllegalArgumentException("Unable to generate reading paragraph cloze content");
-        }
-        var clozeCards = mapClozeCardsFromLlm(clozeGenerated, selected, vocabById);
-        if (clozeCards.isEmpty()) {
+        var topic = GENERAL_TOPIC;
+        var clozeGenerated = generateValidatedCloze(topic, seeds, selected, vocabById, userId);
+        var paragraphMappings = mapParagraphsFromLlm(clozeGenerated, selected, vocabById);
+        if (paragraphMappings.isEmpty()) {
             throw new IllegalArgumentException("Unable to map cloze paragraph vocabulary references");
         }
-        String clozeParagraph = clozeGenerated.clozeParagraph().trim();
+        var rootParagraph = paragraphMappings.getFirst().paragraph();
+        var clozeParagraph = rootParagraph.clozeParagraph();
+        var clozeCards = paragraphMappings.stream()
+                .flatMap(mapping -> mapping.cards().stream())
+                .toList();
+        var paragraphs = paragraphMappings.stream().map(ParagraphMapping::paragraph).toList();
 
         var session = new ReadingParagraphClozeSession(
                 new ReadingParagraphClozeSession.ReadingParagraphClozeSessionId(UUID.randomUUID().toString()),
@@ -122,6 +124,7 @@ public class ReadingParagraphClozeService {
                 topic,
                 clozeParagraph,
                 Instant.now(),
+                paragraphs,
                 clozeCards
         );
 
@@ -153,15 +156,29 @@ public class ReadingParagraphClozeService {
             var remainingCards = session.cards().stream()
                     .filter(card -> !flashcardId.equals(card.flashcardId()))
                     .toList();
+            var remainingByParagraph = session.paragraphs().stream()
+                    .map(paragraph -> new ReadingParagraphClozeParagraph(
+                            paragraph.id(),
+                            paragraph.paragraphIndex(),
+                            paragraph.scenarioLabel(),
+                            paragraph.clozeParagraph(),
+                            paragraph.createdAt(),
+                            paragraph.cards().stream().filter(card -> !flashcardId.equals(card.flashcardId())).toList()
+                    ))
+                    .filter(paragraph -> !paragraph.cards().isEmpty())
+                    .toList();
+            var nextParagraph = remainingByParagraph.isEmpty() ? null : remainingByParagraph.getFirst();
             var updated = new ReadingParagraphClozeSession(
                     session.id(),
                     session.userId(),
                     session.topic(),
-                    session.clozeParagraph(),
+                    nextParagraph == null ? session.clozeParagraph() : nextParagraph.clozeParagraph(),
                     session.createdAt(),
+                    remainingByParagraph,
                     remainingCards
             );
-            return toResponse(repo.save(updated), userId);
+            var saved = repo.save(updated);
+            return toResponse(saved == null ? updated : saved, userId);
         }
         return toResponse(session, userId);
     }
@@ -212,14 +229,12 @@ public class ReadingParagraphClozeService {
         return merged.isEmpty() ? GENERAL_TOPIC : String.join(" | ", merged);
     }
 
-    private List<ReadingParagraphClozeCard> mapClozeCardsFromLlm(
+    private List<ParagraphMapping> mapParagraphsFromLlm(
             com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration generated,
             List<VocabularyClozeCandidate> selected,
-            Map<String, Vocabulary> vocabById
-    ) {
-        if (generated.items() == null || generated.items().isEmpty()) {
-            return List.of();
-        }
+            Map<String, Vocabulary> vocabById) {
+        if (generated.paragraphs() == null || generated.paragraphs().isEmpty()) return List.of();
+
         var candidateBySurface = selected.stream()
                 .filter(candidate -> vocabById.containsKey(candidate.vocabularyId()))
                 .collect(Collectors.toMap(
@@ -227,27 +242,43 @@ public class ReadingParagraphClozeService {
                         candidate -> candidate,
                         (first, ignored) -> first
                 ));
-        var cards = new ArrayList<ReadingParagraphClozeCard>();
+
+        var result = new ArrayList<ParagraphMapping>();
         var queuedFlashcards = new HashSet<String>();
-        for (var item : generated.items()) {
-            if (item == null || item.vocabSource() == null || item.vocabSource().isBlank()) {
-                continue;
+        int paragraphIndex = 0;
+        for (var paragraph : generated.paragraphs()) {
+            if (paragraph == null || paragraph.items() == null || paragraph.items().isEmpty()) continue;
+            var paragraphId = UUID.randomUUID().toString();
+            var paragraphCards = new ArrayList<ReadingParagraphClozeCard>();
+            for (var item : paragraph.items()) {
+                if (item == null || item.vocabSource() == null || item.vocabSource().isBlank()) continue;
+                var candidate = candidateBySurface.get(normalizeSurface(item.vocabSource()));
+                if (candidate == null) continue;
+                if (!queuedFlashcards.add(candidate.flashcardId())) continue;
+                paragraphCards.add(new ReadingParagraphClozeCard(
+                        new ReadingParagraphClozeCard.ReadingParagraphClozeCardId(UUID.randomUUID().toString()),
+                        paragraphId,
+                        candidate.flashcardId(),
+                        candidate.vocabularyId(),
+                        Instant.now()
+                ));
             }
-            var candidate = candidateBySurface.get(normalizeSurface(item.vocabSource()));
-            if (candidate == null) {
-                continue;
-            }
-            if (!queuedFlashcards.add(candidate.flashcardId())) {
-                continue;
-            }
-            cards.add(new ReadingParagraphClozeCard(
-                    new ReadingParagraphClozeCard.ReadingParagraphClozeCardId(UUID.randomUUID().toString()),
-                    candidate.flashcardId(),
-                    candidate.vocabularyId(),
-                    Instant.now()
+            if (paragraphCards.isEmpty()) continue;
+            result.add(new ParagraphMapping(
+                    new ReadingParagraphClozeParagraph(
+                            new ReadingParagraphClozeParagraph.ReadingParagraphClozeParagraphId(paragraphId),
+                            paragraphIndex++,
+                            paragraph.scenarioLabel() == null || paragraph.scenarioLabel().isBlank()
+                                    ? "Scenario " + (paragraphIndex)
+                                    : paragraph.scenarioLabel().trim(),
+                            paragraph.clozeParagraph().trim(),
+                            Instant.now(),
+                            paragraphCards
+                    ),
+                    paragraphCards
             ));
         }
-        return cards;
+        return result;
     }
 
     private List<String> toAnswerWords(String surface) {
@@ -278,7 +309,15 @@ public class ReadingParagraphClozeService {
         int totalCount = session.totalCount();
         String status = ratedCount >= totalCount ? "COMPLETED" : "ACTIVE";
 
-        var vocabularyIds = session.cards().stream()
+        var activeParagraph = session.paragraphs() == null || session.paragraphs().isEmpty()
+                ? null
+                : session.paragraphs().stream()
+                .filter(paragraph -> paragraph.cards() != null && !paragraph.cards().isEmpty())
+                .findFirst()
+                .orElse(session.paragraphs().getFirst());
+
+        var activeCards = activeParagraph == null ? session.cards() : activeParagraph.cards();
+        var vocabularyIds = activeCards.stream()
                 .map(ReadingParagraphClozeCard::vocabularyId)
                 .distinct()
                 .toList();
@@ -286,7 +325,7 @@ public class ReadingParagraphClozeService {
                 .filter(v -> v.userId() != null && userId.equals(v.userId().id()))
                 .collect(Collectors.toMap(v -> v.id().id(), v -> v));
 
-        var cards = session.cards().stream()
+        var cards = activeCards.stream()
                 .map(card -> {
                     var vocab = vocabById.get(card.vocabularyId());
                     var surface = vocab == null ? "" : vocab.surface();
@@ -304,8 +343,8 @@ public class ReadingParagraphClozeService {
                 .toList();
         return new ReadingParagraphClozeSessionResponse(
                 session.id().id(),
-                session.topic(),
-                session.clozeParagraph(),
+                activeParagraph == null ? session.topic() : activeParagraph.scenarioLabel(),
+                activeParagraph == null ? session.clozeParagraph() : activeParagraph.clozeParagraph(),
                 status,
                 ratedCount,
                 totalCount,
@@ -330,4 +369,56 @@ public class ReadingParagraphClozeService {
     private String normalizeSurface(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
     }
+
+    private com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration generateValidatedCloze(
+            String topic,
+            List<ReadingPracticeVocabularySeed> seeds,
+            List<VocabularyClozeCandidate> selected,
+            Map<String, Vocabulary> vocabById,
+            String userId) {
+        var first = generateCloze(topic, seeds, userId);
+        if (isValid(first, selected, vocabById)) return first;
+        var retry = generateCloze(topic + " | Retry with strict constraints", seeds, userId);
+        if (!isValid(retry, selected, vocabById)) {
+            throw new IllegalArgumentException("Unable to generate valid reading paragraph cloze content");
+        }
+        return retry;
+    }
+
+    private com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration generateCloze(
+            String topic, List<ReadingPracticeVocabularySeed> seeds, String userId) {
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            return readingPracticeLlmApi.generateReadingParagraphCloze(topic, seeds, DIFFICULTY_LEVEL);
+        }
+    }
+
+    private boolean isValid(
+            com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration generated,
+            List<VocabularyClozeCandidate> selected,
+            Map<String, Vocabulary> vocabById) {
+        if (generated == null || generated.paragraphs() == null || generated.paragraphs().isEmpty()) return false;
+        for (var paragraph : generated.paragraphs()) {
+            if (paragraph == null || paragraph.clozeParagraph() == null || paragraph.clozeParagraph().isBlank()) return false;
+            int sentenceCount = countSentences(paragraph.clozeParagraph());
+            if (sentenceCount < MIN_SENTENCES_PER_PARAGRAPH || sentenceCount > MAX_SENTENCES_PER_PARAGRAPH) return false;
+            if (paragraph.items() == null || paragraph.items().isEmpty() || paragraph.items().size() > MAX_CLOZE_ITEMS_PER_PARAGRAPH) return false;
+            for (var item : paragraph.items()) {
+                if (item == null || item.vocabSource() == null || item.vocabSource().isBlank()) return false;
+            }
+        }
+        return true;
+    }
+
+    private int countSentences(String paragraph) {
+        var trimmed = paragraph == null ? "" : paragraph.trim();
+        if (trimmed.isEmpty()) return 0;
+        return (int) Arrays.stream(trimmed.split("(?<=[.!?])\\s+"))
+                .filter(value -> !value.isBlank())
+                .count();
+    }
+
+    private record ParagraphMapping(
+            ReadingParagraphClozeParagraph paragraph,
+            List<ReadingParagraphClozeCard> cards
+    ) {}
 }

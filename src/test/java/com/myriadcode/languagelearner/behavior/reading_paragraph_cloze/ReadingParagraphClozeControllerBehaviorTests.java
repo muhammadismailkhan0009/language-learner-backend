@@ -40,11 +40,11 @@ class ReadingParagraphClozeControllerBehaviorTests {
         var controller = new ReadingParagraphClozeController(service);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
-        mockMvc.perform(post("/api/v1/reading-cloze-paragraph/sessions")
+                mockMvc.perform(post("/api/v1/reading-cloze-paragraph/sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"user-1\",\"limit\":50}"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.response.topic").value("Travel | Work"))
+                .andExpect(jsonPath("$.response.topic").value("Travel"))
                 .andExpect(jsonPath("$.response.cards.length()").value(2));
     }
 
@@ -97,13 +97,16 @@ class ReadingParagraphClozeControllerBehaviorTests {
         ));
         when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel"));
         when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Work"));
-        when(readingPracticeLlmApi.generateReadingParagraphCloze(eq("Travel | Work"), any(), eq("B1")))
+        when(readingPracticeLlmApi.generateReadingParagraphCloze(any(), any(), eq("B1")))
                 .thenReturn(new ReadingParagraphClozeGeneration(
-                        "Ich ___ nach Berlin und ___ Anna.",
-                        List.of(
-                                new ReadingParagraphClozeGeneration.Item("gehen", "go", List.of("gehe"), "___"),
-                                new ReadingParagraphClozeGeneration.Item("kennen", "know", List.of("kenne"), "___")
-                        )
+                        List.of(new ReadingParagraphClozeGeneration.Paragraph(
+                                "Travel",
+                                "Ich ___ nach Berlin und ___ Anna. Wir bleiben dort zwei Tage. Am Abend trinken wir Tee. Danach gehen wir spazieren. Morgen fahren wir zurück.",
+                                List.of(
+                                        new ReadingParagraphClozeGeneration.Item("gehen", "go", List.of("gehe"), "___"),
+                                        new ReadingParagraphClozeGeneration.Item("kennen", "know", List.of("kenne"), "___")
+                                )
+                        ))
                 ));
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -126,8 +129,10 @@ class ReadingParagraphClozeControllerBehaviorTests {
                 "topic",
                 "Ich ___.",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         Instant.parse("2026-01-01T00:00:01Z")
@@ -157,8 +162,10 @@ class ReadingParagraphClozeControllerBehaviorTests {
                 "topic",
                 "Ich ___.",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         Instant.parse("2026-01-01T00:00:01Z")

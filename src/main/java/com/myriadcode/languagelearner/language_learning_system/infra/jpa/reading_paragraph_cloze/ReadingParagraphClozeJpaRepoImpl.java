@@ -8,7 +8,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -29,12 +31,28 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Instant.now());
         }
+
+        var paragraphEntityById = new HashMap<String, com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.ReadingParagraphClozeParagraphEntity>();
+        entity.setParagraphs(new LinkedHashSet<>(session.paragraphs().stream()
+                .map(MAPPER::toParagraphEntity)
+                .peek(paragraph -> {
+                    if (paragraph.getCreatedAt() == null) {
+                        paragraph.setCreatedAt(Instant.now());
+                    }
+                    paragraphEntityById.put(paragraph.getId(), paragraph);
+                })
+                .toList()));
+
         entity.setCards(new LinkedHashSet<>(session.cards().stream()
-                .map(MAPPER::toCardEntity)
-                .peek(card -> {
+                .map(domainCard -> {
+                    var card = MAPPER.toCardEntity(domainCard);
                     if (card.getCreatedAt() == null) {
                         card.setCreatedAt(Instant.now());
                     }
+                    if (domainCard.paragraphId() != null) {
+                        card.setParagraph(paragraphEntityById.get(domainCard.paragraphId()));
+                    }
+                    return card;
                 })
                 .toList()));
 
@@ -55,6 +73,20 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
 
     private ReadingParagraphClozeSession toDomain(com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.ReadingParagraphClozeSessionEntity entity) {
         var base = MAPPER.toDomain(entity);
+        var paragraphs = entity.getParagraphs().stream()
+                .map(paragraphEntity -> {
+                    var paragraphBase = MAPPER.toParagraphDomain(paragraphEntity);
+                    var cards = paragraphEntity.getCards().stream().map(MAPPER::toCardDomain).toList();
+                    return new com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeParagraph(
+                            paragraphBase.id(),
+                            paragraphBase.paragraphIndex(),
+                            paragraphBase.scenarioLabel(),
+                            paragraphBase.clozeParagraph(),
+                            paragraphBase.createdAt(),
+                            cards
+                    );
+                })
+                .toList();
         var cards = entity.getCards().stream().map(MAPPER::toCardDomain).toList();
         return new ReadingParagraphClozeSession(
                 base.id(),
@@ -62,6 +94,7 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
                 base.topic(),
                 base.clozeParagraph(),
                 base.createdAt(),
+                paragraphs,
                 cards
         );
     }

@@ -351,41 +351,47 @@ public final class PromptsGenerator {
     String vocabList = formatVocabulary(vocabulary);
 
     return """
-        You are an expert German teacher creating a paragraph-based cloze exercise.
+        You are an expert German teacher creating multi-paragraph cloze reading practice.
 
         CEFR Level: %s
-        Topic: "%s"
 
         Goal:
-        Generate ONE natural German reading paragraph with multiple blanks, and a mapping for used learner vocabulary.
+        Generate MULTIPLE natural German paragraphs in one response.
+        You decide a scenario/topic for each paragraph.
+        Use the full learner vocabulary list globally across paragraphs.
 
         Output contract:
-        - `clozeParagraph`: one German paragraph containing blanks.
-        - `items`: list of blanked learner vocabulary mappings.
-        - Each item must include:
+        - Return `paragraphs`: list of paragraph objects.
+        - Each paragraph object contains:
+          - `scenarioLabel`: short scenario name (2-8 words)
+          - `clozeParagraph`: German paragraph text with blanks
+          - `items`: list of blanked learner vocabulary mappings for this paragraph
+        - Each item contains:
           - `vocabSource`: exact learner vocabulary `surface` used as source
-          - `hint`: short English meaning (1-4 words)
-          - `answerWords`: exact missing words that fill the blank in context (can be inflected forms)
-          - `blankToken`: blank marker string matching answerWords count (e.g., "___" or "___ ___")
+          - `hint`: English meaning hint
+          - `answerWords`: exact missing words in context (can be inflected forms)
+          - `blankToken`: blank marker with same word count as `answerWords`
 
         Mandatory rules:
-        - Use only learner vocabulary surfaces provided below as `vocabSource`.
-        - `vocabSource` must exactly match one provided surface value (case-sensitive).
-        - `answerWords` may be inflected forms naturally used in sentence context.
-        - `blankToken` must contain the same number of `___` blocks as `answerWords` length.
-        - Place blanks directly in `clozeParagraph` where answer words should appear.
-        - Paragraph must read naturally and coherently (not isolated sentences).
-        - Keep paragraph understandable and context-rich for inference.
-        - Avoid adding many new thematic words.
+        - Sentence count per paragraph must be 5-7 sentences.
+        - Maximum 4 cloze items per paragraph.
+        - You may use other learner vocabulary in paragraph text without blanking it.
+        - `vocabSource` must exactly match a provided surface value.
+        - `answerWords` may be inflected context forms.
+        - `blankToken` must match answerWords word count.
+        - Keep paragraphs coherent and scenario-focused.
+        - Paragraphs should use different scenarios.
+        - Use as many provided vocabulary items as natural across all paragraphs.
+        - Distribute cloze targets across paragraphs (not all in one paragraph).
 
         Quality:
-        - 7-16 sentences worth of paragraph content length in natural prose.
-        - Prioritize real-life, clear context.
-        - Reuse important learner words when natural.
+        - Real-life scenario language.
+        - Clear contextual clues for inference.
+        - Avoid overcrowding blanks.
 
         Learner Vocabulary (German - translation):
         %s
-        """.formatted(difficultyLevel, topic, vocabList);
+        """.formatted(difficultyLevel, vocabList);
   }
 
   public static String readingUsedVocabularySelection(

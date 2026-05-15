@@ -32,6 +32,11 @@ public class ReadingParagraphClozeSessionEntity {
     @Fetch(FetchMode.SUBSELECT)
     private Set<ReadingParagraphClozeCardEntity> cards = new LinkedHashSet<>();
 
+    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("paragraphIndex ASC")
+    @Fetch(FetchMode.SUBSELECT)
+    private Set<ReadingParagraphClozeParagraphEntity> paragraphs = new LinkedHashSet<>();
+
     @PrePersist
     public void onCreate() {
         if (createdAt == null) {
@@ -58,5 +63,16 @@ public class ReadingParagraphClozeSessionEntity {
     public void addCard(ReadingParagraphClozeCardEntity card) {
         card.setSession(this);
         this.cards.add(card);
+    }
+
+    public Set<ReadingParagraphClozeParagraphEntity> getParagraphs() { return paragraphs; }
+    public void setParagraphs(Set<ReadingParagraphClozeParagraphEntity> paragraphs) {
+        this.paragraphs.clear();
+        if (paragraphs == null) return;
+        paragraphs.forEach(this::addParagraph);
+    }
+    public void addParagraph(ReadingParagraphClozeParagraphEntity paragraph) {
+        paragraph.setSession(this);
+        this.paragraphs.add(paragraph);
     }
 }

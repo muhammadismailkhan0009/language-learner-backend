@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record ReadingParagraphClozeCard(
         ReadingParagraphClozeCardId id,
+        String paragraphId,
         String flashcardId,
         String vocabularyId,
         Instant createdAt

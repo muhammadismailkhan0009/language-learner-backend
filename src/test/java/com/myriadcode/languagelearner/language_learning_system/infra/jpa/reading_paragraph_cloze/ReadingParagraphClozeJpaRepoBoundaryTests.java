@@ -46,8 +46,10 @@ class ReadingParagraphClozeJpaRepoBoundaryTests {
                 "topic",
                 "Ich ___ nach Hause.",
                 null,
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         null
@@ -74,6 +76,7 @@ class ReadingParagraphClozeJpaRepoBoundaryTests {
                 "topic-1",
                 "para-1",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of()
         ));
         repo.save(new ReadingParagraphClozeSession(
@@ -82,6 +85,7 @@ class ReadingParagraphClozeJpaRepoBoundaryTests {
                 "topic-2",
                 "para-2",
                 Instant.parse("2026-01-02T00:00:00Z"),
+                List.of(),
                 List.of()
         ));
 

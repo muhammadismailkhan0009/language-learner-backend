@@ -314,12 +314,15 @@ class ReadingPracticeSessionFlowTests {
                                                                              List<ReadingPracticeVocabularySeed> vocabulary,
                                                                              String difficultyLevel) {
             return new ReadingParagraphClozeGeneration(
-                    "Ich ___ heute.",
-                    List.of(new ReadingParagraphClozeGeneration.Item(
-                            vocabulary.isEmpty() ? "" : vocabulary.getFirst().surface(),
-                            vocabulary.isEmpty() ? "" : vocabulary.getFirst().translation(),
-                            List.of("gehe"),
-                            "___"
+                    List.of(new ReadingParagraphClozeGeneration.Paragraph(
+                            "Daily routine",
+                            "Ich ___ heute.",
+                            List.of(new ReadingParagraphClozeGeneration.Item(
+                                    vocabulary.isEmpty() ? "" : vocabulary.getFirst().surface(),
+                                    vocabulary.isEmpty() ? "" : vocabulary.getFirst().translation(),
+                                    List.of("gehe"),
+                                    "___"
+                            ))
                     ))
             );
         }

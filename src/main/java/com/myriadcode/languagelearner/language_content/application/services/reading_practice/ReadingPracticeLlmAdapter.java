@@ -53,11 +53,11 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
                                                                          List<ReadingPracticeVocabularySeed> vocabulary,
                                                                          String difficultyLevel) {
         if (vocabulary == null || vocabulary.isEmpty()) {
-            return new ReadingParagraphClozeGeneration("", List.of());
+            return new ReadingParagraphClozeGeneration(List.of());
         }
         var content = llmPort.generateReadingParagraphCloze(topic, vocabulary, difficultyLevel);
-        if (content == null || content.items() == null) {
-            return new ReadingParagraphClozeGeneration("", List.of());
+        if (content == null || content.paragraphs() == null) {
+            return new ReadingParagraphClozeGeneration(List.of());
         }
         return content;
     }

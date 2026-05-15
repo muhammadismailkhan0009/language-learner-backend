@@ -11,6 +11,7 @@ public record ReadingParagraphClozeSession(
         String topic,
         String clozeParagraph,
         Instant createdAt,
+        List<ReadingParagraphClozeParagraph> paragraphs,
         List<ReadingParagraphClozeCard> cards
 ) {
     public record ReadingParagraphClozeSessionId(String id) {

@@ -63,19 +63,22 @@ class ReadingParagraphClozeServiceBehaviorTests {
         ));
         when(recentReadingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Travel"));
         when(recentWritingTopicsApi.findRecentTopics("user-1", 3)).thenReturn(List.of("Work"));
-        when(readingPracticeLlmApi.generateReadingParagraphCloze(eq("Travel | Work"), any(), eq("B1")))
+        when(readingPracticeLlmApi.generateReadingParagraphCloze(any(), any(), eq("B1")))
                 .thenReturn(new ReadingParagraphClozeGeneration(
-                        "Ich ___ nach Berlin und ___ Anna.",
-                        List.of(
-                                new ReadingParagraphClozeGeneration.Item("gehen", "go", List.of("gehe"), "___"),
-                                new ReadingParagraphClozeGeneration.Item("kennen", "know", List.of("kenne"), "___")
-                        )
+                        List.of(new ReadingParagraphClozeGeneration.Paragraph(
+                                "Travel",
+                                "Ich ___ nach Berlin und ___ Anna. Wir bleiben dort zwei Tage. Am Abend trinken wir Tee. Danach gehen wir spazieren. Morgen fahren wir zurück.",
+                                List.of(
+                                        new ReadingParagraphClozeGeneration.Item("gehen", "go", List.of("gehe"), "___"),
+                                        new ReadingParagraphClozeGeneration.Item("kennen", "know", List.of("kenne"), "___")
+                                )
+                        ))
                 ));
         when(repo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         var response = service.createSession("user-1", 50);
 
-        assertThat(response.topic()).isEqualTo("Travel | Work");
+        assertThat(response.topic()).isEqualTo("Travel");
         assertThat(response.clozeParagraph()).contains("___");
         assertThat(response.cards()).hasSize(2);
         assertThat(response.cards()).extracting(value -> value.flashcardId())
@@ -91,8 +94,10 @@ class ReadingParagraphClozeServiceBehaviorTests {
                 "topic",
                 "Ich ___ .",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         Instant.parse("2026-01-01T00:00:01Z")
@@ -104,6 +109,7 @@ class ReadingParagraphClozeServiceBehaviorTests {
                 session.topic(),
                 session.clozeParagraph(),
                 session.createdAt(),
+                List.of(),
                 List.of()
         );
         when(repo.findByIdAndUserId("s-1", "user-1")).thenReturn(Optional.of(session));
@@ -129,8 +135,10 @@ class ReadingParagraphClozeServiceBehaviorTests {
                 "topic",
                 "Ich ___ .",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         Instant.parse("2026-01-01T00:00:01Z")
@@ -158,8 +166,10 @@ class ReadingParagraphClozeServiceBehaviorTests {
                 "topic",
                 "Ich ___.",
                 Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(),
                 List.of(new ReadingParagraphClozeCard(
                         new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "p-1",
                         "f-1",
                         "v-1",
                         Instant.parse("2026-01-01T00:00:01Z")
