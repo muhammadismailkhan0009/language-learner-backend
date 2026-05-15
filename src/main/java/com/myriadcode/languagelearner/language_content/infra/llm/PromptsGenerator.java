@@ -360,6 +360,25 @@ public final class PromptsGenerator {
         You decide a scenario/topic for each paragraph.
         Use the full learner vocabulary list globally across paragraphs.
 
+        HARD OUTPUT FIELD RULES (must follow exactly):
+        - scenarioLabel:
+          - short label only (2-8 words)
+          - NOT a sentence
+          - no punctuation at end
+          - example: "Train station directions"
+        - clozeParagraph:
+          - full paragraph text (5-7 sentences)
+          - this is where all paragraph sentences must go
+          - MUST NOT be empty
+        - items:
+          - only cloze-target mappings for this paragraph
+
+        CRITICAL:
+        - Never place paragraph text inside scenarioLabel.
+        - Never leave clozeParagraph empty.
+        - scenarioLabel and clozeParagraph must represent different levels:
+          label vs full text.
+
         Output contract:
         - Return `paragraphs`: list of paragraph objects.
         - Each paragraph object contains:
@@ -388,6 +407,24 @@ public final class PromptsGenerator {
         - Real-life scenario language.
         - Clear contextual clues for inference.
         - Avoid overcrowding blanks.
+
+        VALID JSON EXAMPLE (shape guidance):
+        {
+          "paragraphs": [
+            {
+              "scenarioLabel": "At the pharmacy",
+              "clozeParagraph": "Ich gehe heute zur ___ . ... (5-7 full sentences total)",
+              "items": [
+                {
+                  "vocabSource": "Apotheke",
+                  "hint": "pharmacy",
+                  "answerWords": ["Apotheke"],
+                  "blankToken": "___"
+                }
+              ]
+            }
+          ]
+        }
 
         Learner Vocabulary (German - translation):
         %s
