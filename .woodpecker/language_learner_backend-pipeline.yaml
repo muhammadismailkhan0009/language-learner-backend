@@ -26,6 +26,8 @@ steps:
       status:
         - success
     environment:
+      DEEPSEEK_API_KEY:
+        from_secret: DEEPSEEK_API_KEY
       API_KEY1:
         from_secret: API_KEY1
       API_KEY2:
@@ -47,6 +49,7 @@ steps:
     commands:
       # Deploy the new container
       - docker run --network=host -d --name language_learner_backend
+        -e "DEEPSEEK_API_KEY=$${DEEPSEEK_API_KEY}"
         -e "API_KEY1=$${API_KEY1}"
         -e "API_KEY2=$${API_KEY2}"
         -e "API_KEY3=$${API_KEY3}"
