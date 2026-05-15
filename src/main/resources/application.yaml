@@ -9,19 +9,15 @@ springdoc:
     enabled: false
 
 
-
-llm:
-  model: gemini-2.5-flash
-  model_demo: gemini-3.1-flash-lite-preview
-  base-url: https://generativelanguage.googleapis.com/v1beta/openai/
-  completions-path: /chat/completions
-  api-keys: >
-    ${API_KEY1},
-    ${API_KEY2},
-    ${API_KEY3}
-    
-
 spring:
+  ai:
+    deepseek:
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        options:
+          model: deepseek-v4-pro
+        completions-path: /chat/completions
   config:
     import: optional:classpath:.env.local[.properties]
   flyway:
@@ -30,3 +26,5 @@ spring:
     baseline-version: 1
     locations: classpath:db/migration
 
+llm:
+  model-demo: deepseek-v4-pro

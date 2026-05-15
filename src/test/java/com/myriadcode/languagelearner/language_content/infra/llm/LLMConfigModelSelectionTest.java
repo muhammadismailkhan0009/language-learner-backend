@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.common.EnvVariableSupplierUtil;
 import com.myriadcode.languagelearner.user_management.application.externals.UserInformationApi;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.ai.chat.model.ChatModel;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -21,6 +22,8 @@ class LLMConfigModelSelectionTest {
 
     @Mock
     private UserInformationApi userInformationApi;
+    @Mock
+    private ChatModel chatModel;
 
     @Test
     void shouldUsePrimaryModelForConfiguredPrimaryEmail() {
@@ -28,12 +31,11 @@ class LLMConfigModelSelectionTest {
         when(userInformationApi.findUsernameByUserId("primary-user"))
                 .thenReturn(Optional.of("ismailkhan33302@gmail.com"));
 
-        var config = new LLMConfig(envVariableSupplierUtil, userInformationApi);
-        ReflectionTestUtils.setField(config, "demoModel", "demo-model");
+        var config = new LLMConfig(envVariableSupplierUtil, userInformationApi, chatModel);
 
         String selectedModel;
         try (var ignored = LlmUserContextHolder.scoped("primary-user")) {
-            selectedModel = ReflectionTestUtils.invokeMethod(config, "resolveModel");
+            selectedModel = ReflectionTestUtils.invokeMethod(config, "resolveModelForCurrentUser");
         }
 
         assertThat(selectedModel).isEqualTo("primary-model");
@@ -41,15 +43,15 @@ class LLMConfigModelSelectionTest {
 
     @Test
     void shouldUseDemoModelForNonPrimaryEmail() {
+        when(envVariableSupplierUtil.getLLMDemoModel()).thenReturn("demo-model");
         when(userInformationApi.findUsernameByUserId("demo-user"))
                 .thenReturn(Optional.of("someone-else@gmail.com"));
 
-        var config = new LLMConfig(envVariableSupplierUtil, userInformationApi);
-        ReflectionTestUtils.setField(config, "demoModel", "demo-model");
+        var config = new LLMConfig(envVariableSupplierUtil, userInformationApi, chatModel);
 
         String selectedModel;
         try (var ignored = LlmUserContextHolder.scoped("demo-user")) {
-            selectedModel = ReflectionTestUtils.invokeMethod(config, "resolveModel");
+            selectedModel = ReflectionTestUtils.invokeMethod(config, "resolveModelForCurrentUser");
         }
 
         assertThat(selectedModel).isEqualTo("demo-model");

@@ -4,12 +4,14 @@ spring:
     hibernate.ddl-auto: validate
     generate-ddl: false # Flyway manages schema changes
     show-sql: true
+  ai:
+    deepseek:
+      base-url: https://api.deepseek.com
+      api-key: ${DEEPSEEK_API_KEY:}
+      chat:
+        options:
+          model: deepseek-v4-pro
+        completions-path: /chat/completions
 
 llm:
-  model: gemini-3.1-flash-lite-preview
-  base-url: https://generativelanguage.googleapis.com/v1beta/openai/
-  completions-path: /chat/completions
-  api-keys: >
-    ${API_KEY1},
-    ${API_KEY2},
-    ${API_KEY3}
+  model-demo: deepseek-v4-pro

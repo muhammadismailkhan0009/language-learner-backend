@@ -28,8 +28,7 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.ResponseFormat;
+import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -195,11 +194,10 @@ public class LLMGenerator implements LLMPort {
 
         var outputConverter = new BeanOutputConverter<>(typeReference);
 
-        Prompt prompt = new Prompt(llmPrompt,
-                OpenAiChatOptions.builder()
-                        .responseFormat(new ResponseFormat(ResponseFormat.Type.JSON_SCHEMA,
-                                outputConverter.getJsonSchema()))
-                        .build());
+        // DeepSeek Spring AI model path (no OpenAI-specific response-format dependency).
+        Prompt prompt = new Prompt(llmPrompt, DeepSeekChatOptions.builder()
+                .model(chatClient.resolveModelForCurrentUser())
+                .build());
 
         var response = this.chatClient.chatModel().call(prompt);
 
