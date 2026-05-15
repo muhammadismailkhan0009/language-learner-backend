@@ -83,8 +83,8 @@ class ReadingParagraphClozeServiceBehaviorTests {
     }
 
     @Test
-    @DisplayName("rateCard: delegates to source-of-truth review API")
-    void rateCardDelegatesToReviewApi() {
+    @DisplayName("rateCard: GOOD detaches card from reading paragraph cloze session and delegates review")
+    void rateCardGoodDetachesCardAndDelegatesToReviewApi() {
         var session = new ReadingParagraphClozeSession(
                 new ReadingParagraphClozeSession.ReadingParagraphClozeSessionId("s-1"),
                 new UserId("user-1"),
@@ -98,8 +98,17 @@ class ReadingParagraphClozeServiceBehaviorTests {
                         Instant.parse("2026-01-01T00:00:01Z")
                 ))
         );
-        when(repo.findByIdAndUserId("s-1", "user-1")).thenReturn(Optional.of(session), Optional.of(session));
-        when(vocabularyRepo.findByIds(List.of("v-1"))).thenReturn(List.of(vocab("v-1", "gehen", "to go")));
+        var detached = new ReadingParagraphClozeSession(
+                session.id(),
+                session.userId(),
+                session.topic(),
+                session.clozeParagraph(),
+                session.createdAt(),
+                List.of()
+        );
+        when(repo.findByIdAndUserId("s-1", "user-1")).thenReturn(Optional.of(session));
+        when(repo.save(any())).thenReturn(detached);
+        when(vocabularyRepo.findByIds(List.of())).thenReturn(List.of());
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(List.of(
                 new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, null, 0.9, 1, 1, 0, Instant.parse("2026-01-01T00:05:00Z"), true)
         ));
@@ -107,7 +116,37 @@ class ReadingParagraphClozeServiceBehaviorTests {
         var response = service.rateCard("s-1", "user-1", "f-1", Rating.GOOD);
 
         verify(reviewVocabularyFlashcardApi).reviewVocabularyFlashcard("f-1", Rating.GOOD);
+        verify(repo).save(any());
         assertThat(response.status()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    @DisplayName("rateCard: HARD keeps card attached while delegating review")
+    void rateCardHardKeepsCardAttached() {
+        var session = new ReadingParagraphClozeSession(
+                new ReadingParagraphClozeSession.ReadingParagraphClozeSessionId("s-1"),
+                new UserId("user-1"),
+                "topic",
+                "Ich ___ .",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(new ReadingParagraphClozeCard(
+                        new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                        "f-1",
+                        "v-1",
+                        Instant.parse("2026-01-01T00:00:01Z")
+                ))
+        );
+        when(repo.findByIdAndUserId("s-1", "user-1")).thenReturn(Optional.of(session));
+        when(vocabularyRepo.findByIds(List.of("v-1"))).thenReturn(List.of(vocab("v-1", "gehen", "to go")));
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(List.of(
+                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, null, 0.9, 1, 1, 0, Instant.parse("2026-01-01T00:05:00Z"), true)
+        ));
+
+        var response = service.rateCard("s-1", "user-1", "f-1", Rating.HARD);
+
+        verify(reviewVocabularyFlashcardApi).reviewVocabularyFlashcard("f-1", Rating.HARD);
+        verify(repo, never()).save(any());
+        assertThat(response.cards()).hasSize(1);
     }
 
     @Test

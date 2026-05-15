@@ -149,9 +149,21 @@ public class ReadingParagraphClozeService {
         // Source-of-truth review path: update the actual vocabulary flashcard state (FSRS/log/event behavior)
         // exactly like existing reverse vocabulary card review flows.
         reviewVocabularyFlashcardApi.reviewVocabularyFlashcard(flashcardId, rating);
-        var updated = repo.findByIdAndUserId(sessionId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Reading paragraph cloze session not found"));
-        return toResponse(updated, userId);
+        if (rating == Rating.GOOD || rating == Rating.EASY) {
+            var remainingCards = session.cards().stream()
+                    .filter(card -> !flashcardId.equals(card.flashcardId()))
+                    .toList();
+            var updated = new ReadingParagraphClozeSession(
+                    session.id(),
+                    session.userId(),
+                    session.topic(),
+                    session.clozeParagraph(),
+                    session.createdAt(),
+                    remainingCards
+            );
+            return toResponse(repo.save(updated), userId);
+        }
+        return toResponse(session, userId);
     }
 
     private List<VocabularyClozeCandidate> buildCandidates(List<VocabularyFlashcardReviewRecord> reversedCards,
