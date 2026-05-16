@@ -12,6 +12,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_paragraph_cloze.ReadingParagraphClozeService;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeCard;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeParagraph;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.repo.ReadingParagraphClozeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
@@ -184,6 +185,63 @@ class ReadingParagraphClozeServiceBehaviorTests {
         assertThatThrownBy(() -> service.getActiveSession("user-1"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("No active reading paragraph cloze session found");
+    }
+
+    @Test
+    @DisplayName("getActiveSession: picks active paragraph from next scheduled attached card")
+    void getActiveSessionPicksParagraphByNextScheduledCard() {
+        var p1Card = new ReadingParagraphClozeCard(
+                new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-1"),
+                "p-1",
+                "f-1",
+                "v-1",
+                Instant.parse("2026-01-01T00:00:01Z")
+        );
+        var p2Card = new ReadingParagraphClozeCard(
+                new ReadingParagraphClozeCard.ReadingParagraphClozeCardId("c-2"),
+                "p-2",
+                "f-2",
+                "v-2",
+                Instant.parse("2026-01-01T00:00:01Z")
+        );
+        var session = new ReadingParagraphClozeSession(
+                new ReadingParagraphClozeSession.ReadingParagraphClozeSessionId("s-1"),
+                new UserId("user-1"),
+                "topic",
+                "fallback",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                List.of(
+                        new ReadingParagraphClozeParagraph(
+                                new ReadingParagraphClozeParagraph.ReadingParagraphClozeParagraphId("p-1"),
+                                0,
+                                "Scenario 1",
+                                "Paragraph one ___",
+                                Instant.parse("2026-01-01T00:00:01Z"),
+                                List.of(p1Card)
+                        ),
+                        new ReadingParagraphClozeParagraph(
+                                new ReadingParagraphClozeParagraph.ReadingParagraphClozeParagraphId("p-2"),
+                                1,
+                                "Scenario 2",
+                                "Paragraph two ___",
+                                Instant.parse("2026-01-01T00:00:01Z"),
+                                List.of(p2Card)
+                        )
+                ),
+                List.of(p1Card, p2Card)
+        );
+        when(repo.findLatestByUserId("user-1")).thenReturn(Optional.of(session));
+        when(vocabularyRepo.findByIds(List.of("v-2"))).thenReturn(List.of(vocab("v-2", "kennen", "to know")));
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(List.of(
+                new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, Instant.now().plusSeconds(3600), 0.4, 1, 1, 0, null, true),
+                new VocabularyFlashcardReviewRecord("f-2", "v-2", State.REVIEW, Instant.now().minusSeconds(300), 0.9, 1, 1, 0, null, true)
+        ));
+
+        var response = service.getActiveSession("user-1");
+
+        assertThat(response.topic()).isEqualTo("Scenario 2");
+        assertThat(response.clozeParagraph()).isEqualTo("Paragraph two ___");
+        assertThat(response.cards()).extracting(value -> value.flashcardId()).containsExactly("f-2");
     }
 
     private Vocabulary vocab(String id, String surface, String translation) {

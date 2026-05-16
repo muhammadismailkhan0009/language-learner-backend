@@ -310,16 +310,13 @@ public class ReadingParagraphClozeService {
     }
 
     private ReadingParagraphClozeSessionResponse toResponse(ReadingParagraphClozeSession session, String userId) {
-        int ratedCount = computeRatedCountFromSourceOfTruth(session, userId);
+        var reviewsByCardId = flashcardReviewsApi.getVocabularyFlashcardsByUser(userId).stream()
+                .collect(Collectors.toMap(VocabularyFlashcardReviewRecord::flashcardId, value -> value, (first, ignored) -> first));
+        int ratedCount = computeRatedCountFromSourceOfTruth(session, reviewsByCardId);
         int totalCount = session.totalCount();
         String status = ratedCount >= totalCount ? "COMPLETED" : "ACTIVE";
 
-        var activeParagraph = session.paragraphs() == null || session.paragraphs().isEmpty()
-                ? null
-                : session.paragraphs().stream()
-                .filter(paragraph -> paragraph.cards() != null && !paragraph.cards().isEmpty())
-                .findFirst()
-                .orElse(session.paragraphs().getFirst());
+        var activeParagraph = selectActiveParagraphByQueue(session, reviewsByCardId);
 
         var activeCards = activeParagraph == null ? session.cards() : activeParagraph.cards();
         var vocabularyIds = activeCards.stream()
@@ -358,9 +355,105 @@ public class ReadingParagraphClozeService {
         );
     }
 
+    private ReadingParagraphClozeParagraph selectActiveParagraphByQueue(
+            ReadingParagraphClozeSession session,
+            Map<String, VocabularyFlashcardReviewRecord> reviewsByCardId) {
+        if (session.paragraphs() == null || session.paragraphs().isEmpty()) {
+            return null;
+        }
+
+        var now = Instant.now();
+        var queuedParagraph = session.paragraphs().stream()
+                .filter(paragraph -> paragraph.cards() != null && !paragraph.cards().isEmpty())
+                .min(Comparator
+                        .comparing((ReadingParagraphClozeParagraph paragraph) -> bestReviewForParagraph(paragraph, reviewsByCardId, now),
+                                paragraphCardComparator(now))
+                        .thenComparingInt(ReadingParagraphClozeParagraph::paragraphIndex)
+                )
+                .orElse(null);
+        return queuedParagraph == null ? session.paragraphs().getFirst() : queuedParagraph;
+    }
+
+    private VocabularyFlashcardReviewRecord bestReviewForParagraph(
+            ReadingParagraphClozeParagraph paragraph,
+            Map<String, VocabularyFlashcardReviewRecord> reviewsByCardId,
+            Instant now) {
+        return paragraph.cards().stream()
+                .map(card -> reviewsByCardId.get(card.flashcardId()))
+                .filter(Objects::nonNull)
+                .min(paragraphCardComparator(now))
+                .orElse(null);
+    }
+
+    private Comparator<VocabularyFlashcardReviewRecord> paragraphCardComparator(Instant now) {
+        return Comparator
+                .comparing((VocabularyFlashcardReviewRecord review) -> dueBucket(review, now))
+                .thenComparing(review -> overdueDurationOrZero(review, now), Comparator.reverseOrder())
+                .thenComparing(this::retrievabilityOrMax)
+                .thenComparing(review -> timeUntilDueOrMax(review, now))
+                .thenComparing(this::lastReviewOrEpoch)
+                .thenComparingInt(this::lapsesOrMax)
+                .thenComparingInt(this::statePriority)
+                .thenComparing(review -> review == null ? "" : review.flashcardId());
+    }
+
+    private int dueBucket(VocabularyFlashcardReviewRecord review, Instant now) {
+        if (review == null || review.due() == null) {
+            return 2;
+        }
+        return review.due().isAfter(now) ? 1 : 0;
+    }
+
+    private java.time.Duration overdueDurationOrZero(VocabularyFlashcardReviewRecord review, Instant now) {
+        if (review == null || review.due() == null || review.due().isAfter(now)) {
+            return java.time.Duration.ZERO;
+        }
+        return java.time.Duration.between(review.due(), now);
+    }
+
+    private double retrievabilityOrMax(VocabularyFlashcardReviewRecord review) {
+        if (review == null || Double.isNaN(review.retrievability())) {
+            return Double.MAX_VALUE;
+        }
+        return review.retrievability();
+    }
+
+    private java.time.Duration timeUntilDueOrMax(VocabularyFlashcardReviewRecord review, Instant now) {
+        if (review == null || review.due() == null) {
+            return java.time.Duration.ofDays(36500);
+        }
+        return java.time.Duration.between(now, review.due()).abs();
+    }
+
+    private Instant lastReviewOrEpoch(VocabularyFlashcardReviewRecord review) {
+        return review == null || review.lastReview() == null ? Instant.EPOCH : review.lastReview();
+    }
+
+    private int lapsesOrMax(VocabularyFlashcardReviewRecord review) {
+        return review == null ? Integer.MAX_VALUE : review.lapses();
+    }
+
+    private int statePriority(VocabularyFlashcardReviewRecord review) {
+        if (review == null || review.fsrsState() == null) {
+            return 4;
+        }
+        return switch (review.fsrsState()) {
+            case RE_LEARNING -> 0;
+            case LEARNING -> 1;
+            case REVIEW -> 2;
+            case NEW -> 3;
+        };
+    }
+
     private int computeRatedCountFromSourceOfTruth(ReadingParagraphClozeSession session, String userId) {
         var reviewsByCardId = flashcardReviewsApi.getVocabularyFlashcardsByUser(userId).stream()
                 .collect(Collectors.toMap(VocabularyFlashcardReviewRecord::flashcardId, value -> value, (first, ignored) -> first));
+        return computeRatedCountFromSourceOfTruth(session, reviewsByCardId);
+    }
+
+    private int computeRatedCountFromSourceOfTruth(
+            ReadingParagraphClozeSession session,
+            Map<String, VocabularyFlashcardReviewRecord> reviewsByCardId) {
         int count = 0;
         for (var card : session.cards()) {
             var review = reviewsByCardId.get(card.flashcardId());
