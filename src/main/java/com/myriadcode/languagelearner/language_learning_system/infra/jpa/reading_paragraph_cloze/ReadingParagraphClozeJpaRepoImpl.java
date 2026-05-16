@@ -1,9 +1,11 @@
 package com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze;
 
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeSession;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeCard;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.repo.ReadingParagraphClozeRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.mappers.ReadingParagraphClozeJpaMapper;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.repos.ReadingParagraphClozeSessionJpaRepo;
+import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +20,11 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
     private static final ReadingParagraphClozeJpaMapper MAPPER = ReadingParagraphClozeJpaMapper.INSTANCE;
 
     private final ReadingParagraphClozeSessionJpaRepo sessionJpaRepo;
+    private final EntityManager entityManager;
 
-    public ReadingParagraphClozeJpaRepoImpl(ReadingParagraphClozeSessionJpaRepo sessionJpaRepo) {
+    public ReadingParagraphClozeJpaRepoImpl(ReadingParagraphClozeSessionJpaRepo sessionJpaRepo, EntityManager entityManager) {
         this.sessionJpaRepo = sessionJpaRepo;
+        this.entityManager = entityManager;
     }
 
     @Override
@@ -58,7 +62,12 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
                 })
                 .toList()));
 
-        return toDomain(sessionJpaRepo.save(entity));
+        var saved = sessionJpaRepo.saveAndFlush(entity);
+        sessionJpaRepo.deleteOrphanParagraphs(saved.getId());
+        sessionJpaRepo.flush();
+        entityManager.clear();
+        var reloaded = sessionJpaRepo.findById(saved.getId()).orElse(saved);
+        return toDomain(reloaded);
     }
 
     @Override
@@ -75,7 +84,20 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
 
     private ReadingParagraphClozeSession toDomain(com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.ReadingParagraphClozeSessionEntity entity) {
         var base = MAPPER.toDomain(entity);
-        var allCards = entity.getCards().stream().map(MAPPER::toCardDomain).toList();
+        var allCards = entity.getCards().stream()
+                .map(cardEntity -> {
+                    var paragraphId = cardEntity.getParagraph() != null
+                            ? cardEntity.getParagraph().getId()
+                            : cardEntity.getParagraphId();
+                    return new ReadingParagraphClozeCard(
+                            new ReadingParagraphClozeCard.ReadingParagraphClozeCardId(cardEntity.getId()),
+                            paragraphId,
+                            cardEntity.getFlashcardId(),
+                            cardEntity.getVocabularyId(),
+                            cardEntity.getCreatedAt()
+                    );
+                })
+                .toList();
         var paragraphs = entity.getParagraphs().stream()
                 .map(paragraphEntity -> {
                     var paragraphBase = MAPPER.toParagraphDomain(paragraphEntity);

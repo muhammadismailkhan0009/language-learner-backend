@@ -235,13 +235,15 @@ public class ReadingParagraphClozeService {
             Map<String, Vocabulary> vocabById) {
         if (generated.paragraphs() == null || generated.paragraphs().isEmpty()) return List.of();
 
-        var candidateBySurface = selected.stream()
+        var candidateBySurface = new HashMap<String, VocabularyClozeCandidate>();
+        selected.stream()
                 .filter(candidate -> vocabById.containsKey(candidate.vocabularyId()))
-                .collect(Collectors.toMap(
-                        candidate -> normalizeSurface(vocabById.get(candidate.vocabularyId()).surface()),
-                        candidate -> candidate,
-                        (first, ignored) -> first
-                ));
+                .forEach(candidate -> {
+                    var surface = vocabById.get(candidate.vocabularyId()).surface();
+                    for (var key : candidateSurfaceKeys(surface)) {
+                        candidateBySurface.putIfAbsent(key, candidate);
+                    }
+                });
 
         var result = new ArrayList<ParagraphMapping>();
         var queuedFlashcards = new HashSet<String>();
@@ -251,8 +253,11 @@ public class ReadingParagraphClozeService {
             var paragraphId = UUID.randomUUID().toString();
             var paragraphCards = new ArrayList<ReadingParagraphClozeCard>();
             for (var item : paragraph.items()) {
+                if (paragraphCards.size() >= MAX_CLOZE_ITEMS_PER_PARAGRAPH) break;
                 if (item == null || item.vocabSource() == null || item.vocabSource().isBlank()) continue;
-                var candidate = candidateBySurface.get(normalizeSurface(item.vocabSource()));
+                if (item.blankToken() == null || item.blankToken().isBlank()) continue;
+                if (paragraph.clozeParagraph() == null || !containsBlankToken(paragraph.clozeParagraph(), item.blankToken())) continue;
+                var candidate = resolveCandidate(item.vocabSource(), candidateBySurface);
                 if (candidate == null) continue;
                 if (!queuedFlashcards.add(candidate.flashcardId())) continue;
                 paragraphCards.add(new ReadingParagraphClozeCard(
@@ -368,6 +373,35 @@ public class ReadingParagraphClozeService {
 
     private String normalizeSurface(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private VocabularyClozeCandidate resolveCandidate(String vocabSource, Map<String, VocabularyClozeCandidate> candidateBySurface) {
+        for (var key : candidateSurfaceKeys(vocabSource)) {
+            var candidate = candidateBySurface.get(key);
+            if (candidate != null) return candidate;
+        }
+        return null;
+    }
+
+    private List<String> candidateSurfaceKeys(String surface) {
+        var normalized = normalizeSurface(surface)
+                .replaceAll("[\\p{Punct}]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (normalized.isBlank()) return List.of();
+        var keys = new LinkedHashSet<String>();
+        keys.add(normalized);
+        var withoutArticle = normalized.replaceFirst("^(der|die|das|den|dem|des|ein|eine|einer|einem|einen)\\s+", "").trim();
+        if (!withoutArticle.isBlank()) {
+            keys.add(withoutArticle);
+        }
+        return new ArrayList<>(keys);
+    }
+
+    private boolean containsBlankToken(String paragraph, String blankToken) {
+        var normalizedParagraph = paragraph.replaceAll("\\s+", " ").trim();
+        var normalizedBlank = blankToken.replaceAll("\\s+", " ").trim();
+        return normalizedParagraph.contains(normalizedBlank);
     }
 
     private com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration generateValidatedCloze(
