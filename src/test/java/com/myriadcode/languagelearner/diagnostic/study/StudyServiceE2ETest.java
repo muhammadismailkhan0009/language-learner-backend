@@ -98,7 +98,7 @@ class StudyServiceE2ETest {
         )));
 
         System.out.println("STEP 2: Create study session (reactive sentence generation path)");
-        StudySessionResponse createdSession = studyService.createSession(userId, 1);
+        StudySessionResponse createdSession = studyService.createSession(userId);
 
         assertThat(createdSession).isNotNull();
         assertThat(createdSession.sessionId()).isNotBlank();

@@ -26,8 +26,7 @@ import java.util.stream.Collectors;
 @Service
 public class StudyService {
 
-    private static final int DEFAULT_LIMIT = 20;
-    private static final int MAX_LIMIT = 100;
+    private static final int FIXED_SESSION_SIZE = 1;
 
     private final StudySessionJpaRepo sessionRepo;
     private final StudySessionItemJpaRepo itemRepo;
@@ -66,13 +65,12 @@ public class StudyService {
     }
 
     @Transactional
-    public StudySessionResponse createSession(String userId, Integer requestedLimit) {
+    public StudySessionResponse createSession(String userId) {
         var existing = sessionRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).orElse(null);
         if (existing != null && "ACTIVE".equals(existing.getStatus())) {
             return toResponse(existing, null, null);
         }
 
-        int limit = normalizeLimit(requestedLimit);
         var ranked = rankCandidates(userId);
         if (ranked.isEmpty()) {
             throw new IllegalArgumentException("No practice vocabulary found for study");
@@ -88,7 +86,7 @@ public class StudyService {
         var usedIds = usageRepo.findAllByUserId(userId).stream().map(StudyUserSentenceUsageEntity::getSentenceId).collect(Collectors.toSet());
         int rank = 0;
         for (var candidate : ranked) {
-            if (rank >= limit) break;
+            if (rank >= FIXED_SESSION_SIZE) break;
             var sentence = selectOrGenerateSentence(candidate.vocabulary(), userId, usedIds);
             if (sentence == null) continue;
             markShown(userId, sentence.getId());
@@ -322,12 +320,6 @@ public class StudyService {
             return Rating.HARD;
         }
         return Rating.AGAIN;
-    }
-
-    private int normalizeLimit(Integer requestedLimit) {
-        if (requestedLimit == null) return DEFAULT_LIMIT;
-        if (requestedLimit < 1) return 1;
-        return Math.min(requestedLimit, MAX_LIMIT);
     }
 
     private String normalize(String value) {

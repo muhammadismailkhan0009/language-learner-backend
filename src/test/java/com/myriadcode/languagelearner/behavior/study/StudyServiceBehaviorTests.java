@@ -123,7 +123,7 @@ class StudyServiceBehaviorTests {
         });
 
         System.out.println("STEP 3: Execute createSession");
-        var response = service.createSession("user-1", 10);
+        var response = service.createSession("user-1");
 
         System.out.println("STEP 4: Response sessionId = " + response.sessionId());
         System.out.println("STEP 5: Response status/rated/total = " + response.status() + "/" + response.ratedCount() + "/" + response.totalCount());

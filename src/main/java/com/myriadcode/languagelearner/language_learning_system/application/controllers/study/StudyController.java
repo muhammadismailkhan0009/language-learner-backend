@@ -21,7 +21,7 @@ public class StudyController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<StudySessionResponse>> createSession(@RequestBody CreateStudySessionRequest request) {
-        var response = studyService.createSession(request.userId(), request.limit());
+        var response = studyService.createSession(request.userId());
         return ResponseEntity.status(201).body(new ApiResponse<>(response));
     }
 
