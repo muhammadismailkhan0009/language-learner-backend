@@ -22,7 +22,9 @@ public class PracticeVocabularyController {
     public ResponseEntity<ApiResponse<ExtractPracticeVocabularyResponse>> extract(
             @RequestBody ExtractPracticeVocabularyRequest request
     ) {
-        var response = practiceVocabularyService.extractAndStore(request.userId(), request.text());
-        return ResponseEntity.ok(new ApiResponse<>(response));
+        practiceVocabularyService.enqueueExtraction(request.userId(), request.text());
+        return ResponseEntity.accepted().body(new ApiResponse<>(
+                new ExtractPracticeVocabularyResponse("Extraction request is sent")
+        ));
     }
 }

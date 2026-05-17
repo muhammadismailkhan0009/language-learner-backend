@@ -1,19 +1,21 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.practice_vocabulary;
 
+import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
-import com.myriadcode.languagelearner.language_learning_system.application.controllers.practice_vocabulary.response.ExtractPracticeVocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
 
 @Service
+@Slf4j
 public class PracticeVocabularyService {
 
     private final VocabularyRepo vocabularyRepo;
@@ -28,7 +30,24 @@ public class PracticeVocabularyService {
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
     }
 
-    public ExtractPracticeVocabularyResponse extractAndStore(String userId, String text) {
+    public void enqueueExtraction(String userId, String text) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("userId is required");
+        }
+        if (text == null || text.isBlank()) {
+            throw new IllegalArgumentException("text is required");
+        }
+
+        Vals.runIo(() -> {
+            try {
+                extractAndStore(userId, text);
+            } catch (RuntimeException ex) {
+                log.error("Practice vocabulary extraction failed for userId={}", userId, ex);
+            }
+        });
+    }
+
+    public ExtractPracticeVocabularyResult extractAndStore(String userId, String text) {
         if (userId == null || userId.isBlank()) {
             throw new IllegalArgumentException("userId is required");
         }
@@ -107,6 +126,6 @@ public class PracticeVocabularyService {
             added++;
         }
 
-        return new ExtractPracticeVocabularyResponse(added, existing, matchedWords, matchedVocabularyIds);
+        return new ExtractPracticeVocabularyResult(added, existing, matchedWords, matchedVocabularyIds);
     }
 }
