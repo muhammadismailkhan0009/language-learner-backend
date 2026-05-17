@@ -1020,7 +1020,44 @@ Validation rule
 
 Learner vocabulary (German | translation):
 %s
-""".formatted(topic, vocabList);
+  """.formatted(topic, vocabList);
+	}
+
+  public static String studyAnswerEvaluation(String sentenceWithBlank,
+                                             String expectedAnswer,
+                                             String answerTranslation,
+                                             String hint,
+                                             String userAnswer) {
+    return """
+Evaluate a learner answer for a German fill-in-the-blank exercise.
+
+Return STRICT JSON object only with this schema:
+{
+  "semanticMatch": number,
+  "formAccuracy": number,
+  "confidence": number,
+  "feedback": string
 }
+
+Rules:
+- semanticMatch: 0.0..1.0 meaning correctness vs expected answer.
+- formAccuracy: 0.0..1.0 grammatical/spelling/form correctness for expected answer.
+- confidence: 0.0..1.0 certainty.
+- feedback: max 25 words, direct, useful.
+
+Exercise:
+Sentence with blank: %s
+Expected answer: %s
+Expected translation: %s
+Hint: %s
+User answer: %s
+""".formatted(
+      sentenceWithBlank,
+      expectedAnswer,
+      answerTranslation == null ? "" : answerTranslation,
+      hint == null ? "" : hint,
+      userAnswer
+    );
+  }
 
 }

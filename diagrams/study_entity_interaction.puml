@@ -1,0 +1,55 @@
+@startuml
+title Entity Interaction - Storage & Data Flow (Reactive)
+
+entity "vocabulary_entries" as VE
+entity "practice_vocabulary_reference" as PVR
+entity "study_sentence_pool" as SSP
+entity "study_user_sentence_usage" as SUU
+entity "study_session" as SS
+entity "study_session_item" as SSI
+entity "study_answer_log" as SAL
+entity "flashcard_reviews\n(existing FSRS source)" as FR
+
+note right of PVR
+Unique: (user_id, vocabulary_id)
+Source: Step A extraction flow
+end note
+
+note right of SSP
+Universal pool (shared)
+Stores:
+- sentence_text_with_blank
+- true_answer_surface
+- normalized_true_answer
+- vocabulary_id
+Unique recommendation:
+(vocabulary_id, sentence_text_with_blank, normalized_true_answer)
+end note
+
+note right of SUU
+User-specific no-repeat tracking
+Unique: (user_id, sentence_id)
+end note
+
+VE ||--o{ PVR : vocabulary_id
+VE ||--o{ SSP : vocabulary_id
+VE ||--o{ SSI : vocabulary_id
+FR ||--o{ SSI : flashcard_id (logical/source-of-truth)
+
+SS ||--o{ SSI : session_id
+SSI ||--o{ SAL : session_item_id
+SSP ||--o{ SUU : sentence_id
+SSI }o--|| SSP : sentence_id
+
+note bottom of SSI
+One presented exercise item:
+- user + flashcard + vocabulary + sentence
+- answer feedback + applied rating
+end note
+
+note bottom of FR
+FSRS scheduling remains source-of-truth.
+Study flow writes ratings here via review API.
+end note
+
+@enduml

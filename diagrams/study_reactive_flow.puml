@@ -1,0 +1,83 @@
+@startuml
+title Study Section - Reactive Flow (Fill in the Blanks)
+
+actor User
+participant "Frontend\nStudy UI" as FE
+participant "Study Controller" as C
+participant "Study Service" as S
+participant "PracticeVocabularyReferenceRepo" as PVR
+participant "FlashcardReviewsApi\n(FSRS stats)" as FSRS
+participant "VocabularyRepo" as VR
+participant "StudySentencePoolRepo" as SPR
+participant "StudyUserSentenceUsageRepo" as USR
+participant "ReadingPracticeLlmApi\n(DeepSeek)" as LLM
+participant "ReviewVocabularyFlashcardApi" as REVIEW
+
+== Start / Next Item ==
+User -> FE : Open Study / Request next item
+FE -> C : GET /api/v1/study/next?userId
+C -> S : getNextStudyItem(userId)
+
+S -> PVR : findByUserId(userId)
+PVR --> S : practice vocab refs
+
+S -> FSRS : getVocabularyFlashcardsByUser(userId)
+FSRS --> S : flashcard stats (due/retrievability/state)
+
+S -> VR : findByIds(vocabularyIds)
+VR --> S : vocabulary rows
+
+S -> S : rank vocab by FSRS priority
+
+loop candidates (priority order)
+  S -> SPR : findByVocabularyId(vocabId)
+  SPR --> S : pooled sentences
+  S -> USR : findUsedSentenceIds(userId)
+  USR --> S : used sentence ids
+  S -> S : filter unused for user
+  alt unused sentence exists
+    S -> S : select sentence
+    break
+  else none exists
+    S -> LLM : generate 1 cloze sentence for vocab
+    LLM --> S : sentence + trueAnswer + hint
+    S -> S : validate payload
+    S -> SPR : save(sentence)
+    SPR --> S : saved sentence
+    S -> S : select saved sentence
+    break
+  end
+end
+
+S -> USR : upsert usage (times_shown +1, last_seen_at)
+S --> C : StudyItemResponse(sentence, hint, itemId, vocabId, flashcardId)
+C --> FE : 200 StudyItemResponse
+FE --> User : Show cloze sentence + input box
+
+== Submit Answer ==
+User -> FE : Submit answer
+FE -> C : POST /api/v1/study/items/{itemId}/answer
+C -> S : submitAnswer(itemId, userId, answer)
+
+S -> S : normalize(answer) vs normalizedTrueAnswer
+alt exact match
+  S -> S : feedback="Correct"
+  S -> S : rating=GOOD
+  S -> S : evaluationMode=EXACT
+else not exact
+  S -> LLM : evaluate answer (context + target + userAnswer)
+  LLM --> S : structured evaluation + confidence + feedback
+  S -> S : deterministic map -> AGAIN/HARD/GOOD
+  S -> S : evaluationMode=LLM
+end
+
+S -> REVIEW : reviewVocabularyFlashcard(flashcardId, rating)
+REVIEW --> S : updated
+
+S -> USR : update counters (correct/wrong, last_seen_at)
+S -> S : persist answer log / session item result
+S --> C : AnswerResult(feedback, rating, completed?, nextItem?)
+C --> FE : 200 AnswerResult
+FE --> User : Show feedback; move next
+
+@enduml

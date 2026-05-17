@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingParagraphs;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
+import com.myriadcode.languagelearner.language_content.application.ports.StudyAnswerEvaluation;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
@@ -124,7 +125,7 @@ public class LLMGenerator implements LLMPort {
                                                                         String readingText) {
         var prompt = PromptsGenerator.readingUsedVocabularySelection(vocabulary, readingText);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<ReadingUsedVocabularySelection>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<ReadingUsedVocabularySelection>() {
         });
     }
 
@@ -172,7 +173,25 @@ public class LLMGenerator implements LLMPort {
                                                                  List<VocabularyClozeGenerationSeed> vocabulary) {
         var prompt = PromptsGenerator.vocabularyClozeSentences(topic, vocabulary);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<VocabularyClozeBatch>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<VocabularyClozeBatch>() {
+        });
+    }
+
+    @Override
+    public StudyAnswerEvaluation evaluateStudyAnswer(String sentenceWithBlank,
+                                                     String expectedAnswer,
+                                                     String answerTranslation,
+                                                     String hint,
+                                                     String userAnswer) {
+        var prompt = PromptsGenerator.studyAnswerEvaluation(
+                sentenceWithBlank,
+                expectedAnswer,
+                answerTranslation,
+                hint,
+                userAnswer
+        );
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runFastLLM(messages, new ParameterizedTypeReference<StudyAnswerEvaluation>() {
         });
     }
 
@@ -190,13 +209,15 @@ public class LLMGenerator implements LLMPort {
         return messages;
     }
 
-    private <T> T doRunLLM(List<Message> llmPrompt, ParameterizedTypeReference<T> typeReference) {
+    private <T> T doRunLLM(List<Message> llmPrompt, ParameterizedTypeReference<T> typeReference, String model) {
 
         var outputConverter = new BeanOutputConverter<>(typeReference);
+        var jsonFormatInstruction = outputConverter.getFormat();
+        var promptWithJsonContract = appendJsonOutputContract(llmPrompt, jsonFormatInstruction);
 
         // DeepSeek Spring AI model path (no OpenAI-specific response-format dependency).
-        Prompt prompt = new Prompt(llmPrompt, DeepSeekChatOptions.builder()
-                .model(chatClient.resolveModelForCurrentUser())
+        Prompt prompt = new Prompt(promptWithJsonContract, DeepSeekChatOptions.builder()
+                .model(model)
                 .build());
 
         var response = this.chatClient.chatModel().call(prompt);
@@ -205,17 +226,59 @@ public class LLMGenerator implements LLMPort {
 
     }
 
+    private List<Message> appendJsonOutputContract(List<Message> messages, String jsonFormatInstruction) {
+        String contract = """
+
+                Return output as STRICT JSON only.
+                Do not use markdown, code fences, prose, or labels.
+                Follow this JSON contract exactly:
+                %s
+                """.formatted(jsonFormatInstruction);
+
+        boolean appended = false;
+        var rebuilt = new java.util.ArrayList<Message>(messages.size());
+        for (Message message : messages) {
+            if (!appended && message instanceof UserMessage userMessage) {
+                rebuilt.add(new UserMessage(userMessage.getText() + contract));
+                appended = true;
+                continue;
+            }
+            rebuilt.add(message);
+        }
+
+        if (!appended) {
+            rebuilt.add(new UserMessage(contract));
+        }
+
+        return List.copyOf(rebuilt);
+    }
+
     private static final int MAX_ATTEMPTS = 3;
 
     private <T> T runLLM(
             List<Message> llmPrompt,
             ParameterizedTypeReference<T> typeReference
     ) {
+        return runLLM(llmPrompt, typeReference, chatClient.resolveModelForCurrentUser());
+    }
+
+    private <T> T runFastLLM(
+            List<Message> llmPrompt,
+            ParameterizedTypeReference<T> typeReference
+    ) {
+        return runLLM(llmPrompt, typeReference, chatClient.resolveFastModel());
+    }
+
+    private <T> T runLLM(
+            List<Message> llmPrompt,
+            ParameterizedTypeReference<T> typeReference,
+            String model
+    ) {
         RuntimeException lastException = null;
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                return doRunLLM(llmPrompt, typeReference);
+                return doRunLLM(llmPrompt, typeReference, model);
             } catch (RuntimeException ex) {
                 lastException = ex;
 

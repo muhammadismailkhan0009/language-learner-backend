@@ -7,7 +7,9 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.vocabulary.VocabularyApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.UniversalVocabularyPoolEntry;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.UniversalVocabularyPoolRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
 import com.myriadcode.fsrs.api.enums.State;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,22 +39,60 @@ public class VocabularyOrchestrationService {
     private final VocabularyRepo vocabularyRepo;
     private final VocabularyFlashCardPublisher vocabularyFlashCardPublisher;
     private final FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi;
+    private final UniversalVocabularyPoolRepo universalVocabularyPoolRepo;
     private final Clock clock;
+
+    public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
+                                          VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
+                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi) {
+        this(vocabularyRepo, vocabularyFlashCardPublisher, vocabularyFlashcardReviewsApi, new UniversalVocabularyPoolRepo() {
+            @Override
+            public java.util.Optional<UniversalVocabularyPoolEntry> findByNormalizedSurfaceAndEntryKind(String normalizedSurface, Vocabulary.EntryKind entryKind) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public UniversalVocabularyPoolEntry save(UniversalVocabularyPoolEntry entry) {
+                return entry;
+            }
+        }, Clock.systemUTC());
+    }
 
     @Autowired
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
                                           VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
-                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi) {
-        this(vocabularyRepo, vocabularyFlashCardPublisher, vocabularyFlashcardReviewsApi, Clock.systemUTC());
+                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                          UniversalVocabularyPoolRepo universalVocabularyPoolRepo) {
+        this(vocabularyRepo, vocabularyFlashCardPublisher, vocabularyFlashcardReviewsApi, universalVocabularyPoolRepo, Clock.systemUTC());
+    }
+
+    // Backward-compatible constructor for tests that pass explicit clock.
+    public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
+                                          VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
+                                          FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                          Clock clock) {
+        this(vocabularyRepo, vocabularyFlashCardPublisher, vocabularyFlashcardReviewsApi, new UniversalVocabularyPoolRepo() {
+            @Override
+            public java.util.Optional<UniversalVocabularyPoolEntry> findByNormalizedSurfaceAndEntryKind(String normalizedSurface, Vocabulary.EntryKind entryKind) {
+                return java.util.Optional.empty();
+            }
+
+            @Override
+            public UniversalVocabularyPoolEntry save(UniversalVocabularyPoolEntry entry) {
+                return entry;
+            }
+        }, clock);
     }
 
     public VocabularyOrchestrationService(VocabularyRepo vocabularyRepo,
                                           VocabularyFlashCardPublisher vocabularyFlashCardPublisher,
                                           FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                          UniversalVocabularyPoolRepo universalVocabularyPoolRepo,
                                           Clock clock) {
         this.vocabularyRepo = vocabularyRepo;
         this.vocabularyFlashCardPublisher = vocabularyFlashCardPublisher;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
+        this.universalVocabularyPoolRepo = universalVocabularyPoolRepo;
         this.clock = clock;
     }
 
@@ -62,6 +103,17 @@ public class VocabularyOrchestrationService {
                 new VocabularyFlashCardPublisher(domainEvent -> {
                 }),
                 userId -> List.of(),
+                new UniversalVocabularyPoolRepo() {
+                    @Override
+                    public java.util.Optional<UniversalVocabularyPoolEntry> findByNormalizedSurfaceAndEntryKind(String normalizedSurface, Vocabulary.EntryKind entryKind) {
+                        return java.util.Optional.empty();
+                    }
+
+                    @Override
+                    public UniversalVocabularyPoolEntry save(UniversalVocabularyPoolEntry entry) {
+                        return entry;
+                    }
+                },
                 Clock.systemUTC()
         );
     }
@@ -86,6 +138,7 @@ public class VocabularyOrchestrationService {
                 VOCABULARY_API_MAPPER.toCreateSentences(request.exampleSentences())
         );
         var saved = vocabularyRepo.save(toSave);
+        upsertUniversalVocabulary(saved);
         vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
     }
@@ -102,8 +155,45 @@ public class VocabularyOrchestrationService {
                 VOCABULARY_API_MAPPER.toUpdateSentences(request.exampleSentences())
         );
         var saved = vocabularyRepo.save(toSave);
+        upsertUniversalVocabulary(saved);
         vocabularyFlashCardPublisher.createPrivateVocabularyCards(saved);
         return VOCABULARY_API_MAPPER.toResponse(saved);
+    }
+
+    private void upsertUniversalVocabulary(Vocabulary vocabulary) {
+        if (vocabulary == null || vocabulary.surface() == null || vocabulary.surface().isBlank() || vocabulary.entryKind() == null) {
+            return;
+        }
+        var normalized = normalizeSurface(vocabulary.surface());
+        if (normalized.isBlank()) {
+            return;
+        }
+        var now = Instant.now();
+        var existing = universalVocabularyPoolRepo.findByNormalizedSurfaceAndEntryKind(normalized, vocabulary.entryKind());
+        if (existing.isPresent()) {
+            var current = existing.get();
+            universalVocabularyPoolRepo.save(new UniversalVocabularyPoolEntry(
+                    current.id(),
+                    current.normalizedSurface(),
+                    vocabulary.surface().trim(),
+                    current.entryKind(),
+                    current.createdAt(),
+                    now
+            ));
+            return;
+        }
+        universalVocabularyPoolRepo.save(new UniversalVocabularyPoolEntry(
+                new UniversalVocabularyPoolEntry.UniversalVocabularyPoolEntryId(UUID.randomUUID().toString()),
+                normalized,
+                vocabulary.surface().trim(),
+                vocabulary.entryKind(),
+                now,
+                now
+        ));
+    }
+
+    private String normalizeSurface(String surface) {
+        return surface == null ? "" : surface.trim().replaceAll("\\s+", " ").toLowerCase(java.util.Locale.ROOT);
     }
 
     public List<VocabularyResponse> fetchVocabularies(String userId) {

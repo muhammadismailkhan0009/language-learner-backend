@@ -32,4 +32,8 @@ public class LLMConfig {
         log.info("Resolved LLM model '{}' for email '{}'", selectedModel, userEmail);
         return selectedModel;
     }
+
+    public String resolveFastModel() {
+        return envVariableSupplierUtil.getLLMFastModel();
+    }
 }

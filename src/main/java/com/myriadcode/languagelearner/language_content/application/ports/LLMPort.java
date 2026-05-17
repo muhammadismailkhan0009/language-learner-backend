@@ -57,4 +57,10 @@ public interface LLMPort {
     VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
                                                           List<VocabularyClozeGenerationSeed> vocabulary);
 
+    StudyAnswerEvaluation evaluateStudyAnswer(String sentenceWithBlank,
+                                              String expectedAnswer,
+                                              String answerTranslation,
+                                              String hint,
+                                              String userAnswer);
+
 }

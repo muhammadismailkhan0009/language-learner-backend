@@ -19,4 +19,11 @@ public class EnvVariableSupplierUtil {
     public String getLLMDemoModel() {
         return demoModel;
     }
+
+    @Value("${llm.model-fast:deepseek-v4-flash}")
+    private String fastModel;
+
+    public String getLLMFastModel() {
+        return fastModel;
+    }
 }

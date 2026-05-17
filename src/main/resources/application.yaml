@@ -13,7 +13,7 @@ spring:
   ai:
     deepseek:
       base-url: https://api.deepseek.com
-      api-key: ${DEEPSEEK_API_KEY:}
+      api-key: ${api-keys:}
       chat:
         options:
           model: deepseek-v4-pro
@@ -28,3 +28,7 @@ spring:
 
 llm:
   model-demo: deepseek-v4-pro
+  model-fast: deepseek-v4-flash
+
+api-keys: >-
+  ${DEEPSEEK_API_KEY:}
