@@ -313,10 +313,12 @@ public class StudyService {
     }
 
     private Rating mapRating(double semantic, double form, double confidence) {
-        if (semantic >= 0.9 && form >= 0.85 && confidence >= 0.4) {
+        if (semantic >= 0.9 && form >= 0.8 && confidence >= 0.35) {
             return Rating.GOOD;
         }
-        if (semantic >= 0.55) {
+        // Meaning-correct answers with form-only mistakes (articles, capitalization, inflection, minor spelling)
+        // should stay in HARD, not AGAIN.
+        if (semantic >= 0.45) {
             return Rating.HARD;
         }
         return Rating.AGAIN;

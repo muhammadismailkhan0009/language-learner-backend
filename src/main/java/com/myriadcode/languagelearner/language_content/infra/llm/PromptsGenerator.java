@@ -1045,6 +1045,16 @@ Rules:
 - confidence: 0.0..1.0 certainty.
 - feedback: max 25 words, direct, useful.
 
+Scoring guidance:
+- Prioritize meaning first.
+- If meaning is correct but there are form-only mistakes (article, capitalization, inflection, minor spelling),
+  keep semanticMatch high and lower formAccuracy.
+- Use low semanticMatch only when meaning/lexeme is wrong.
+- Do not treat capitalization-only mistakes as semantic errors.
+- Typical targets:
+  - correct meaning + small form error: semanticMatch >= 0.70, formAccuracy in 0.45..0.80
+  - wrong meaning/word: semanticMatch < 0.45
+
 Exercise:
 Sentence with blank: %s
 Expected answer: %s
