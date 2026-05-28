@@ -88,11 +88,15 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     public WritingPracticeSession updateSubmission(String sessionId,
                                                    String userId,
                                                    String submittedAnswer,
-                                                   Instant submittedAt) {
+                                                   Instant submittedAt,
+                                                   String feedbackText,
+                                                   Instant feedbackGeneratedAt) {
         var entity = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
         entity.setSubmittedAnswer(submittedAnswer);
         entity.setSubmittedAt(submittedAt);
+        entity.setFeedbackText(feedbackText);
+        entity.setFeedbackGeneratedAt(feedbackGeneratedAt);
         return toDomain(writingPracticeSessionJpaRepo.save(entity));
     }
 
@@ -136,6 +140,8 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                 base.createdAt(),
                 base.submittedAnswer(),
                 base.submittedAt(),
+                base.feedbackText(),
+                base.feedbackGeneratedAt(),
                 sentencePairs,
                 usages
         );
@@ -155,6 +161,8 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                 base.createdAt(),
                 base.submittedAnswer(),
                 base.submittedAt(),
+                base.feedbackText(),
+                base.feedbackGeneratedAt(),
                 List.of(),
                 usages
         );

@@ -54,6 +54,10 @@ public interface LLMPort {
     WritingSentencePairSplit splitWritingContentIntoSentencePairs(String englishParagraph,
                                                                   String germanParagraph);
 
+    WritingSubmissionFeedback generateWritingSubmissionFeedback(String englishParagraph,
+                                                               String referenceGermanParagraph,
+                                                               String submittedGermanParagraph);
+
     VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
                                                           List<VocabularyClozeGenerationSeed> vocabulary);
 

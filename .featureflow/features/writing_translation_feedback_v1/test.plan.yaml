@@ -1,0 +1,39 @@
+feature_id: writing_translation_feedback_v1
+status: active
+
+phases:
+  - name: direct_behavior_tests
+    tests:
+      - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeServiceOrchestratorTests.java
+      - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingSubmissionFeedbackAdapterBehaviorTests.java
+    covered_requirements:
+      - REQ-WRITE-001
+      - REQ-WRITE-002
+      - REQ-WRITE-003
+
+  - name: boundary_contract_tests
+    tests:
+      - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeControllerBehaviorTests.java
+      - src/test/java/com/myriadcode/languagelearner/language_learning_system/infra/jpa/writing_practice/WritingPracticeJpaRepoBoundaryTests.java
+      - src/test/java/com/myriadcode/languagelearner/language_learning_system/application/mappers/writing_practice/WritingPracticeApiMapperTests.java
+      - src/test/java/com/myriadcode/languagelearner/language_learning_system/infra/jpa/writing_practice/mappers/WritingPracticeJpaMapperTests.java
+    covered_requirements:
+      - REQ-WRITE-004
+      - REQ-WRITE-005
+
+  - name: integration_or_composition_tests
+    tests:
+      - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeSessionFlowTests.java
+    covered_requirements:
+      - REQ-WRITE-001
+      - REQ-WRITE-003
+      - REQ-WRITE-004
+
+mock_review:
+  decisions:
+    - test: WritingPracticeServiceOrchestratorTests
+      why_mock_allowed: external adapters only (flashcard api, vocabulary api, llm api, repo boundary)
+      excluded_behavior: persistence semantics and transport contract semantics
+      lower_level_coverage_reference:
+        - WritingPracticeJpaRepoBoundaryTests
+        - WritingPracticeControllerBehaviorTests

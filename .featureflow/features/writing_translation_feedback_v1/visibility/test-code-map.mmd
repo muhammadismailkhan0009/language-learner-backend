@@ -1,0 +1,10 @@
+flowchart LR
+    T1[WritingPracticeServiceOrchestratorTests] --> C1[WritingPracticeService.java]
+    T2[WritingPracticeSessionFlowTests] --> C1
+    T2 --> C2[WritingPracticeJpaRepoImpl.java]
+    T3[WritingPracticeControllerBehaviorTests] --> C3[WritingPracticeController.java]
+    T4[WritingPracticeApiMapperTests] --> C4[WritingPracticeApiMapper.java]
+    T5[WritingPracticeJpaRepoBoundaryTests] --> C2
+    T5 --> C5[WritingPracticeSessionEntity.java]
+    T6[WritingPracticeJpaMapperTests] --> C6[WritingPracticeJpaMapper.java]
+    T7[WritingSubmissionFeedbackAdapterBehaviorTests] --> C7[WritingSubmissionFeedbackLlmAdapter.java]

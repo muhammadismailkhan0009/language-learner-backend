@@ -1,0 +1,11 @@
+flowchart LR
+    R1[REQ-WRITE-001] --> T1[WritingPracticeServiceOrchestratorTests]
+    R1 --> T2[WritingPracticeSessionFlowTests]
+    R2[REQ-WRITE-002] --> T1
+    R3[REQ-WRITE-003] --> T1
+    R3 --> T2
+    R3 --> T6[WritingSubmissionFeedbackAdapterBehaviorTests]
+    R4[REQ-WRITE-004] --> T3[WritingPracticeControllerBehaviorTests]
+    R4 --> T4[WritingPracticeApiMapperTests]
+    R4 --> T2
+    R5[REQ-WRITE-005] --> T5[WritingPracticeJpaRepoBoundaryTests]

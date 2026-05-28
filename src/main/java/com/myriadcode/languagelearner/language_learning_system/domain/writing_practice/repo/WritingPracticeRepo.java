@@ -15,7 +15,12 @@ public interface WritingPracticeRepo {
 
     List<String> findRecentTopicsByUserId(String userId, int limit);
 
-    WritingPracticeSession updateSubmission(String sessionId, String userId, String submittedAnswer, java.time.Instant submittedAt);
+    WritingPracticeSession updateSubmission(String sessionId,
+                                            String userId,
+                                            String submittedAnswer,
+                                            java.time.Instant submittedAt,
+                                            String feedbackText,
+                                            java.time.Instant feedbackGeneratedAt);
 
     void deleteByIdAndUserId(String sessionId, String userId);
 

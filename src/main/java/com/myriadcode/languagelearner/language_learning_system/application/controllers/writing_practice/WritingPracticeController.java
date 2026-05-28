@@ -37,34 +37,34 @@ public class WritingPracticeController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<WritingPracticeSessionSummaryResponse>>> listSessions(@RequestParam String userId) {
+    public ResponseEntity<ApiResponse<List<WritingPracticeSessionSummaryResponse>>> listSessions(@RequestParam("userId") String userId) {
         return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.listSessions(userId)));
     }
 
     @GetMapping("{sessionId}")
-    public ResponseEntity<ApiResponse<WritingPracticeSessionResponse>> getSession(@PathVariable String sessionId,
-                                                                                  @RequestParam String userId) {
+    public ResponseEntity<ApiResponse<WritingPracticeSessionResponse>> getSession(@PathVariable("sessionId") String sessionId,
+                                                                                  @RequestParam("userId") String userId) {
         return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.getSession(userId, sessionId)));
     }
 
     @PostMapping("{sessionId}/submission")
-    public ResponseEntity<Void> submitAnswer(@PathVariable String sessionId,
+    public ResponseEntity<Void> submitAnswer(@PathVariable("sessionId") String sessionId,
                                              @RequestBody SubmitWritingPracticeAnswerRequest request) {
         writingPracticeService.submitAnswer(request.userId(), sessionId, request.submittedAnswer());
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("{sessionId}")
-    public ResponseEntity<Void> deleteSession(@PathVariable String sessionId,
-                                              @RequestParam String userId) {
+    public ResponseEntity<Void> deleteSession(@PathVariable("sessionId") String sessionId,
+                                              @RequestParam("userId") String userId) {
         writingPracticeService.deleteSession(userId, sessionId);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("{sessionId}/flashcards/{flashcardId}")
-    public ResponseEntity<Void> detachFlashcard(@PathVariable String sessionId,
-                                                @PathVariable String flashcardId,
-                                                @RequestParam String userId) {
+    public ResponseEntity<Void> detachFlashcard(@PathVariable("sessionId") String sessionId,
+                                                @PathVariable("flashcardId") String flashcardId,
+                                                @RequestParam("userId") String userId) {
         writingPracticeService.detachFlashcard(userId, sessionId, flashcardId);
         return ResponseEntity.noContent().build();
     }

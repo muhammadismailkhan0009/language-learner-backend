@@ -40,6 +40,12 @@ public class WritingPracticeSessionEntity {
     @Column(name = "submitted_at")
     private Instant submittedAt;
 
+    @Column(name = "feedback_text", columnDefinition = "text")
+    private String feedbackText;
+
+    @Column(name = "feedback_generated_at")
+    private Instant feedbackGeneratedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -74,6 +80,10 @@ public class WritingPracticeSessionEntity {
     public void setSubmittedAnswer(String submittedAnswer) { this.submittedAnswer = submittedAnswer; }
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
+    public String getFeedbackText() { return feedbackText; }
+    public void setFeedbackText(String feedbackText) { this.feedbackText = feedbackText; }
+    public Instant getFeedbackGeneratedAt() { return feedbackGeneratedAt; }
+    public void setFeedbackGeneratedAt(Instant feedbackGeneratedAt) { this.feedbackGeneratedAt = feedbackGeneratedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
     public Set<WritingPracticeSentencePairEntity> getSentencePairs() { return sentencePairs; }

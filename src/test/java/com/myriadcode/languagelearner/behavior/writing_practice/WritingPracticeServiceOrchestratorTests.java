@@ -4,11 +4,15 @@ import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
+import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
@@ -27,6 +31,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class WritingPracticeServiceOrchestratorTests {
@@ -35,6 +40,8 @@ class WritingPracticeServiceOrchestratorTests {
     private FetchVocabularyFlashcardReviewsApi flashcardReviewsApi;
     private FetchPrivateVocabularyApi privateVocabularyApi;
     private WritingPracticeLlmApi writingPracticeLlmApi;
+    private PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
+    private WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
 
     private WritingPracticeService service;
 
@@ -44,12 +51,16 @@ class WritingPracticeServiceOrchestratorTests {
         flashcardReviewsApi = mock(FetchVocabularyFlashcardReviewsApi.class);
         privateVocabularyApi = mock(FetchPrivateVocabularyApi.class);
         writingPracticeLlmApi = mock(WritingPracticeLlmApi.class);
+        practiceVocabularyReferenceRepo = mock(PracticeVocabularyReferenceRepo.class);
+        writingSubmissionFeedbackLlmApi = mock(WritingSubmissionFeedbackLlmApi.class);
 
         service = new WritingPracticeService(
                 writingPracticeRepo,
                 flashcardReviewsApi,
                 privateVocabularyApi,
-                writingPracticeLlmApi
+                writingPracticeLlmApi,
+                practiceVocabularyReferenceRepo,
+                writingSubmissionFeedbackLlmApi
         );
     }
 
@@ -76,6 +87,11 @@ class WritingPracticeServiceOrchestratorTests {
         );
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(onlyReversed);
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1"))
+                .thenReturn(List.of(
+                        practiceRef("ref-1", "user-1", "v-1"),
+                        practiceRef("ref-2", "user-1", "v-2")
+                ));
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1", "v-2"), "user-1"))
                 .thenReturn(List.of(vocab("v-1"), vocab("v-2")));
 
@@ -88,9 +104,42 @@ class WritingPracticeServiceOrchestratorTests {
     }
 
     @Test
+    @DisplayName("createSession: fails when user has no practice vocabulary references")
+    void createSessionFailsWhenNoPracticeReferences() {
+        var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.createSession("user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("No practice vocabulary references found for user");
+
+        verify(privateVocabularyApi, never()).getVocabularyRecords(any(), any());
+        verify(writingPracticeRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("createSession: fails when practice references exist but none map to user flashcards")
+    void createSessionFailsWhenPracticeReferencesDoNotMatchFlashcards() {
+        var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1"))
+                .thenReturn(List.of(practiceRef("ref-9", "user-1", "v-9")));
+
+        assertThatThrownBy(() -> service.createSession("user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("No flashcards found for practice vocabulary references");
+
+        verify(privateVocabularyApi, never()).getVocabularyRecords(any(), any());
+        verify(writingPracticeRepo, never()).save(any());
+    }
+
+    @Test
     @DisplayName("createSession: falls back to general topic when LLM returns no topic")
     void createSessionUsesGeneralTopicFallback() {
         var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1"))
+                .thenReturn(List.of(practiceRef("ref-1", "user-1", "v-1")));
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
@@ -116,6 +165,8 @@ class WritingPracticeServiceOrchestratorTests {
     @DisplayName("createSession: does not save when generated writing content is empty")
     void createSessionDoesNotSaveWhenGeneratedWritingContentIsEmpty() {
         var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1"))
+                .thenReturn(List.of(practiceRef("ref-1", "user-1", "v-1")));
 
         when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
@@ -146,6 +197,8 @@ class WritingPracticeServiceOrchestratorTests {
                 "Deutscher Absatz.",
                 Instant.parse("2026-01-01T00:00:00Z"),
                 "My answer",
+                Instant.parse("2026-01-01T01:00:00Z"),
+                "Feedback",
                 Instant.parse("2026-01-01T01:00:00Z"),
                 List.of(),
                 List.of(usage1, usage2)
@@ -200,9 +253,34 @@ class WritingPracticeServiceOrchestratorTests {
     @Test
     @DisplayName("submitAnswer: trims input and forwards submission update to repo")
     void submitAnswerForwardsTrimmedValue() {
+        var session = new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId("session-1"),
+                new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
+                "Topic",
+                "English paragraph.",
+                "German paragraph.",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of()
+        );
+        when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
+        when(writingSubmissionFeedbackLlmApi.generateFeedback("English paragraph.", "German paragraph.", "My answer"))
+                .thenReturn("Feedback");
+
         service.submitAnswer("user-1", "session-1", "  My answer  ");
 
-        verify(writingPracticeRepo).updateSubmission(eq("session-1"), eq("user-1"), eq("My answer"), any());
+        verify(writingPracticeRepo).updateSubmission(
+                eq("session-1"),
+                eq("user-1"),
+                eq("My answer"),
+                any(),
+                eq("Feedback"),
+                any()
+        );
     }
 
     @Test
@@ -212,7 +290,63 @@ class WritingPracticeServiceOrchestratorTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Submitted answer must not be blank");
 
-        verify(writingPracticeRepo, never()).updateSubmission(any(), any(), any(), any());
+        verify(writingPracticeRepo, never()).updateSubmission(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("createSession: rejects blank user id")
+    void createSessionRejectsBlankUserId() {
+        assertThatThrownBy(() -> service.createSession("   "))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId is required");
+
+        verifyNoInteractions(flashcardReviewsApi);
+        verifyNoInteractions(practiceVocabularyReferenceRepo);
+    }
+
+    @Test
+    @DisplayName("submitAnswer: rejects blank user id")
+    void submitAnswerRejectsBlankUserId() {
+        assertThatThrownBy(() -> service.submitAnswer(" ", "session-1", "answer"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("userId is required");
+
+        verify(writingPracticeRepo, never()).findByIdAndUserId(any(), any());
+    }
+
+    @Test
+    @DisplayName("createSession: handles null used-vocabulary list without failing")
+    void createSessionHandlesNullUsedVocabularyList() {
+        var reviews = List.of(new VocabularyFlashcardReviewRecord("f-1", "v-1", State.REVIEW, true));
+        when(practiceVocabularyReferenceRepo.findByUserId("user-1"))
+                .thenReturn(List.of(practiceRef("ref-1", "user-1", "v-1")));
+
+        when(flashcardReviewsApi.getVocabularyFlashcardsByUser("user-1")).thenReturn(reviews);
+        when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
+                .thenReturn(List.of(vocab("v-1")));
+        when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
+        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq("B1"))).thenReturn("topic");
+        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq("B1")))
+                .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
+        when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
+                .thenReturn(null);
+        when(writingPracticeLlmApi.splitIntoSentencePairs("English paragraph.", "Deutscher Absatz."))
+                .thenReturn(List.of(new WritingPracticeSentencePairSeed("English paragraph.", "Deutscher Absatz.")));
+
+        service.createSession("user-1");
+
+        verify(writingPracticeRepo).save(any(WritingPracticeSession.class));
+    }
+
+    private PracticeVocabularyReference practiceRef(String id, String userId, String vocabularyId) {
+        return new PracticeVocabularyReference(
+                new PracticeVocabularyReference.PracticeVocabularyReferenceId(id),
+                new com.myriadcode.languagelearner.common.ids.UserId(userId),
+                new Vocabulary.VocabularyId(vocabularyId),
+                1,
+                Instant.parse("2026-01-01T00:00:00Z"),
+                Instant.parse("2026-01-01T00:00:00Z")
+        );
     }
 
     private PrivateVocabularyRecord vocab(String id) {

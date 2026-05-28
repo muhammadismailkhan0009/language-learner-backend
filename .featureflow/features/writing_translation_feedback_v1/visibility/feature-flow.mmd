@@ -1,0 +1,9 @@
+flowchart TD
+    A[user_id + flashcard reviews] --> B[filter by practice_vocabulary_reference]
+    B --> C[selection policy review/learning/relearning]
+    C --> D[LLM topic + bilingual paragraph generation]
+    D --> E[identify used vocabulary]
+    E --> F[persist writing session]
+    G[user submits german paragraph] --> H[LLM feedback generation]
+    H --> I[persist submission + feedback fields]
+    I --> J[get session response includes feedback]

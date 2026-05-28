@@ -1,0 +1,34 @@
+feature_id: writing_translation_feedback_v1
+last_updated: '2026-05-28'
+
+requirement_to_tests:
+  REQ-WRITE-001:
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeServiceOrchestratorTests.java
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeSessionFlowTests.java
+  REQ-WRITE-002:
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeServiceOrchestratorTests.java
+  REQ-WRITE-003:
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeServiceOrchestratorTests.java
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeSessionFlowTests.java
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingSubmissionFeedbackAdapterBehaviorTests.java
+  REQ-WRITE-004:
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeControllerBehaviorTests.java
+    - src/test/java/com/myriadcode/languagelearner/language_learning_system/application/mappers/writing_practice/WritingPracticeApiMapperTests.java
+    - src/test/java/com/myriadcode/languagelearner/behavior/writing_practice/WritingPracticeSessionFlowTests.java
+  REQ-WRITE-005:
+    - src/test/java/com/myriadcode/languagelearner/language_learning_system/infra/jpa/writing_practice/WritingPracticeJpaRepoBoundaryTests.java
+
+step_to_code:
+  select_practice_vocab_pool:
+    - src/main/java/com/myriadcode/languagelearner/language_learning_system/application/services/writing_practice/WritingPracticeService.java
+  generate_bilingual_prompt:
+    - src/main/java/com/myriadcode/languagelearner/language_learning_system/application/services/writing_practice/WritingPracticeService.java
+    - src/main/java/com/myriadcode/languagelearner/language_content/application/services/writing_practice/WritingPracticeLlmAdapter.java
+  evaluate_submission_feedback:
+    - src/main/java/com/myriadcode/languagelearner/language_content/application/services/writing_practice/WritingSubmissionFeedbackLlmAdapter.java
+    - src/main/java/com/myriadcode/languagelearner/language_content/infra/llm/adapters/LLMGenerator.java
+    - src/main/java/com/myriadcode/languagelearner/language_content/infra/llm/PromptsGenerator.java
+  persist_submission_and_feedback:
+    - src/main/java/com/myriadcode/languagelearner/language_learning_system/infra/jpa/writing_practice/WritingPracticeJpaRepoImpl.java
+    - src/main/java/com/myriadcode/languagelearner/language_learning_system/infra/jpa/writing_practice/entities/WritingPracticeSessionEntity.java
+    - src/main/resources/db/migration/V13__writing_practice_feedback.sql

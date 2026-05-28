@@ -10,6 +10,8 @@ public record WritingPracticeSessionResponse(
         String germanParagraph,
         String submittedAnswer,
         Instant submittedAt,
+        String feedbackText,
+        Instant feedbackGeneratedAt,
         List<WritingSentencePairResponse> sentencePairs,
         List<WritingVocabularyFlashCardView> vocabFlashcards,
         Instant createdAt

@@ -1,0 +1,150 @@
+feature:
+  id: writing_translation_feedback_v1
+  name: Writing Translation Practice Uses Practice-Vocab Pool And Stores LLM Feedback
+  status: active
+
+goal:
+  summary: >
+    Generate writing translation sessions from practice-vocabulary references,
+    evaluate submitted German translation with one consolidated LLM feedback response,
+    and persist feedback for later session retrieval.
+
+inputs:
+  - user_id
+  - writing_session_id
+  - submitted_german_paragraph
+
+outputs:
+  - writing_session_with_feedback
+  - persisted_feedback_text
+  - persisted_feedback_generated_at
+
+flow:
+  - id: select_practice_vocab_pool
+    behavior: Restrict writing candidate pool to flashcards whose vocabulary appears in practice_vocabulary_reference.
+    input:
+      - user_id
+      - flashcard_reviews
+      - practice_vocabulary_references
+    output:
+      - filtered_flashcard_reviews
+    must:
+      - only_practice_vocab_items_used
+      - error_when_no_practice_references
+      - error_when_no_flashcards_after_filter
+    test_strategy:
+      primary: direct_behavior
+      isolation: boundary_isolated
+      mock_policy: external_only
+
+  - id: generate_bilingual_prompt
+    behavior: Generate topic and bilingual content from selected vocabulary candidates.
+    input:
+      - filtered_flashcard_reviews
+      - private_vocabulary_records
+      - previous_topics
+    output:
+      - topic
+      - english_paragraph
+      - german_reference_paragraph
+      - sentence_pairs
+      - used_vocabulary_surfaces
+    must:
+      - preserve_existing_selection_policy
+      - reject_empty_generated_content
+      - attach_only_used_selected_vocabulary
+    test_strategy:
+      primary: integration
+      isolation: composed_runtime
+      mock_policy: external_only
+
+  - id: evaluate_submission_feedback
+    behavior: Generate one consolidated feedback text for submitted answer.
+    input:
+      - english_paragraph
+      - german_reference_paragraph
+      - submitted_german_paragraph
+    output:
+      - feedback_text
+    must:
+      - include_major_grammar_and_meaning_issues
+      - return_single_feedback_payload
+      - provide_safe_fallback_feedback_when_llm_empty
+    test_strategy:
+      primary: direct_behavior
+      isolation: boundary_isolated
+      mock_policy: external_only
+
+  - id: persist_submission_and_feedback
+    behavior: Persist submitted answer, submitted_at, feedback_text, and feedback_generated_at into writing session.
+    input:
+      - writing_session_id
+      - user_id
+      - submitted_german_paragraph
+      - feedback_text
+    output:
+      - updated_writing_session
+    must:
+      - feedback_fields_persisted
+      - feedback_fields_returned_from_get_session
+      - api_contract_includes_feedback_fields
+    test_strategy:
+      primary: boundary_contract
+      isolation: composed_runtime
+      mock_policy: no_mocks
+
+requirements:
+  - id: REQ-WRITE-001
+    behavior_step: select_practice_vocab_pool
+    guarantee: Writing session candidate pool must be subset of practice_vocabulary_reference vocabulary IDs.
+    risk: high
+  - id: REQ-WRITE-002
+    behavior_step: select_practice_vocab_pool
+    guarantee: Service must fail with explicit error when no practice references exist for user.
+    risk: medium
+  - id: REQ-WRITE-003
+    behavior_step: evaluate_submission_feedback
+    guarantee: Submit answer path must invoke feedback generation and persist non-null feedback text.
+    risk: high
+  - id: REQ-WRITE-004
+    behavior_step: persist_submission_and_feedback
+    guarantee: Writing session response contract must expose feedbackText and feedbackGeneratedAt.
+    risk: high
+  - id: REQ-WRITE-005
+    behavior_step: persist_submission_and_feedback
+    guarantee: Database schema must include writing_practice_session feedback columns and preserve prior fields.
+    risk: high
+
+test_strategy:
+  phases:
+    - direct_behavior_tests
+    - boundary_contract_tests
+    - integration_or_composition_tests
+    - system_tests_for_critical_journeys_only
+    - llm_or_quality_evals_when_needed
+
+mock_policy:
+  default: do_not_mock_business_behavior
+  allowed_when:
+    - dependency_is_external_or_nondeterministic
+    - dependency_behavior_is_already_directly_tested
+    - test_does_not_claim_to_verify_mocked_behavior
+  forbidden_when:
+    - dependency_contains_business_rule_under_test
+    - dependency_contains_persistence_semantics_under_test
+    - dependency_contains_contract_semantics_under_test
+    - mock_is_used_only_for_convenience
+
+visibility:
+  required_views:
+    - feature_flow
+    - requirement_to_test_map
+    - test_to_code_map
+    - affected_test_map
+  canonical_source:
+    - feature.contract.yaml
+    - test.plan.yaml
+    - traceability.report.yaml
+    - visibility/feature-flow.mmd
+    - visibility/requirement-test-map.mmd
+    - visibility/test-code-map.mmd

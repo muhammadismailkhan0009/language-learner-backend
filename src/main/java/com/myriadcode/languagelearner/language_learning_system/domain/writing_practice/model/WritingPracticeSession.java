@@ -14,6 +14,8 @@ public record WritingPracticeSession(
         Instant createdAt,
         String submittedAnswer,
         Instant submittedAt,
+        String feedbackText,
+        Instant feedbackGeneratedAt,
         List<WritingSentencePair> sentencePairs,
         List<WritingVocabularyUsage> vocabularyUsages
 ) {

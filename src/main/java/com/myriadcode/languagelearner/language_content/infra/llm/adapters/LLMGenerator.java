@@ -16,6 +16,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Writing
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
+import com.myriadcode.languagelearner.language_content.application.ports.WritingSubmissionFeedback;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -165,6 +166,20 @@ public class LLMGenerator implements LLMPort {
         var prompt = PromptsGenerator.writingSentencePairSplit(englishParagraph, germanParagraph);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingSentencePairSplit>() {
+        });
+    }
+
+    @Override
+    public WritingSubmissionFeedback generateWritingSubmissionFeedback(String englishParagraph,
+                                                                      String referenceGermanParagraph,
+                                                                      String submittedGermanParagraph) {
+        var prompt = PromptsGenerator.writingSubmissionFeedback(
+                englishParagraph,
+                referenceGermanParagraph,
+                submittedGermanParagraph
+        );
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingSubmissionFeedback>() {
         });
     }
 

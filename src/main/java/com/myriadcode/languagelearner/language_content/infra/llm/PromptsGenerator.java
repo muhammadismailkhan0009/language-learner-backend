@@ -652,6 +652,42 @@ public final class PromptsGenerator {
         """.formatted(englishParagraph, germanParagraph);
   }
 
+  public static String writingSubmissionFeedback(
+      String englishParagraph,
+      String referenceGermanParagraph,
+      String submittedGermanParagraph) {
+    return """
+        You are expert German writing coach.
+
+        Goal:
+        Evaluate submitted German translation against source English paragraph and reference German paragraph.
+        Return one concise feedback string in field `feedback`.
+
+        Focus:
+        - grammar mistakes
+        - word choice mistakes
+        - meaning mismatch
+        - major spelling mistakes that change meaning
+
+        Rules:
+        - Keep feedback practical and specific.
+        - Keep tone encouraging but direct.
+        - Max 140 words.
+        - Mention 3-6 important issues, not every tiny issue.
+        - Include 1 short actionable next-step tip at end.
+        - `feedback` must be plain text, no bullets, no markdown.
+
+        English paragraph:
+        %s
+
+        Reference German paragraph:
+        %s
+
+        Submitted German paragraph:
+        %s
+        """.formatted(englishParagraph, referenceGermanParagraph, submittedGermanParagraph);
+  }
+
   public static String readingContentParagraphSentenceSplit(List<String> paragraphs) {
     var builder = new StringBuilder();
     for (int i = 0; i < paragraphs.size(); i++) {

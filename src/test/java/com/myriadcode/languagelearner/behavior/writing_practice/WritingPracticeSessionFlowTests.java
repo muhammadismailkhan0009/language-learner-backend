@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Wri
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingVocabularyFlashCardView;
@@ -14,6 +15,9 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
+import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -54,6 +58,12 @@ class WritingPracticeSessionFlowTests {
     @Autowired
     private StubFetchPrivateVocabularyApi stubFetchPrivateVocabularyApi;
 
+    @Autowired
+    private StubPracticeVocabularyReferenceRepo stubPracticeVocabularyReferenceRepo;
+
+    @Autowired
+    private StubWritingSubmissionFeedbackLlmApi stubWritingSubmissionFeedbackLlmApi;
+
     @AfterEach
     void tearDown() {
         writingPracticeSessionJpaRepo.deleteAll();
@@ -63,6 +73,8 @@ class WritingPracticeSessionFlowTests {
         stubWritingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
+        stubPracticeVocabularyReferenceRepo.reset();
+        stubWritingSubmissionFeedbackLlmApi.lastFeedback = null;
     }
 
     @Test
@@ -259,10 +271,15 @@ class WritingPracticeSessionFlowTests {
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
         assertThat(persisted.getSubmittedAnswer()).isEqualTo("My written answer");
         assertThat(persisted.getSubmittedAt()).isNotNull();
+        assertThat(persisted.getFeedbackText()).isEqualTo("Feedback for submitted paragraph.");
+        assertThat(persisted.getFeedbackGeneratedAt()).isNotNull();
 
         var response = writingPracticeService.getSession("user-1", sessionId);
         assertThat(response.submittedAnswer()).isEqualTo("My written answer");
         assertThat(response.submittedAt()).isNotNull();
+        assertThat(response.feedbackText()).isEqualTo("Feedback for submitted paragraph.");
+        assertThat(response.feedbackGeneratedAt()).isNotNull();
+        assertThat(stubWritingSubmissionFeedbackLlmApi.lastFeedback).isEqualTo("Feedback for submitted paragraph.");
 
         var listed = writingPracticeService.listSessions("user-1");
         assertThat(listed).anyMatch(WritingPracticeSessionSummaryResponse::submitted);
@@ -286,6 +303,18 @@ class WritingPracticeSessionFlowTests {
         @Primary
         StubWritingPracticeLlmApi writingPracticeLlmApi() {
             return new StubWritingPracticeLlmApi();
+        }
+
+        @Bean
+        @Primary
+        StubPracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo() {
+            return new StubPracticeVocabularyReferenceRepo();
+        }
+
+        @Bean
+        @Primary
+        StubWritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi() {
+            return new StubWritingSubmissionFeedbackLlmApi();
         }
     }
 
@@ -431,6 +460,80 @@ class WritingPracticeSessionFlowTests {
                     null,
                     Instant.parse("2026-01-01T00:%02d:00Z".formatted(minuteOffset % 60))
             );
+        }
+    }
+
+    static class StubPracticeVocabularyReferenceRepo implements PracticeVocabularyReferenceRepo {
+        private final Map<String, List<PracticeVocabularyReference>> byUser = new HashMap<>();
+
+        StubPracticeVocabularyReferenceRepo() {
+            reset();
+        }
+
+        @Override
+        public PracticeVocabularyReference save(PracticeVocabularyReference reference) {
+            var list = byUser.computeIfAbsent(reference.userId().id(), key -> new ArrayList<>());
+            list.removeIf(existing -> existing.vocabularyId().id().equals(reference.vocabularyId().id()));
+            list.add(reference);
+            return reference;
+        }
+
+        @Override
+        public java.util.Optional<PracticeVocabularyReference> findByUserIdAndVocabularyId(String userId, String vocabularyId) {
+            return byUser.getOrDefault(userId, List.of()).stream()
+                    .filter(reference -> reference.vocabularyId().id().equals(vocabularyId))
+                    .findFirst();
+        }
+
+        @Override
+        public List<PracticeVocabularyReference> findByUserId(String userId) {
+            return byUser.getOrDefault(userId, List.of());
+        }
+
+        void reset() {
+            byUser.clear();
+            seedUser("user-1");
+            seedUser("user-2");
+        }
+
+        private void seedUser(String userId) {
+            var references = new ArrayList<PracticeVocabularyReference>();
+            for (int i = 1; i <= 6; i++) {
+                references.add(ref("ref-r-" + i, userId, "v-review-" + i));
+                references.add(ref("ref-rx-" + i, userId, "v-r-" + i));
+            }
+            for (int i = 1; i <= 8; i++) {
+                references.add(ref("ref-rl-" + i, userId, "v-relearn-" + i));
+                references.add(ref("ref-rlx-" + i, userId, "v-rl-" + i));
+            }
+            for (int i = 1; i <= 4; i++) {
+                references.add(ref("ref-l-" + i, userId, "v-learning-" + i));
+                references.add(ref("ref-lx-" + i, userId, "v-l-" + i));
+            }
+            references.add(ref("ref-n-1", userId, "v-n-1"));
+            references.add(ref("ref-n-2", userId, "v-n-2"));
+            byUser.put(userId, references);
+        }
+
+        private PracticeVocabularyReference ref(String id, String userId, String vocabularyId) {
+            return new PracticeVocabularyReference(
+                    new PracticeVocabularyReference.PracticeVocabularyReferenceId(id),
+                    new com.myriadcode.languagelearner.common.ids.UserId(userId),
+                    new Vocabulary.VocabularyId(vocabularyId),
+                    1,
+                    Instant.parse("2026-01-01T00:00:00Z"),
+                    Instant.parse("2026-01-01T00:00:00Z")
+            );
+        }
+    }
+
+    static class StubWritingSubmissionFeedbackLlmApi implements WritingSubmissionFeedbackLlmApi {
+        private String lastFeedback;
+
+        @Override
+        public String generateFeedback(String englishParagraph, String referenceGermanParagraph, String submittedGermanParagraph) {
+            this.lastFeedback = "Feedback for submitted paragraph.";
+            return this.lastFeedback;
         }
     }
 }

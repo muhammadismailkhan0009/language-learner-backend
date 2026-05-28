@@ -30,6 +30,8 @@ class WritingPracticeApiMapperTests {
                 Instant.parse("2026-01-01T00:00:00Z"),
                 null,
                 null,
+                null,
+                null,
                 List.of(),
                 List.of(
                         new WritingVocabularyUsage(new WritingVocabularyUsage.WritingVocabularyUsageId("u1"), "c1", "v1"),
@@ -57,6 +59,8 @@ class WritingPracticeApiMapperTests {
                 Instant.parse("2026-01-01T00:00:00Z"),
                 "My answer",
                 Instant.parse("2026-01-01T01:00:00Z"),
+                "Feedback",
+                Instant.parse("2026-01-01T01:00:00Z"),
                 List.of(new WritingSentencePair(
                         new WritingSentencePair.WritingSentencePairId("p-1"),
                         "English sentence.",
@@ -81,6 +85,8 @@ class WritingPracticeApiMapperTests {
         assertThat(response.germanParagraph()).isEqualTo("Deutscher Absatz.");
         assertThat(response.submittedAnswer()).isEqualTo("My answer");
         assertThat(response.submittedAt()).isEqualTo(Instant.parse("2026-01-01T01:00:00Z"));
+        assertThat(response.feedbackText()).isEqualTo("Feedback");
+        assertThat(response.feedbackGeneratedAt()).isEqualTo(Instant.parse("2026-01-01T01:00:00Z"));
         assertThat(response.sentencePairs()).hasSize(1);
         assertThat(response.sentencePairs().getFirst().englishSentence()).isEqualTo("English sentence.");
         assertThat(response.sentencePairs().getFirst().germanSentence()).isEqualTo("Deutscher Satz.");

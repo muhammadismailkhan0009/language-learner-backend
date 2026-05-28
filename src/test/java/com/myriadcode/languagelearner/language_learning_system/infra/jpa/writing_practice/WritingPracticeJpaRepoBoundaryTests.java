@@ -49,6 +49,8 @@ class WritingPracticeJpaRepoBoundaryTests {
                 null,
                 null,
                 null,
+                null,
+                null,
                 List.of(new WritingSentencePair(
                         new WritingSentencePair.WritingSentencePairId("p1"),
                         "English sentence",
@@ -84,6 +86,8 @@ class WritingPracticeJpaRepoBoundaryTests {
                 Instant.parse("2026-01-01T00:00:00Z"),
                 null,
                 null,
+                null,
+                null,
                 List.of(),
                 List.of()
         );
@@ -93,11 +97,15 @@ class WritingPracticeJpaRepoBoundaryTests {
                 "s2",
                 "user-1",
                 "Submitted answer",
+                Instant.parse("2026-01-01T01:00:00Z"),
+                "Feedback",
                 Instant.parse("2026-01-01T01:00:00Z")
         );
 
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId("s2", "user-1").orElseThrow();
         assertThat(persisted.getSubmittedAnswer()).isEqualTo("Submitted answer");
         assertThat(persisted.getSubmittedAt()).isEqualTo(Instant.parse("2026-01-01T01:00:00Z"));
+        assertThat(persisted.getFeedbackText()).isEqualTo("Feedback");
+        assertThat(persisted.getFeedbackGeneratedAt()).isEqualTo(Instant.parse("2026-01-01T01:00:00Z"));
     }
 }

@@ -29,6 +29,8 @@ class WritingPracticeJpaMapperTests {
                 Instant.parse("2026-01-01T00:00:00Z"),
                 "Submitted answer",
                 Instant.parse("2026-01-01T01:00:00Z"),
+                null,
+                null,
                 List.of(),
                 List.of()
         );
@@ -55,6 +57,8 @@ class WritingPracticeJpaMapperTests {
         entity.setGermanParagraph("Deutscher Absatz 2");
         entity.setSubmittedAnswer("My answer");
         entity.setSubmittedAt(Instant.parse("2026-01-01T01:00:00Z"));
+        entity.setFeedbackText("Feedback");
+        entity.setFeedbackGeneratedAt(Instant.parse("2026-01-01T01:05:00Z"));
         entity.setCreatedAt(Instant.parse("2026-01-01T00:00:00Z"));
 
         var domain = MAPPER.toDomain(entity);
@@ -66,6 +70,8 @@ class WritingPracticeJpaMapperTests {
         assertThat(domain.germanParagraph()).isEqualTo("Deutscher Absatz 2");
         assertThat(domain.submittedAnswer()).isEqualTo("My answer");
         assertThat(domain.submittedAt()).isEqualTo(Instant.parse("2026-01-01T01:00:00Z"));
+        assertThat(domain.feedbackText()).isEqualTo("Feedback");
+        assertThat(domain.feedbackGeneratedAt()).isEqualTo(Instant.parse("2026-01-01T01:05:00Z"));
     }
 
     @Test
