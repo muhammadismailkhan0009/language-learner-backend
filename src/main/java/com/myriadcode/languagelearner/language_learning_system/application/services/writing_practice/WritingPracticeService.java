@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice;
 
+import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
@@ -21,6 +22,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.writing_pr
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -33,6 +35,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class WritingPracticeService {
 
     private static final String DIFFICULTY_LEVEL = "B1";
@@ -61,6 +64,17 @@ public class WritingPracticeService {
         this.writingPracticeLlmApi = writingPracticeLlmApi;
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
         this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
+    }
+
+    public void createSessionReactive(String userId) {
+        var normalizedUserId = requireUserId(userId);
+        Vals.runIo(() -> {
+            try {
+                createSession(normalizedUserId);
+            } catch (Exception exception) {
+                log.error("Writing session background creation failed for userId={}", normalizedUserId, exception);
+            }
+        });
     }
 
     public void createSession(String userId) {

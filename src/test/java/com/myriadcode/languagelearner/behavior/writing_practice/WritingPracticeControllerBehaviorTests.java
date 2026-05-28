@@ -37,17 +37,18 @@ class WritingPracticeControllerBehaviorTests {
     }
 
     @Test
-    @DisplayName("Create session API: returns 201 and forwards user id")
-    void createSessionReturnsCreatedAndForwardsUserId() throws Exception {
+    @DisplayName("Create session API: returns 202 with in-progress message and forwards user id")
+    void createSessionReturnsAcceptedAndForwardsUserId() throws Exception {
         var service = mock(WritingPracticeService.class);
         MockMvc mockMvc = mockMvcFor(service);
 
         mockMvc.perform(post("/api/v1/writing-practice/sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"user-1\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.response").value("Creation in progress. Will display when done."));
 
-        verify(service).createSession("user-1");
+        verify(service).createSessionReactive("user-1");
     }
 
     @Test
@@ -193,7 +194,7 @@ class WritingPracticeControllerBehaviorTests {
         var service = mock(WritingPracticeService.class);
         MockMvc mockMvc = mockMvcFor(service);
         doThrow(new IllegalArgumentException("No practice vocabulary references found for user"))
-                .when(service).createSession("user-1");
+                .when(service).createSessionReactive("user-1");
 
         mockMvc.perform(post("/api/v1/writing-practice/sessions")
                         .contentType(MediaType.APPLICATION_JSON)

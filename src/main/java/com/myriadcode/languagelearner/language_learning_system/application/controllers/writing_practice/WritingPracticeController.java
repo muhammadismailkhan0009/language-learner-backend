@@ -31,9 +31,9 @@ public class WritingPracticeController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> createSession(@RequestBody CreateWritingPracticeSessionRequest request) {
-        writingPracticeService.createSession(request.userId());
-        return ResponseEntity.status(201).build();
+    public ResponseEntity<ApiResponse<String>> createSession(@RequestBody CreateWritingPracticeSessionRequest request) {
+        writingPracticeService.createSessionReactive(request.userId());
+        return ResponseEntity.accepted().body(new ApiResponse<>("Creation in progress. Will display when done."));
     }
 
     @GetMapping
