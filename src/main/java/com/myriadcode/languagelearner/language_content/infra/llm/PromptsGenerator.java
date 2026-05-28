@@ -1207,6 +1207,7 @@ Return STRICT JSON object only:
 
 Rules:
 - Keep explanations concise and generic.
+- Write explanationParagraphs in clear English.
 - Provide 2-4 explanation paragraphs.
 - Provide 3-6 examples.
 - Examples must be natural German and match the rule.
