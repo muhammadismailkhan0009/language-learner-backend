@@ -238,7 +238,7 @@ public class LLMGenerator implements LLMPort {
     public List<GrammarRuleDraftProposalPort> proposeGrammarRules(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules) {
         var prompt = PromptsGenerator.grammarRuleDrafts(level, targetLanguage, count, existingRules);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<List<GrammarRuleDraftProposalPort>>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<List<GrammarRuleDraftProposalPort>>() {
         });
     }
 
