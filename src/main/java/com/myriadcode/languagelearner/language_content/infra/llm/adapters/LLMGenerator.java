@@ -136,7 +136,7 @@ public class LLMGenerator implements LLMPort {
                                                                      String difficultyLevel) {
         var prompt = PromptsGenerator.writingTopicSelection(vocabulary, previousTopics, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingTopicSelection>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingTopicSelection>() {
         });
     }
 
@@ -156,7 +156,7 @@ public class LLMGenerator implements LLMPort {
                                                                         String germanParagraph) {
         var prompt = PromptsGenerator.writingUsedVocabularySelection(vocabulary, englishParagraph, germanParagraph);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingUsedVocabularySelection>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingUsedVocabularySelection>() {
         });
     }
 
@@ -165,7 +165,7 @@ public class LLMGenerator implements LLMPort {
                                                                          String germanParagraph) {
         var prompt = PromptsGenerator.writingSentencePairSplit(englishParagraph, germanParagraph);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingSentencePairSplit>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingSentencePairSplit>() {
         });
     }
 
