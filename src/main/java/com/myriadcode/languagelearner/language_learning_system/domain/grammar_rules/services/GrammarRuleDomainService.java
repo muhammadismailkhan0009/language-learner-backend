@@ -39,6 +39,7 @@ public final class GrammarRuleDomainService {
                 identifier,
                 name,
                 level,
+                "READY",
                 active,
                 normalizedParagraphs,
                 scenario
@@ -80,6 +81,7 @@ public final class GrammarRuleDomainService {
                 updatedIdentifier,
                 updatedName,
                 updatedLevel,
+                existingGrammarRule.status(),
                 updatedActive,
                 updatedParagraphs,
                 updatedScenario

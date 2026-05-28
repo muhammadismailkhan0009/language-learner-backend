@@ -71,6 +71,7 @@ class GrammarRuleDraftGenerationBehaviorTests {
                 identifier,
                 name,
                 level,
+                "READY",
                 true,
                 List.of(new GrammarExplanationParagraph(
                         new GrammarExplanationParagraph.GrammarExplanationParagraphId("p-" + id),
@@ -127,6 +128,11 @@ class GrammarRuleDraftGenerationBehaviorTests {
         @Override
         public List<GrammarRule> findAll() {
             return data.values().stream().toList();
+        }
+
+        @Override
+        public List<GrammarRule> findByStatus(String status) {
+            return data.values().stream().filter(rule -> status.equals(rule.status())).toList();
         }
     }
 }

@@ -16,4 +16,7 @@ public interface GrammarRuleEntityJpaRepo extends JpaRepository<GrammarRuleEntit
     @Override
     @EntityGraph(attributePaths = {"explanationParagraphs", "grammarScenario"})
     List<GrammarRuleEntity> findAll();
+
+    @EntityGraph(attributePaths = {"explanationParagraphs", "grammarScenario"})
+    List<GrammarRuleEntity> findByStatus(String status);
 }

@@ -48,4 +48,12 @@ public class GrammarRuleJpaRepoImpl implements GrammarRuleRepo {
                 .map(GRAMMAR_RULE_JPA_MAPPER::toDomain)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<GrammarRule> findByStatus(String status) {
+        return grammarRuleEntityJpaRepo.findByStatus(status).stream()
+                .map(GRAMMAR_RULE_JPA_MAPPER::toDomain)
+                .toList();
+    }
 }

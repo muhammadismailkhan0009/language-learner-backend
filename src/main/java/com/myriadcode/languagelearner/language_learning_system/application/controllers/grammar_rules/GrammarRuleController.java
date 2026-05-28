@@ -60,6 +60,21 @@ public class GrammarRuleController {
         return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.draftGrammarRules(request)));
     }
 
+    @GetMapping("admin/drafts/v1")
+    public ResponseEntity<ApiResponse<List<GrammarRuleDraftResponse>>> fetchDraftGrammarRules(
+            @RequestParam("admin_key") String adminKey
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.fetchDraftGrammarRules(adminKey)));
+    }
+
+    @PostMapping("admin/drafts/{draftId}/details/v1")
+    public ResponseEntity<ApiResponse<GrammarRuleDraftDetailsResponse>> generateDraftDetailsForDraftId(
+            @PathVariable("draftId") String draftId,
+            @RequestBody GenerateGrammarRuleDraftDetailsRequest request
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.generateDraftDetailsForDraftId(draftId, request)));
+    }
+
     @PostMapping("admin/details/v1")
     public ResponseEntity<ApiResponse<List<GrammarRuleDraftDetailsResponse>>> generateGrammarRuleDetails(
             @RequestBody GenerateGrammarRuleDetailsRequest request

@@ -12,4 +12,6 @@ public interface GrammarRuleRepo {
     Optional<GrammarRule> findById(String grammarRuleId);
 
     List<GrammarRule> findAll();
+
+    List<GrammarRule> findByStatus(String status);
 }

@@ -7,6 +7,10 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleDraftResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.grammar_rules.GrammarRuleApiMapper;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarExplanationParagraph;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarRule;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarScenario;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarScenarioSentence;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.repo.GrammarRuleRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.services.GrammarRuleDomainService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +23,8 @@ import java.util.Locale;
 public class GrammarRuleOrchestrationService {
 
     private static final String ADMIN_KEY = "112233";
+    private static final String STATUS_DRAFT = "DRAFT";
+    private static final String STATUS_READY = "READY";
     private static final GrammarRuleApiMapper GRAMMAR_RULE_API_MAPPER = GrammarRuleApiMapper.INSTANCE;
     private final GrammarRuleRepo grammarRuleRepo;
     private final GrammarRuleCurationLlmApi grammarRuleCurationLlmApi;
@@ -102,13 +108,102 @@ public class GrammarRuleOrchestrationService {
                 .toList();
 
         return grammarRuleCurationLlmApi.proposeRules(level, targetLanguage, count, existingRules).stream()
+                .map(rule -> createDraftRule(
+                        normalizeIdentifier(rule.identifier(), rule.name()),
+                        rule.name(),
+                        defaultLevel(rule.level()),
+                        targetLanguage
+                ))
+                .map(grammarRuleRepo::save)
                 .map(rule -> new GrammarRuleDraftResponse(
+                        rule.id().id(),
                         normalizeIdentifier(rule.identifier(), rule.name()),
                         rule.name(),
                         defaultLevel(rule.level()),
                         targetLanguage
                 ))
                 .toList();
+    }
+
+    public List<GrammarRuleDraftResponse> fetchDraftGrammarRules(String adminKey) {
+        validateAdminKey(adminKey);
+        return grammarRuleRepo.findByStatus(STATUS_DRAFT).stream()
+                .map(rule -> new GrammarRuleDraftResponse(
+                        rule.id().id(),
+                        rule.identifier(),
+                        rule.name(),
+                        defaultLevel(rule.level()),
+                        "de"
+                ))
+                .toList();
+    }
+
+    public GrammarRuleDraftDetailsResponse generateDraftDetailsForDraftId(String draftId, GenerateGrammarRuleDraftDetailsRequest request) {
+        validateAdminKey(request.adminKey());
+        var draftRule = grammarRuleRepo.findById(draftId)
+                .orElseThrow(() -> new IllegalArgumentException("Grammar draft not found"));
+        if (!STATUS_DRAFT.equalsIgnoreCase(draftRule.status())) {
+            throw new IllegalArgumentException("Grammar rule is not in draft status");
+        }
+
+        var details = grammarRuleCurationLlmApi.generateRuleDetails(
+                normalizeIdentifier(draftRule.identifier(), draftRule.name()),
+                draftRule.name(),
+                defaultLevel(draftRule.level()),
+                "de"
+        );
+
+        var scenario = new GrammarScenario(
+                draftRule.grammarScenario().id(),
+                "Explanation examples",
+                "Examples for grammar rule",
+                "de",
+                draftRule.grammarScenario().createdBy(),
+                draftRule.grammarScenario().isFixed(),
+                (details.explanationExamples() == null ? List.<com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleDraftDetails.GrammarRuleExample>of() : details.explanationExamples()).stream()
+                        .map(example -> new GrammarScenarioSentence(
+                                new GrammarScenarioSentence.GrammarScenarioSentenceId(java.util.UUID.randomUUID().toString()),
+                                example.sentence(),
+                                example.translation(),
+                                0
+                        ))
+                        .toList()
+        );
+
+        var paragraphs = (details.explanationParagraphs() == null ? List.<String>of() : details.explanationParagraphs()).stream()
+                .filter(p -> p != null && !p.isBlank())
+                .map(p -> new GrammarExplanationParagraph(
+                        new GrammarExplanationParagraph.GrammarExplanationParagraphId(java.util.UUID.randomUUID().toString()),
+                        p,
+                        0
+                ))
+                .toList();
+
+        var detailed = new GrammarRule(
+                draftRule.id(),
+                normalizeIdentifier(details.identifier(), details.name()),
+                details.name(),
+                defaultLevel(details.level()),
+                STATUS_READY,
+                true,
+                paragraphs,
+                scenario
+        );
+        var saved = grammarRuleRepo.save(detailed);
+        return new GrammarRuleDraftDetailsResponse(
+                saved.identifier(),
+                saved.name(),
+                saved.level(),
+                "de",
+                saved.explanationParagraphs().stream().map(GrammarExplanationParagraph::text).toList(),
+                saved.grammarScenario().sentences().stream()
+                        .map(sentence -> new GrammarRuleResponse.GrammarExplanationExampleResponse(
+                                sentence.sentence(),
+                                sentence.translation(),
+                                null
+                        ))
+                        .toList()
+        );
     }
 
     public List<GrammarRuleDraftDetailsResponse> generateDraftDetails(GenerateGrammarRuleDetailsRequest request) {
@@ -194,5 +289,36 @@ public class GrammarRuleOrchestrationService {
         if (adminKey == null || !ADMIN_KEY.equals(adminKey)) {
             throw new IllegalArgumentException("Invalid admin key");
         }
+    }
+
+    private GrammarRule createDraftRule(String identifier, String name, String level, String targetLanguage) {
+        var scenario = new GrammarScenario(
+                new GrammarScenario.GrammarScenarioId(java.util.UUID.randomUUID().toString()),
+                "Explanation examples",
+                "Examples for grammar rule",
+                targetLanguage,
+                "SYSTEM",
+                true,
+                List.of(new GrammarScenarioSentence(
+                        new GrammarScenarioSentence.GrammarScenarioSentenceId(java.util.UUID.randomUUID().toString()),
+                        "Placeholder draft sentence.",
+                        "Placeholder draft sentence.",
+                        0
+                ))
+        );
+        return new GrammarRule(
+                new GrammarRule.GrammarRuleId(java.util.UUID.randomUUID().toString()),
+                identifier,
+                name,
+                level,
+                STATUS_DRAFT,
+                false,
+                List.of(new GrammarExplanationParagraph(
+                        new GrammarExplanationParagraph.GrammarExplanationParagraphId(java.util.UUID.randomUUID().toString()),
+                        "Draft placeholder explanation.",
+                        0
+                )),
+                scenario
+        );
     }
 }

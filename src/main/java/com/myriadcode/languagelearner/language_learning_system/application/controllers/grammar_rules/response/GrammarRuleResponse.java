@@ -6,6 +6,7 @@ public record GrammarRuleResponse(String id,
                                   String identifier,
                                   String name,
                                   String level,
+                                  String status,
                                   boolean active,
                                   List<String> explanationParagraphs,
                                   List<GrammarExplanationExampleResponse> explanationExamples) {

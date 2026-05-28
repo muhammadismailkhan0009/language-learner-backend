@@ -33,6 +33,9 @@ public class GrammarRuleEntity {
     private String level;
 
     @Column(nullable = false)
+    private String status;
+
+    @Column(nullable = false)
     private boolean active;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
@@ -99,6 +102,14 @@ public class GrammarRuleEntity {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public GrammarScenarioEntity getGrammarScenario() {

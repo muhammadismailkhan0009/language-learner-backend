@@ -7,6 +7,7 @@ public record GrammarRule(GrammarRuleId id,
                           String identifier,
                           String name,
                           String level,
+                          String status,
                           boolean active,
                           List<GrammarExplanationParagraph> explanationParagraphs,
                           GrammarScenario grammarScenario) {
@@ -15,7 +16,7 @@ public record GrammarRule(GrammarRuleId id,
                        String name,
                        List<GrammarExplanationParagraph> explanationParagraphs,
                        GrammarScenario grammarScenario) {
-        this(id, toIdentifier(name), name, "A1", true, explanationParagraphs, grammarScenario);
+        this(id, toIdentifier(name), name, "A1", "READY", true, explanationParagraphs, grammarScenario);
     }
 
     private static String toIdentifier(String raw) {

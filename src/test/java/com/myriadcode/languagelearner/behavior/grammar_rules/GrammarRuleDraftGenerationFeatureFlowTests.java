@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Gra
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleDraftProposal;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.CreateGrammarRuleRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.DraftGrammarRulesRequest;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.GenerateGrammarRuleDraftDetailsRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.grammar_rules.repos.GrammarRuleEntityJpaRepo;
 import org.junit.jupiter.api.AfterEach;
@@ -41,6 +42,8 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
     @AfterEach
     void tearDown() {
         grammarRuleEntityJpaRepo.deleteAll();
+        var capturing = (CapturingGrammarRuleCurationLlmApi) grammarRuleCurationLlmApi;
+        capturing.nextProposals.set(List.of(new GrammarRuleDraftProposal("a2-word-order", "A2 Word Order", "A2", "de")));
     }
 
     @Test
@@ -83,6 +86,56 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
                 .containsExactlyInAnyOrder("present-tense-basics", "relative-clauses");
     }
 
+    @Test
+    @DisplayName("feature flow: generated drafts are persisted and retrievable from draft queue")
+    void generatedDraftsArePersistedAndRetrievable() {
+        var drafts = grammarRuleOrchestrationService.draftGrammarRules(new DraftGrammarRulesRequest("a2", "112233"));
+
+        assertThat(drafts).hasSize(1);
+        assertThat(drafts.getFirst().id()).isNotBlank();
+
+        var persistedDrafts = grammarRuleOrchestrationService.fetchDraftGrammarRules("112233");
+        assertThat(persistedDrafts).hasSize(1);
+        assertThat(persistedDrafts.getFirst().id()).isEqualTo(drafts.getFirst().id());
+        assertThat(persistedDrafts.getFirst().identifier()).isEqualTo("a2-word-order");
+    }
+
+    @Test
+    @DisplayName("feature flow: per-draft details generation transitions rule out of draft queue")
+    void draftDetailsGenerationTransitionsOutOfDraftQueue() {
+        var capturing = (CapturingGrammarRuleCurationLlmApi) grammarRuleCurationLlmApi;
+        capturing.nextProposals.set(List.of(new GrammarRuleDraftProposal("case-endings-a2", "Case Endings A2", "A2", "de")));
+        capturing.nextDetails.set(new GrammarRuleDraftDetails(
+                "case-endings-a2",
+                "Case Endings A2",
+                "A2",
+                "de",
+                List.of("Use case endings based on article and role in sentence."),
+                List.of(new GrammarRuleDraftDetails.GrammarRuleExample(
+                        "Ich sehe den Mann.",
+                        "I see the man.",
+                        "Akkusativ for direct object."
+                ))
+        ));
+
+        var drafts = grammarRuleOrchestrationService.draftGrammarRules(new DraftGrammarRulesRequest("a2", "112233"));
+        var draftId = drafts.getFirst().id();
+
+        var details = grammarRuleOrchestrationService.generateDraftDetailsForDraftId(
+                draftId,
+                new GenerateGrammarRuleDraftDetailsRequest("112233")
+        );
+        assertThat(details.explanationParagraphs()).isNotEmpty();
+        assertThat(details.explanationExamples()).isNotEmpty();
+
+        var remainingDrafts = grammarRuleOrchestrationService.fetchDraftGrammarRules("112233");
+        assertThat(remainingDrafts).isEmpty();
+
+        var updatedRule = grammarRuleOrchestrationService.fetchGrammarRule(draftId);
+        assertThat(updatedRule.status()).isEqualTo("READY");
+        assertThat(updatedRule.identifier()).isEqualTo("case-endings-a2");
+    }
+
     @TestConfiguration
     static class Config {
         @Bean(name = "grammarRuleCurationLlmAdapter")
@@ -93,16 +146,31 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
 
     static class CapturingGrammarRuleCurationLlmApi implements GrammarRuleCurationLlmApi {
         private final AtomicReference<List<GrammarRuleCatalogContext>> lastExistingRules = new AtomicReference<>(List.of());
+        private final AtomicReference<List<GrammarRuleDraftProposal>> nextProposals =
+                new AtomicReference<>(List.of(new GrammarRuleDraftProposal("a2-word-order", "A2 Word Order", "A2", "de")));
+        private final AtomicReference<GrammarRuleDraftDetails> nextDetails =
+                new AtomicReference<>(new GrammarRuleDraftDetails(
+                        "a2-word-order",
+                        "A2 Word Order",
+                        "A2",
+                        "de",
+                        List.of("Put the finite verb in position two in main clauses."),
+                        List.of(new GrammarRuleDraftDetails.GrammarRuleExample(
+                                "Heute lerne ich Deutsch.",
+                                "Today I learn German.",
+                                "Verb remains second."
+                        ))
+                ));
 
         @Override
         public List<GrammarRuleDraftProposal> proposeRules(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules) {
             lastExistingRules.set(existingRules);
-            return List.of(new GrammarRuleDraftProposal("a2-word-order", "A2 Word Order", "A2", "de"));
+            return nextProposals.get();
         }
 
         @Override
         public GrammarRuleDraftDetails generateRuleDetails(String identifier, String name, String level, String targetLanguage) {
-            return new GrammarRuleDraftDetails(identifier, name, level, targetLanguage, List.of(), List.of());
+            return nextDetails.get();
         }
     }
 }
