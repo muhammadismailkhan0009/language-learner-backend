@@ -1,0 +1,9 @@
+flowchart LR
+    T1[T-GLG-001] --> C1[GrammarRuleOrchestrationService]
+    T2[T-GLG-002] --> C1[GrammarRuleOrchestrationService]
+    T3[T-GLG-003] --> C1[GrammarRuleOrchestrationService]
+    T3 --> C2[GrammarRuleRepo]
+    T4[T-GLG-004] --> C3[PromptsGenerator]
+    T4 --> C4[LLMGenerator]
+    T4 --> C5[LLMPort]
+    T5[T-GLG-005] --> C6[GrammarRuleController]

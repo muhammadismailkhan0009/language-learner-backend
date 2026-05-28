@@ -1,0 +1,134 @@
+feature:
+  id: grammar_admin_level_only_generation_v1
+  name: Grammar admin generation with level-only input and global dedupe
+  status: draft
+
+goal:
+  summary: >
+    Let admin UI submit only CEFR level for grammar generation while backend uses LLM to
+    generate complete draft rules that are level-appropriate and non-duplicative against
+    the full existing grammar catalog across all levels.
+
+inputs:
+  - admin_key
+  - level
+
+outputs:
+  - draft_rules_with_identifier_name_level_targetLanguage
+
+flow:
+  - id: validate_admin_request
+    behavior: Validate admin key and normalize level.
+    input:
+      - admin_key
+      - level
+    output:
+      - normalized_level
+    must:
+      - reject_invalid_admin_key
+      - default_level_to_a1_when_missing
+      - uppercase_level
+    test_strategy:
+      primary: direct_behavior
+      isolation: pure
+      mock_policy: no_mocks
+
+  - id: load_existing_catalog
+    behavior: Load all existing grammar rules and prepare exclusion context.
+    input:
+      - normalized_level
+    output:
+      - existing_catalog_context
+    must:
+      - include_all_levels_not_only_selected_level
+      - include_identifier_and_name_for_overlap_prevention
+    test_strategy:
+      primary: direct_behavior
+      isolation: boundary_isolated
+      mock_policy: external_only
+
+  - id: generate_level_drafts
+    behavior: Call LLM to generate draft rules for selected level using existing catalog context.
+    input:
+      - normalized_level
+      - existing_catalog_context
+    output:
+      - llm_draft_rules
+    must:
+      - prompt_instructs_global_nonduplication
+      - prompt_instructs_level_appropriateness
+      - output_shape_is_backend_contract
+    test_strategy:
+      primary: boundary_contract
+      isolation: boundary_isolated
+      mock_policy: external_only
+
+  - id: normalize_and_return_drafts
+    behavior: Normalize identifiers and map LLM output to API response.
+    input:
+      - llm_draft_rules
+    output:
+      - draft_rules_with_identifier_name_level_targetLanguage
+    must:
+      - identifier_normalized_when_missing_or_invalid
+      - level_normalized_in_response
+      - target_language_defaulted_to_de
+    test_strategy:
+      primary: direct_behavior
+      isolation: pure
+      mock_policy: no_mocks
+
+requirements:
+  - id: REQ-GLG-001
+    behavior_step: validate_admin_request
+    guarantee: Draft generation rejects invalid admin key.
+    risk: high
+
+  - id: REQ-GLG-002
+    behavior_step: validate_admin_request
+    guarantee: Level is normalized to uppercase and defaults to A1 when blank.
+    risk: medium
+
+  - id: REQ-GLG-003
+    behavior_step: load_existing_catalog
+    guarantee: Existing rule context includes rules from all levels for dedupe checks.
+    risk: high
+
+  - id: REQ-GLG-004
+    behavior_step: generate_level_drafts
+    guarantee: LLM proposal prompt includes explicit global non-duplication constraint against existing catalog.
+    risk: high
+
+  - id: REQ-GLG-005
+    behavior_step: generate_level_drafts
+    guarantee: LLM proposal prompt requires level-appropriate rules for selected CEFR level.
+    risk: medium
+
+  - id: REQ-GLG-006
+    behavior_step: normalize_and_return_drafts
+    guarantee: Output contains normalized identifier and normalized level per draft item.
+    risk: medium
+
+test_strategy:
+  phases:
+    - direct_behavior_tests_for_orchestration_validation_and_normalization
+    - boundary_contract_tests_for_llm_port_prompt_inputs
+    - integration_tests_for_controller_request_shape_level_plus_admin_key
+
+mock_policy:
+  default: do_not_mock_business_behavior
+  allowed_when:
+    - dependency_is_external_or_nondeterministic
+    - dependency_behavior_is_already_directly_tested
+  forbidden_when:
+    - dependency_contains_business_rule_under_test
+
+visibility:
+  required_views:
+    - feature_flow
+    - requirement_to_test_map
+    - test_to_code_map
+  canonical_source:
+    - feature.contract.yaml
+    - test.plan.yaml
+    - visibility/system-behavior.yaml

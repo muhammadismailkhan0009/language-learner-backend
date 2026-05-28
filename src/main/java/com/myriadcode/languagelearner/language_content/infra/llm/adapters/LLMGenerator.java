@@ -7,10 +7,14 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.ports.StudyAnswerEvaluation;
+import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftDetailsPort;
+import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftProposalPort;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
@@ -171,12 +175,21 @@ public class LLMGenerator implements LLMPort {
 
     @Override
     public WritingSubmissionFeedback generateWritingSubmissionFeedback(String englishParagraph,
+                                                                       String referenceGermanParagraph,
+                                                                       String submittedGermanParagraph) {
+        return generateWritingSubmissionFeedback(englishParagraph, referenceGermanParagraph, submittedGermanParagraph, List.of());
+    }
+
+    @Override
+    public WritingSubmissionFeedback generateWritingSubmissionFeedback(String englishParagraph,
                                                                       String referenceGermanParagraph,
-                                                                      String submittedGermanParagraph) {
+                                                                      String submittedGermanParagraph,
+                                                                      List<GrammarRuleCatalogItem> grammarCatalog) {
         var prompt = PromptsGenerator.writingSubmissionFeedback(
                 englishParagraph,
                 referenceGermanParagraph,
-                submittedGermanParagraph
+                submittedGermanParagraph,
+                grammarCatalog
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingSubmissionFeedback>() {
@@ -198,15 +211,42 @@ public class LLMGenerator implements LLMPort {
                                                      String answerTranslation,
                                                      String hint,
                                                      String userAnswer) {
+        return evaluateStudyAnswer(sentenceWithBlank, expectedAnswer, answerTranslation, hint, userAnswer, List.of());
+    }
+
+    @Override
+    public StudyAnswerEvaluation evaluateStudyAnswer(String sentenceWithBlank,
+                                                     String expectedAnswer,
+                                                     String answerTranslation,
+                                                     String hint,
+                                                     String userAnswer,
+                                                     List<GrammarRuleCatalogItem> grammarCatalog) {
         var prompt = PromptsGenerator.studyAnswerEvaluation(
                 sentenceWithBlank,
                 expectedAnswer,
                 answerTranslation,
                 hint,
-                userAnswer
+                userAnswer,
+                grammarCatalog
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runFastLLM(messages, new ParameterizedTypeReference<StudyAnswerEvaluation>() {
+        });
+    }
+
+    @Override
+    public List<GrammarRuleDraftProposalPort> proposeGrammarRules(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules) {
+        var prompt = PromptsGenerator.grammarRuleDrafts(level, targetLanguage, count, existingRules);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<List<GrammarRuleDraftProposalPort>>() {
+        });
+    }
+
+    @Override
+    public GrammarRuleDraftDetailsPort generateGrammarRuleDetails(String identifier, String name, String level, String targetLanguage) {
+        var prompt = PromptsGenerator.grammarRuleDetails(identifier, name, level, targetLanguage);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<GrammarRuleDraftDetailsPort>() {
         });
     }
 

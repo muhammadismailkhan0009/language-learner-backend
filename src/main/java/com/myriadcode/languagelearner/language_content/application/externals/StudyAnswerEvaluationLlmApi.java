@@ -7,4 +7,13 @@ public interface StudyAnswerEvaluationLlmApi {
                                          String answerTranslation,
                                          String hint,
                                          String userAnswer);
+
+    default StudyAnswerEvaluationResult evaluate(String sentenceWithBlank,
+                                                 String expectedAnswer,
+                                                 String answerTranslation,
+                                                 String hint,
+                                                 String userAnswer,
+                                                 java.util.List<GrammarRuleCatalogItem> grammarCatalog) {
+        return evaluate(sentenceWithBlank, expectedAnswer, answerTranslation, hint, userAnswer);
+    }
 }

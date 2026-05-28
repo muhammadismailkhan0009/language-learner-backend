@@ -4,6 +4,15 @@ public record StudyAnswerEvaluationResult(
         double semanticMatch,
         double formAccuracy,
         double confidence,
-        String feedback
+        String feedback,
+        java.util.List<GrammarFeedbackIssueResult> grammarIssues
 ) {
+    public StudyAnswerEvaluationResult(
+            double semanticMatch,
+            double formAccuracy,
+            double confidence,
+            String feedback
+    ) {
+        this(semanticMatch, formAccuracy, confidence, feedback, java.util.List.of());
+    }
 }

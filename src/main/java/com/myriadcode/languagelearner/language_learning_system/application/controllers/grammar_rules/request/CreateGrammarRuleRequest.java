@@ -4,7 +4,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public record CreateGrammarRuleRequest(String name, List<String> explanationParagraphs,
+public record CreateGrammarRuleRequest(String identifier,
+                                       String name,
+                                       String level,
+                                       Boolean active,
+                                       List<String> explanationParagraphs,
                                        GrammarScenarioRequest scenario,
                                        @JsonProperty("admin_key") String adminKey) {
 

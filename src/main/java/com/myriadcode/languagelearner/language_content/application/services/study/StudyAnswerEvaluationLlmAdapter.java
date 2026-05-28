@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_content.application.services.stu
 
 import com.myriadcode.languagelearner.language_content.application.externals.StudyAnswerEvaluationLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.StudyAnswerEvaluationResult;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import org.springframework.stereotype.Service;
 
@@ -20,15 +21,41 @@ public class StudyAnswerEvaluationLlmAdapter implements StudyAnswerEvaluationLlm
                                                 String answerTranslation,
                                                 String hint,
                                                 String userAnswer) {
-        var result = llmPort.evaluateStudyAnswer(sentenceWithBlank, expectedAnswer, answerTranslation, hint, userAnswer);
+        return evaluate(sentenceWithBlank, expectedAnswer, answerTranslation, hint, userAnswer, java.util.List.of());
+    }
+
+    @Override
+    public StudyAnswerEvaluationResult evaluate(String sentenceWithBlank,
+                                                String expectedAnswer,
+                                                String answerTranslation,
+                                                String hint,
+                                                String userAnswer,
+                                                java.util.List<GrammarRuleCatalogItem> grammarCatalog) {
+        var result = llmPort.evaluateStudyAnswer(
+                sentenceWithBlank,
+                expectedAnswer,
+                answerTranslation,
+                hint,
+                userAnswer,
+                grammarCatalog
+        );
         if (result == null) {
-            return new StudyAnswerEvaluationResult(0.0, 0.0, 0.0, "Your answer is incorrect. Try again.");
+            return new StudyAnswerEvaluationResult(0.0, 0.0, 0.0, "Your answer is incorrect. Try again.", java.util.List.of());
         }
         return new StudyAnswerEvaluationResult(
                 result.semanticMatch(),
                 result.formAccuracy(),
                 result.confidence(),
-                result.feedback() == null || result.feedback().isBlank() ? "Your answer was checked." : result.feedback().trim()
+                result.feedback() == null || result.feedback().isBlank() ? "Your answer was checked." : result.feedback().trim(),
+                result.grammarIssues() == null ? java.util.List.of() : result.grammarIssues().stream()
+                        .map(issue -> new com.myriadcode.languagelearner.language_content.application.externals.GrammarFeedbackIssueResult(
+                                issue.issueText(),
+                                issue.message(),
+                                issue.suggestion(),
+                                issue.ruleIdentifier(),
+                                issue.fallbackExplanation()
+                        ))
+                        .toList()
         );
     }
 }

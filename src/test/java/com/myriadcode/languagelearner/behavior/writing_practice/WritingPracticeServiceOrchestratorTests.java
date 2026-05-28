@@ -2,6 +2,8 @@ package com.myriadcode.languagelearner.behavior.writing_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackResult;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarFeedbackIssueResult;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
@@ -9,6 +11,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
@@ -27,7 +30,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -42,6 +48,7 @@ class WritingPracticeServiceOrchestratorTests {
     private WritingPracticeLlmApi writingPracticeLlmApi;
     private PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
     private WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
+    private GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
 
     private WritingPracticeService service;
 
@@ -53,6 +60,7 @@ class WritingPracticeServiceOrchestratorTests {
         writingPracticeLlmApi = mock(WritingPracticeLlmApi.class);
         practiceVocabularyReferenceRepo = mock(PracticeVocabularyReferenceRepo.class);
         writingSubmissionFeedbackLlmApi = mock(WritingSubmissionFeedbackLlmApi.class);
+        grammarFeedbackOrchestrationService = mock(GrammarFeedbackOrchestrationService.class);
 
         service = new WritingPracticeService(
                 writingPracticeRepo,
@@ -60,7 +68,8 @@ class WritingPracticeServiceOrchestratorTests {
                 privateVocabularyApi,
                 writingPracticeLlmApi,
                 practiceVocabularyReferenceRepo,
-                writingSubmissionFeedbackLlmApi
+                writingSubmissionFeedbackLlmApi,
+                grammarFeedbackOrchestrationService
         );
     }
 
@@ -268,7 +277,14 @@ class WritingPracticeServiceOrchestratorTests {
                 List.of()
         );
         when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
-        when(writingSubmissionFeedbackLlmApi.generateFeedback("English paragraph.", "German paragraph.", "My answer"))
+        when(grammarFeedbackOrchestrationService.buildCatalog()).thenReturn(List.of());
+        when(writingSubmissionFeedbackLlmApi.generateFeedback(
+                eq("English paragraph."),
+                eq("German paragraph."),
+                eq("My answer"),
+                anyList()
+        )).thenReturn(new WritingSubmissionFeedbackResult("Feedback", List.of()));
+        when(grammarFeedbackOrchestrationService.appendGrammarExplanations(eq("Feedback"), anyList()))
                 .thenReturn("Feedback");
 
         service.submitAnswer("user-1", "session-1", "  My answer  ");
@@ -279,6 +295,60 @@ class WritingPracticeServiceOrchestratorTests {
                 eq("My answer"),
                 any(),
                 eq("Feedback"),
+                any()
+        );
+    }
+
+    @Test
+    @DisplayName("submitAnswer: appends grammar explanation into persisted feedback text")
+    void submitAnswerAppendsGrammarExplanationIntoFeedbackText() {
+        var session = new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId("session-1"),
+                new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
+                "Topic",
+                "English paragraph.",
+                "German paragraph.",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of()
+        );
+        when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
+        var serviceWithGrammar = new WritingPracticeService(
+                writingPracticeRepo,
+                flashcardReviewsApi,
+                privateVocabularyApi,
+                writingPracticeLlmApi,
+                practiceVocabularyReferenceRepo,
+                writingSubmissionFeedbackLlmApi,
+                grammarFeedbackOrchestrationService
+        );
+        when(grammarFeedbackOrchestrationService.buildCatalog()).thenReturn(List.of());
+        when(grammarFeedbackOrchestrationService.appendGrammarExplanations(eq("Feedback"), anyList()))
+                .thenReturn("Feedback\n\nGrammar notes: Use ordinal adjective before counted noun.");
+        when(writingSubmissionFeedbackLlmApi.generateFeedback(eq("English paragraph."), eq("German paragraph."), eq("My answer"), anyList()))
+                .thenReturn(new WritingSubmissionFeedbackResult(
+                        "Feedback",
+                        List.of(new GrammarFeedbackIssueResult(
+                                "erst",
+                                "Use ordinal adjective form.",
+                                "erste",
+                                "",
+                                "Use ordinal adjective before counted noun."
+                        ))
+                ));
+
+        serviceWithGrammar.submitAnswer("user-1", "session-1", "My answer");
+
+        verify(writingPracticeRepo).updateSubmission(
+                eq("session-1"),
+                eq("user-1"),
+                eq("My answer"),
+                any(),
+                eq("Feedback\n\nGrammar notes: Use ordinal adjective before counted noun."),
                 any()
         );
     }

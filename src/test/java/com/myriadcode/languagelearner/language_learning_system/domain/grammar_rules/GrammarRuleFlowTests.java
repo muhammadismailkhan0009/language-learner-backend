@@ -39,7 +39,10 @@ public class GrammarRuleFlowTests {
     public void storeGrammarRule() {
         var saved = grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Present Tense Basics",
+                        "A1",
+                        true,
                         List.of(
                                 "Use present tense for current actions.",
                                 "Conjugation changes by subject pronoun."
@@ -62,8 +65,7 @@ public class GrammarRuleFlowTests {
         assertThat(saved.id()).isNotBlank();
         assertThat(saved.name()).isEqualTo("Present Tense Basics");
         assertThat(saved.explanationParagraphs()).hasSize(2);
-        assertThat(saved.scenario().isFixed()).isTrue();
-        assertThat(saved.scenario().sentences()).hasSize(1);
+        assertThat(saved.explanationExamples()).hasSize(1);
         assertThat(grammarRuleEntityJpaRepo.count()).isEqualTo(1);
     }
 
@@ -72,7 +74,10 @@ public class GrammarRuleFlowTests {
     public void editGrammarRuleUpdatesNameExplanationAndScenario() {
         var saved = grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Articles",
+                        "A1",
+                        true,
                         List.of("Articles define nouns."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "At the market",
@@ -92,7 +97,10 @@ public class GrammarRuleFlowTests {
         var updated = grammarRuleOrchestrationService.editGrammarRule(
                 saved.id(),
                 new EditGrammarRuleRequest(
+                        null,
                         "Definite Articles",
+                        "A1",
+                        true,
                         List.of(
                                 "Der, die, das are definite articles in German.",
                                 "Article choice depends on gender and case."
@@ -118,9 +126,7 @@ public class GrammarRuleFlowTests {
 
         assertThat(updated.name()).isEqualTo("Definite Articles");
         assertThat(updated.explanationParagraphs()).hasSize(2);
-        assertThat(updated.scenario().title()).isEqualTo("At the bakery");
-        assertThat(updated.scenario().isFixed()).isTrue();
-        assertThat(updated.scenario().sentences()).hasSize(2);
+        assertThat(updated.explanationExamples()).hasSize(2);
     }
 
     @Test
@@ -128,7 +134,10 @@ public class GrammarRuleFlowTests {
     public void fetchGrammarRulesReturnsAllRules() {
         grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Past Tense",
+                        "A1",
+                        true,
                         List.of("Use simple past for completed actions."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Weekend recap",
@@ -146,7 +155,10 @@ public class GrammarRuleFlowTests {
         );
         grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Future Tense",
+                        "A1",
+                        true,
                         List.of("Use future tense for planned actions."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Trip planning",
@@ -172,7 +184,7 @@ public class GrammarRuleFlowTests {
                 .extracting(rule -> rule.explanationParagraphs())
                 .allSatisfy(paragraphs -> assertThat(paragraphs).isNotEmpty());
         assertThat(all)
-                .flatExtracting(rule -> rule.scenario().sentences())
+                .flatExtracting(rule -> rule.explanationExamples())
                 .isNotEmpty();
     }
 
@@ -181,7 +193,10 @@ public class GrammarRuleFlowTests {
     public void fetchGrammarRuleReturnsSelectedRuleWithScenarioSentences() {
         var saved = grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Present Continuous",
+                        "A1",
+                        true,
                         List.of("Use this tense for ongoing actions."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Office check-in",
@@ -206,7 +221,7 @@ public class GrammarRuleFlowTests {
 
         assertThat(fetched.id()).isEqualTo(saved.id());
         assertThat(fetched.name()).isEqualTo("Present Continuous");
-        assertThat(fetched.scenario().sentences())
+        assertThat(fetched.explanationExamples())
                 .extracting(sentence -> sentence.sentence() + "|" + sentence.translation())
                 .containsExactly(
                         "Ich arbeite gerade.|I am working right now.",
@@ -219,7 +234,10 @@ public class GrammarRuleFlowTests {
     public void fetchGrammarRuleReturnsCompletePayloadIncludingExplanationParagraphs() {
         var saved = grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Modal Verbs",
+                        "A1",
+                        true,
                         List.of(
                                 "Modal verbs express ability, permission, or obligation.",
                                 "In German, modal verbs usually send the main verb to the end."
@@ -252,12 +270,7 @@ public class GrammarRuleFlowTests {
                         "Modal verbs express ability, permission, or obligation.",
                         "In German, modal verbs usually send the main verb to the end."
                 );
-        assertThat(fetched.scenario().title()).isEqualTo("Planning after class");
-        assertThat(fetched.scenario().description())
-                .isEqualTo("Two learners discuss what they can and must do later.");
-        assertThat(fetched.scenario().targetLanguage()).isEqualTo("de");
-        assertThat(fetched.scenario().isFixed()).isTrue();
-        assertThat(fetched.scenario().sentences())
+        assertThat(fetched.explanationExamples())
                 .extracting(sentence -> sentence.sentence() + "|" + sentence.translation())
                 .containsExactly(
                         "Ich kann heute Abend lernen.|I can study this evening.",
@@ -270,7 +283,10 @@ public class GrammarRuleFlowTests {
     public void createGrammarRuleFailsWhenExplanationParagraphsMissing() {
         assertThatThrownBy(() -> grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Nouns",
+                        "A1",
+                        true,
                         List.of(),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Classroom objects",
@@ -295,7 +311,10 @@ public class GrammarRuleFlowTests {
     public void createGrammarRuleFailsWhenScenarioSentencesMissing() {
         assertThatThrownBy(() -> grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Pronouns",
+                        "A1",
+                        true,
                         List.of("Pronouns can replace nouns."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Class intro",
@@ -315,7 +334,10 @@ public class GrammarRuleFlowTests {
     public void createGrammarRuleFailsWhenAdminKeyInvalid() {
         assertThatThrownBy(() -> grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Pronouns",
+                        "A1",
+                        true,
                         List.of("Pronouns can replace nouns."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "Class intro",
@@ -340,7 +362,10 @@ public class GrammarRuleFlowTests {
     public void editGrammarRuleFailsWhenAdminKeyInvalid() {
         var saved = grammarRuleOrchestrationService.createGrammarRule(
                 new CreateGrammarRuleRequest(
+                        null,
                         "Articles",
+                        "A1",
+                        true,
                         List.of("Articles define nouns."),
                         new CreateGrammarRuleRequest.GrammarScenarioRequest(
                                 "At the market",
@@ -360,7 +385,10 @@ public class GrammarRuleFlowTests {
         assertThatThrownBy(() -> grammarRuleOrchestrationService.editGrammarRule(
                 saved.id(),
                 new EditGrammarRuleRequest(
+                        null,
                         "Changed Name",
+                        "A1",
+                        true,
                         List.of("Updated explanation."),
                         new EditGrammarRuleRequest.GrammarScenarioUpdateRequest(
                                 "At the bakery",

@@ -23,8 +23,17 @@ public class GrammarRuleEntity {
     @Id
     private String id;
 
+    @Column(nullable = false, unique = true)
+    private String identifier;
+
     @Column(nullable = false)
     private String name;
+
+    @Column(nullable = false)
+    private String level;
+
+    @Column(nullable = false)
+    private boolean active;
 
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, optional = false)
     @JoinColumn(name = "grammar_scenario_id", nullable = false, unique = true)
@@ -60,12 +69,36 @@ public class GrammarRuleEntity {
         this.id = id;
     }
 
+    public String getIdentifier() {
+        return identifier;
+    }
+
+    public void setIdentifier(String identifier) {
+        this.identifier = identifier;
+    }
+
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getLevel() {
+        return level;
+    }
+
+    public void setLevel(String level) {
+        this.level = level;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public GrammarScenarioEntity getGrammarScenario() {

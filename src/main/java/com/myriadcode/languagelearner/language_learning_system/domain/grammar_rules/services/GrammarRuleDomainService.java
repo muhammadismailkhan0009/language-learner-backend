@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.grammar_ru
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 public final class GrammarRuleDomainService {
@@ -18,13 +19,27 @@ public final class GrammarRuleDomainService {
 
     public static GrammarRule create(String name, List<String> explanationParagraphs,
                                      GrammarScenarioCreateInput grammarScenarioInput) {
+        return create(toIdentifier(name), name, "A1", true, explanationParagraphs, grammarScenarioInput);
+    }
+
+    public static GrammarRule create(String identifier,
+                                     String name,
+                                     String level,
+                                     boolean active,
+                                     List<String> explanationParagraphs,
+                                     GrammarScenarioCreateInput grammarScenarioInput) {
         validateName(name);
+        validateIdentifier(identifier);
+        validateLevel(level);
         var normalizedParagraphs = normalizeParagraphs(explanationParagraphs);
         var scenario = createGrammarScenario(grammarScenarioInput);
 
         return new GrammarRule(
                 new GrammarRule.GrammarRuleId(UUID.randomUUID().toString()),
+                identifier,
                 name,
+                level,
+                active,
                 normalizedParagraphs,
                 scenario
         );
@@ -32,8 +47,25 @@ public final class GrammarRuleDomainService {
 
     public static GrammarRule edit(GrammarRule existingGrammarRule, String name, List<String> explanationParagraphs,
                                    GrammarScenarioPatchInput grammarScenarioPatchInput) {
+        return edit(existingGrammarRule, existingGrammarRule.identifier(), name, existingGrammarRule.level(),
+                existingGrammarRule.active(), explanationParagraphs, grammarScenarioPatchInput);
+    }
+
+    public static GrammarRule edit(GrammarRule existingGrammarRule,
+                                   String identifier,
+                                   String name,
+                                   String level,
+                                   Boolean active,
+                                   List<String> explanationParagraphs,
+                                   GrammarScenarioPatchInput grammarScenarioPatchInput) {
+        var updatedIdentifier = identifier == null ? existingGrammarRule.identifier() : identifier;
         var updatedName = name == null ? existingGrammarRule.name() : name;
+        var updatedLevel = level == null ? existingGrammarRule.level() : level;
+        var updatedActive = active == null ? existingGrammarRule.active() : active;
+
         validateName(updatedName);
+        validateIdentifier(updatedIdentifier);
+        validateLevel(updatedLevel);
 
         var updatedParagraphs = explanationParagraphs == null
                 ? existingGrammarRule.explanationParagraphs()
@@ -45,7 +77,10 @@ public final class GrammarRuleDomainService {
 
         return new GrammarRule(
                 existingGrammarRule.id(),
+                updatedIdentifier,
                 updatedName,
+                updatedLevel,
+                updatedActive,
                 updatedParagraphs,
                 updatedScenario
         );
@@ -149,6 +184,18 @@ public final class GrammarRuleDomainService {
         }
     }
 
+    private static void validateIdentifier(String identifier) {
+        if (identifier == null || identifier.isBlank()) {
+            throw new IllegalArgumentException("Grammar rule identifier is required");
+        }
+    }
+
+    private static void validateLevel(String level) {
+        if (level == null || level.isBlank()) {
+            throw new IllegalArgumentException("Grammar rule level is required");
+        }
+    }
+
     private static void validateScenarioTitle(String title) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Grammar scenario title is required");
@@ -174,6 +221,15 @@ public final class GrammarRuleDomainService {
         if (sentenceInput.translation() == null || sentenceInput.translation().isBlank()) {
             throw new IllegalArgumentException("Grammar scenario sentence translation is required");
         }
+    }
+
+    private static String toIdentifier(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "grammar-rule";
+        }
+        return raw.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "-")
+                .replaceAll("(^-|-$)", "");
     }
 
     public record GrammarScenarioCreateInput(String title, String description, String targetLanguage,

@@ -11,6 +11,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.ReviewVocabularyFlashcardApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.study.StudyService;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
@@ -41,6 +42,7 @@ class StudyServiceBehaviorTests {
     private final VocabularyClozeLlmApi vocabularyClozeLlmApi = mock(VocabularyClozeLlmApi.class);
     private final StudyAnswerEvaluationLlmApi studyAnswerEvaluationLlmApi = mock(StudyAnswerEvaluationLlmApi.class);
     private final ReviewVocabularyFlashcardApi reviewVocabularyFlashcardApi = mock(ReviewVocabularyFlashcardApi.class);
+    private final GrammarFeedbackOrchestrationService grammarService = mock(GrammarFeedbackOrchestrationService.class);
 
     private final StudyService service = new StudyService(
             sessionRepo,
@@ -53,7 +55,8 @@ class StudyServiceBehaviorTests {
             vocabularyRepo,
             vocabularyClozeLlmApi,
             studyAnswerEvaluationLlmApi,
-            reviewVocabularyFlashcardApi
+            reviewVocabularyFlashcardApi,
+            grammarService
     );
 
     @Test
@@ -169,10 +172,12 @@ class StudyServiceBehaviorTests {
         when(itemRepo.findByIdAndSessionId("i-1", "s-1")).thenReturn(Optional.of(item));
         when(sentencePoolRepo.findById("sen-1")).thenReturn(Optional.of(sentence));
 
-        when(studyAnswerEvaluationLlmApi.evaluate(anyString(), anyString(), anyString(), anyString(), eq("gehen")))
+        when(grammarService.buildCatalog()).thenReturn(List.of());
+        when(grammarService.appendGrammarExplanations(anyString(), anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studyAnswerEvaluationLlmApi.evaluate(anyString(), anyString(), anyString(), anyString(), eq("gehen"), anyList()))
                 .thenAnswer(invocation -> {
                     System.out.println("STEP 2: LLM evaluation called for answer = gehen");
-                    return new StudyAnswerEvaluationResult(0.70, 0.60, 0.91, "Close meaning, but verb form should match the sentence.");
+                    return new StudyAnswerEvaluationResult(0.70, 0.60, 0.91, "Close meaning, but verb form should match the sentence.", List.of());
                 });
 
         when(itemRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
@@ -193,6 +198,69 @@ class StudyServiceBehaviorTests {
         verify(reviewVocabularyFlashcardApi).reviewVocabularyFlashcard("f-1", Rating.HARD);
         assertThat(response.appliedRating()).isEqualTo(Rating.HARD);
         assertThat(response.feedback()).contains("Close meaning");
+    }
+
+    @Test
+    @DisplayName("submitAnswer: non-exact answer appends grammar notes via grammar service")
+    void submitAnswerAppendsGrammarNotes() {
+        var enrichedService = new StudyService(
+                sessionRepo,
+                itemRepo,
+                sentencePoolRepo,
+                usageRepo,
+                answerLogRepo,
+                practiceRepo,
+                flashcardReviewsApi,
+                vocabularyRepo,
+                vocabularyClozeLlmApi,
+                studyAnswerEvaluationLlmApi,
+                reviewVocabularyFlashcardApi,
+                grammarService
+        );
+
+        var session = new StudySessionEntity();
+        session.setId("s-1");
+        session.setUserId("user-1");
+        session.setStatus("ACTIVE");
+        session.setCreatedAt(Instant.now());
+
+        var item = new StudySessionItemEntity();
+        item.setId("i-1");
+        item.setSessionId("s-1");
+        item.setFlashcardId("f-1");
+        item.setVocabularyId("v-1");
+        item.setSentenceId("sen-1");
+        item.setQueueRankSnapshot(0);
+        item.setPresentedAt(Instant.now());
+
+        var sentence = new StudySentencePoolEntity();
+        sentence.setId("sen-1");
+        sentence.setVocabularyId("v-1");
+        sentence.setSentenceTextWithBlank("Ich ____ jeden Tag zur Arbeit.");
+        sentence.setTrueAnswerSurface("gehe");
+        sentence.setNormalizedTrueAnswer("gehe");
+        sentence.setHint("go");
+        sentence.setSource("LLM");
+        sentence.setCreatedAt(Instant.now());
+
+        when(sessionRepo.findById("s-1")).thenReturn(Optional.of(session));
+        when(itemRepo.findByIdAndSessionId("i-1", "s-1")).thenReturn(Optional.of(item));
+        when(sentencePoolRepo.findById("sen-1")).thenReturn(Optional.of(sentence));
+        when(itemRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(usageRepo.findByUserIdAndSentenceId("user-1", "sen-1")).thenReturn(Optional.empty());
+        when(answerLogRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(itemRepo.findAllBySessionIdOrderByQueueRankSnapshotAsc("s-1")).thenReturn(List.of(item));
+
+        when(grammarService.buildCatalog()).thenReturn(List.of());
+        when(studyAnswerEvaluationLlmApi.evaluate(anyString(), anyString(), anyString(), anyString(), eq("gehen"), anyList()))
+                .thenReturn(new StudyAnswerEvaluationResult(0.70, 0.60, 0.91, "Base feedback", List.of()));
+        when(grammarService.appendGrammarExplanations(eq("Base feedback"), anyList()))
+                .thenReturn("Base feedback\n\nGrammar notes: Verb-second in main clauses.");
+
+        var response = enrichedService.submitAnswer("s-1", "i-1", "user-1", "gehen");
+
+        assertThat(response.feedback()).contains("Grammar notes");
+        verify(grammarService).appendGrammarExplanations(eq("Base feedback"), anyList());
     }
 
     private Vocabulary vocab(String id, String surface, String translation) {

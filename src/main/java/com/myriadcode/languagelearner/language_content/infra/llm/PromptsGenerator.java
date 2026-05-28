@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_content.domain.model.language_set
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 
 import java.util.List;
 
@@ -655,13 +656,20 @@ public final class PromptsGenerator {
   public static String writingSubmissionFeedback(
       String englishParagraph,
       String referenceGermanParagraph,
-      String submittedGermanParagraph) {
+      String submittedGermanParagraph,
+      java.util.List<com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem> grammarCatalog) {
+    String grammarCatalogText = (grammarCatalog == null || grammarCatalog.isEmpty())
+        ? "(none yet)"
+        : grammarCatalog.stream()
+            .map(item -> "- " + item.identifier() + " | " + item.name() + " | " + (item.hint() == null ? "" : item.hint()))
+            .collect(java.util.stream.Collectors.joining("\n"));
+
     return """
         You are expert German writing coach.
 
         Goal:
         Evaluate submitted German translation against source English paragraph and reference German paragraph.
-        Return one concise feedback string in field `feedback`.
+        Return JSON with feedback plus grammar issue mappings.
 
         Focus:
         - grammar mistakes
@@ -676,6 +684,25 @@ public final class PromptsGenerator {
         - Mention 3-6 important issues, not every tiny issue.
         - Include 1 short actionable next-step tip at end.
         - `feedback` must be plain text, no bullets, no markdown.
+        - For each major grammar issue, map to an existing grammar identifier from catalog when possible.
+        - If no good match exists, set `ruleIdentifier` to empty string and provide a concise `fallbackExplanation`.
+
+        Return STRICT JSON object only:
+        {
+          "feedback": "string",
+          "grammarIssues": [
+            {
+              "issueText": "short issue anchor from learner text",
+              "message": "brief correction message",
+              "suggestion": "suggested correction",
+              "ruleIdentifier": "existing identifier or empty",
+              "fallbackExplanation": "brief explanation used when identifier missing"
+            }
+          ]
+        }
+
+        Existing grammar identifiers catalog:
+        %s
 
         English paragraph:
         %s
@@ -685,7 +712,7 @@ public final class PromptsGenerator {
 
         Submitted German paragraph:
         %s
-        """.formatted(englishParagraph, referenceGermanParagraph, submittedGermanParagraph);
+        """.formatted(grammarCatalogText, englishParagraph, referenceGermanParagraph, submittedGermanParagraph);
   }
 
   public static String readingContentParagraphSentenceSplit(List<String> paragraphs) {
@@ -1063,7 +1090,14 @@ Learner vocabulary (German | translation):
                                              String expectedAnswer,
                                              String answerTranslation,
                                              String hint,
-                                             String userAnswer) {
+                                             String userAnswer,
+                                             java.util.List<com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem> grammarCatalog) {
+    String grammarCatalogText = (grammarCatalog == null || grammarCatalog.isEmpty())
+        ? "(none yet)"
+        : grammarCatalog.stream()
+            .map(item -> "- " + item.identifier() + " | " + item.name() + " | " + (item.hint() == null ? "" : item.hint()))
+            .collect(java.util.stream.Collectors.joining("\n"));
+
     return """
 Evaluate a learner answer for a German fill-in-the-blank exercise.
 
@@ -1072,7 +1106,16 @@ Return STRICT JSON object only with this schema:
   "semanticMatch": number,
   "formAccuracy": number,
   "confidence": number,
-  "feedback": string
+  "feedback": string,
+  "grammarIssues": [
+    {
+      "issueText": "short issue anchor",
+      "message": "brief correction message",
+      "suggestion": "suggested correction",
+      "ruleIdentifier": "existing identifier or empty",
+      "fallbackExplanation": "brief explanation"
+    }
+  ]
 }
 
 Rules:
@@ -1087,6 +1130,8 @@ Scoring guidance:
   keep semanticMatch high and lower formAccuracy.
 - Use low semanticMatch only when meaning/lexeme is wrong.
 - Do not treat capitalization-only mistakes as semantic errors.
+- Reuse catalog identifier whenever matching grammar rule already exists.
+- If no match exists, keep ruleIdentifier empty and provide fallbackExplanation.
 - Typical targets:
   - correct meaning + small form error: semanticMatch >= 0.70, formAccuracy in 0.45..0.80
   - wrong meaning/word: semanticMatch < 0.45
@@ -1097,13 +1142,80 @@ Expected answer: %s
 Expected translation: %s
 Hint: %s
 User answer: %s
+Existing grammar identifiers catalog:
+%s
 """.formatted(
       sentenceWithBlank,
       expectedAnswer,
       answerTranslation == null ? "" : answerTranslation,
       hint == null ? "" : hint,
-      userAnswer
+      userAnswer,
+      grammarCatalogText
     );
+  }
+
+  public static String grammarRuleDrafts(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules) {
+    String existingCatalog = (existingRules == null || existingRules.isEmpty())
+        ? "(none)"
+        : existingRules.stream()
+            .map(rule -> "identifier=%s | name=%s | level=%s".formatted(rule.identifier(), rule.name(), rule.level()))
+            .reduce((a, b) -> a + "\n" + b)
+            .orElse("(none)");
+
+    return """
+You are designing a German grammar curriculum catalog.
+
+Return STRICT JSON array only. Each item:
+{
+  "identifier": "kebab-case unique id",
+  "name": "short generic grammar rule name",
+  "level": "A1|A2|B1|B2|C1|C2",
+  "targetLanguage": "language code"
+}
+
+Rules:
+- Return exactly %d items.
+- Rules must be generic and reusable, not word-specific.
+- Keep identifiers descriptive and stable.
+- Do not include duplicates.
+- Do not return rules that overlap with existing catalog identifiers or rule meanings.
+- Check uniqueness against the full existing catalog across all levels.
+- Propose rules appropriate for requested level only.
+
+Requested level: %s
+Target language: %s
+Existing catalog (all levels):
+%s
+""".formatted(count, level, targetLanguage, existingCatalog);
+  }
+
+  public static String grammarRuleDetails(String identifier, String name, String level, String targetLanguage) {
+    return """
+You are writing grammar learning content for one rule.
+
+Return STRICT JSON object only:
+{
+  "identifier": "same identifier",
+  "name": "same rule name",
+  "level": "same CEFR level",
+  "targetLanguage": "same language code",
+  "explanationParagraphs": ["paragraph 1", "paragraph 2"],
+  "explanationExamples": [
+    {"sentence":"...", "translation":"...", "note":"..."}
+  ]
+}
+
+Rules:
+- Keep explanations concise and generic.
+- Provide 2-4 explanation paragraphs.
+- Provide 3-6 examples.
+- Examples must be natural German and match the rule.
+
+Identifier: %s
+Rule name: %s
+Level: %s
+Target language: %s
+""".formatted(identifier, name, level, targetLanguage);
   }
 
 }

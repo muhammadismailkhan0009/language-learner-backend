@@ -1,0 +1,64 @@
+system_behavior:
+  feature_id: grammar_admin_level_only_generation_v1
+  feature_name: Grammar admin generation with level-only input and global dedupe
+
+nodes:
+  - id: validate_admin_request
+    type: behavior_step
+    label: Validate admin key and normalize level
+    requirements:
+      - REQ-GLG-001
+      - REQ-GLG-002
+    tests:
+      - T-GLG-001
+      - T-GLG-002
+    code:
+      - GrammarRuleOrchestrationService.java
+
+  - id: load_existing_catalog
+    type: behavior_step
+    label: Load full grammar catalog across all levels
+    requirements:
+      - REQ-GLG-003
+    tests:
+      - T-GLG-003
+    code:
+      - GrammarRuleOrchestrationService.java
+      - GrammarRuleRepo.java
+
+  - id: generate_level_drafts
+    type: behavior_step
+    label: LLM draft generation with dedupe constraints
+    requirements:
+      - REQ-GLG-004
+      - REQ-GLG-005
+    tests:
+      - T-GLG-004
+    code:
+      - GrammarRuleCurationLlmAdapter.java
+      - LLMPort.java
+      - LLMGenerator.java
+      - PromptsGenerator.java
+
+  - id: normalize_and_return_drafts
+    type: behavior_step
+    label: Normalize and return draft response
+    requirements:
+      - REQ-GLG-006
+    tests:
+      - T-GLG-002
+      - T-GLG-005
+    code:
+      - GrammarRuleOrchestrationService.java
+      - GrammarRuleController.java
+
+edges:
+  - from: validate_admin_request
+    to: load_existing_catalog
+    meaning: normalized_level
+  - from: load_existing_catalog
+    to: generate_level_drafts
+    meaning: existing_catalog_context
+  - from: generate_level_drafts
+    to: normalize_and_return_drafts
+    meaning: llm_draft_rules

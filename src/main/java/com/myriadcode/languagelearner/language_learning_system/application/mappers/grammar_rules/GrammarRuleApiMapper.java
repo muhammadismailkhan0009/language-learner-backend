@@ -10,6 +10,8 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
+import java.util.List;
+
 @Mapper
 public interface GrammarRuleApiMapper {
 
@@ -32,16 +34,23 @@ public interface GrammarRuleApiMapper {
     );
 
     @Mapping(target = "id", source = "id.id")
-    @Mapping(target = "scenario", source = "grammarScenario")
+    @Mapping(target = "explanationExamples", expression = "java(toExplanationExamples(grammarRule))")
     GrammarRuleResponse toResponse(GrammarRule grammarRule);
-
-    @Mapping(target = "id", source = "id.id")
-    @Mapping(target = "isFixed", source = "isFixed")
-    GrammarRuleResponse.GrammarScenarioResponse toScenarioResponse(
-            com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarScenario scenario
-    );
 
     default String toExplanationParagraphText(GrammarExplanationParagraph paragraph) {
         return paragraph == null ? null : paragraph.text();
+    }
+
+    default List<GrammarRuleResponse.GrammarExplanationExampleResponse> toExplanationExamples(GrammarRule grammarRule) {
+        if (grammarRule == null || grammarRule.grammarScenario() == null || grammarRule.grammarScenario().sentences() == null) {
+            return List.of();
+        }
+        return grammarRule.grammarScenario().sentences().stream()
+                .map(sentence -> new GrammarRuleResponse.GrammarExplanationExampleResponse(
+                        sentence.sentence(),
+                        sentence.translation(),
+                        null
+                ))
+                .toList();
     }
 }

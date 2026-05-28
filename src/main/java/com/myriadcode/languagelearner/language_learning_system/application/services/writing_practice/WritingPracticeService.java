@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackResult;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
@@ -22,7 +23,9 @@ import com.myriadcode.languagelearner.language_learning_system.domain.writing_pr
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -48,22 +51,26 @@ public class WritingPracticeService {
     private final WritingPracticeLlmApi writingPracticeLlmApi;
     private final PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
     private final WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
+    private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
 
+    @Autowired
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
                                   FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
                                   FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
                                   WritingPracticeLlmApi writingPracticeLlmApi,
                                   PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi) {
+                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService) {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
         this.writingPracticeLlmApi = writingPracticeLlmApi;
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
         this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
+        this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
     }
 
     public void createSessionReactive(String userId) {
@@ -199,21 +206,57 @@ public class WritingPracticeService {
         var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
 
-        String feedback;
+        WritingSubmissionFeedbackResult feedback;
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
-            feedback = writingSubmissionFeedbackLlmApi.generateFeedback(
-                    session.englishParagraph(),
-                    session.germanParagraph(),
-                    sanitizedAnswer
-            );
+            if (grammarFeedbackOrchestrationService == null) {
+                feedback = new WritingSubmissionFeedbackResult(
+                        writingSubmissionFeedbackLlmApi.generateFeedback(
+                                session.englishParagraph(),
+                                session.germanParagraph(),
+                                sanitizedAnswer
+                        ),
+                        List.of()
+                );
+            } else {
+                feedback = writingSubmissionFeedbackLlmApi.generateFeedback(
+                        session.englishParagraph(),
+                        session.germanParagraph(),
+                        sanitizedAnswer,
+                        grammarFeedbackOrchestrationService.buildCatalog()
+                );
+            }
+        }
+        String enrichedFeedback = feedback.feedback();
+        if (grammarFeedbackOrchestrationService != null) {
+            enrichedFeedback = grammarFeedbackOrchestrationService.appendGrammarExplanations(feedback.feedback(), feedback.grammarIssues());
         }
         var submittedAt = Instant.now();
-        writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, submittedAt, feedback, submittedAt);
+        writingPracticeRepo.updateSubmission(
+                sessionId,
+                normalizedUserId,
+                sanitizedAnswer,
+                submittedAt,
+                enrichedFeedback,
+                submittedAt
+        );
     }
 
     private WritingPracticeSessionResponse toSessionResponse(WritingPracticeSession session, String userId) {
         var flashcards = buildFlashcards(userId, session.vocabularyUsages());
-        return WRITING_PRACTICE_API_MAPPER.toResponse(session, flashcards);
+        var mapped = WRITING_PRACTICE_API_MAPPER.toResponse(session, flashcards);
+        return new WritingPracticeSessionResponse(
+                mapped.sessionId(),
+                mapped.topic(),
+                mapped.englishParagraph(),
+                mapped.germanParagraph(),
+                mapped.submittedAnswer(),
+                mapped.submittedAt(),
+                mapped.feedbackText(),
+                mapped.feedbackGeneratedAt(),
+                mapped.sentencePairs(),
+                mapped.vocabFlashcards(),
+                mapped.createdAt()
+        );
     }
 
     private List<WritingVocabularyFlashCardView> buildFlashcards(String userId,

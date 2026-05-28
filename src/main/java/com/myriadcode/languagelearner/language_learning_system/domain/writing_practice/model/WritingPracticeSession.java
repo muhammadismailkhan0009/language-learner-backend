@@ -20,6 +20,57 @@ public record WritingPracticeSession(
         List<WritingVocabularyUsage> vocabularyUsages
 ) {
 
+    public WritingPracticeSession {
+    }
+
+    public WritingPracticeSessionId id() {
+        return id;
+    }
+
+    public UserId userId() {
+        return userId;
+    }
+
+    public String topic() {
+        return topic;
+    }
+
+    public String englishParagraph() {
+        return englishParagraph;
+    }
+
+    public String germanParagraph() {
+        return germanParagraph;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public String submittedAnswer() {
+        return submittedAnswer;
+    }
+
+    public Instant submittedAt() {
+        return submittedAt;
+    }
+
+    public String feedbackText() {
+        return feedbackText;
+    }
+
+    public Instant feedbackGeneratedAt() {
+        return feedbackGeneratedAt;
+    }
+
+    public List<WritingSentencePair> sentencePairs() {
+        return sentencePairs;
+    }
+
+    public List<WritingVocabularyUsage> vocabularyUsages() {
+        return vocabularyUsages;
+    }
+
     public record WritingPracticeSessionId(String id) {
     }
 }

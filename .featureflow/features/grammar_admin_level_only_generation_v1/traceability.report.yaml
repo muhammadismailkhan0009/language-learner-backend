@@ -1,0 +1,11 @@
+feature_id: grammar_admin_level_only_generation_v1
+status: planned
+requirements_to_tests:
+  REQ-GLG-001: [T-GLG-001]
+  REQ-GLG-002: [T-GLG-002]
+  REQ-GLG-003: [T-GLG-003]
+  REQ-GLG-004: [T-GLG-004]
+  REQ-GLG-005: [T-GLG-004]
+  REQ-GLG-006: [T-GLG-002, T-GLG-005]
+notes:
+  - Implementation pending phase approvals.

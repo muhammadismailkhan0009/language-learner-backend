@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -42,7 +43,7 @@ public class GrammarRuleControllerTests {
                         .value("Use present tense for current actions."))
                 .andExpect(jsonPath("$.response.explanationParagraphs[1]")
                         .value("Conjugation changes by subject pronoun."))
-                .andExpect(jsonPath("$.response.scenario.title").value("Coffee Shop Greeting"));
+                .andExpect(jsonPath("$.response.explanationExamples[0].sentence").value("Ich bestelle einen Kaffee."));
     }
 
     @Test
@@ -62,6 +63,27 @@ public class GrammarRuleControllerTests {
                         .value("Use present tense for current actions."))
                 .andExpect(jsonPath("$.response[0].explanationParagraphs[1]")
                         .value("Conjugation changes by subject pronoun."));
+    }
+
+    @Test
+    @DisplayName("Draft grammar rules API: accepts level and admin key payload")
+    public void draftGrammarRulesAcceptsLevelAndAdminKeyPayload() throws Exception {
+        var repo = new FakeGrammarRuleRepo();
+        GrammarRuleOrchestrationService service = new GrammarRuleOrchestrationService(repo);
+        var controller = new GrammarRuleController(service);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(post("/api/v1/grammar-rules/admin/drafts/v1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "level": "a2",
+                                  "admin_key": "112233"
+                                }
+                                """)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response").isArray());
     }
 
     private GrammarRule sampleGrammarRule(String ruleId) {

@@ -13,8 +13,10 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.study.entities.*;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.study.repos.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,7 +41,9 @@ public class StudyService {
     private final VocabularyClozeLlmApi vocabularyClozeLlmApi;
     private final StudyAnswerEvaluationLlmApi studyAnswerEvaluationLlmApi;
     private final ReviewVocabularyFlashcardApi reviewVocabularyFlashcardApi;
+    private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
 
+    @Autowired
     public StudyService(StudySessionJpaRepo sessionRepo,
                         StudySessionItemJpaRepo itemRepo,
                         StudySentencePoolJpaRepo sentencePoolRepo,
@@ -50,7 +54,8 @@ public class StudyService {
                         VocabularyRepo vocabularyRepo,
                         VocabularyClozeLlmApi vocabularyClozeLlmApi,
                         StudyAnswerEvaluationLlmApi studyAnswerEvaluationLlmApi,
-                        ReviewVocabularyFlashcardApi reviewVocabularyFlashcardApi) {
+                        ReviewVocabularyFlashcardApi reviewVocabularyFlashcardApi,
+                        GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService) {
         this.sessionRepo = sessionRepo;
         this.itemRepo = itemRepo;
         this.sentencePoolRepo = sentencePoolRepo;
@@ -62,6 +67,7 @@ public class StudyService {
         this.vocabularyClozeLlmApi = vocabularyClozeLlmApi;
         this.studyAnswerEvaluationLlmApi = studyAnswerEvaluationLlmApi;
         this.reviewVocabularyFlashcardApi = reviewVocabularyFlashcardApi;
+        this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
     }
 
     @Transactional
@@ -144,7 +150,6 @@ public class StudyService {
         String feedback;
         String evalMode;
         String llmPayload;
-
         if (exact) {
             appliedRating = Rating.GOOD;
             feedback = "Correct answer.";
@@ -158,11 +163,14 @@ public class StudyService {
                         sentence.getTrueAnswerSurface(),
                         "",
                         sentence.getHint(),
-                        answer
+                        answer,
+                        grammarFeedbackOrchestrationService == null ? List.of() : grammarFeedbackOrchestrationService.buildCatalog()
                 );
             }
             appliedRating = mapRating(eval.semanticMatch(), eval.formAccuracy(), eval.confidence());
-            feedback = eval.feedback();
+            feedback = grammarFeedbackOrchestrationService == null
+                    ? eval.feedback()
+                    : grammarFeedbackOrchestrationService.appendGrammarExplanations(eval.feedback(), eval.grammarIssues());
             evalMode = "LLM";
             llmPayload = "{\"semanticMatch\":" + eval.semanticMatch() + ",\"formAccuracy\":" + eval.formAccuracy() + ",\"confidence\":" + eval.confidence() + "}";
         }
@@ -209,7 +217,9 @@ public class StudyService {
         return toResponse(session, feedback, appliedRating);
     }
 
-    private StudySessionResponse toResponse(StudySessionEntity session, String feedback, Rating appliedRating) {
+    private StudySessionResponse toResponse(StudySessionEntity session,
+                                            String feedback,
+                                            Rating appliedRating) {
         var items = itemRepo.findAllBySessionIdOrderByQueueRankSnapshotAsc(session.getId());
         int total = items.size();
         int rated = (int) items.stream().filter(item -> item.getRatedAt() != null).count();
@@ -228,7 +238,16 @@ public class StudyService {
                     ""
             );
         }
-        return new StudySessionResponse(session.getId(), session.getStatus(), rated, total, currentItem, session.getCreatedAt(), feedback, appliedRating);
+        return new StudySessionResponse(
+                session.getId(),
+                session.getStatus(),
+                rated,
+                total,
+                currentItem,
+                session.getCreatedAt(),
+                feedback,
+                appliedRating
+        );
     }
 
     private List<StudyCandidate> rankCandidates(String userId) {

@@ -1,0 +1,50 @@
+feature_id: grammar_admin_level_only_generation_v1
+
+planned_tests:
+  - id: T-GLG-001
+    type: direct_behavior
+    target: GrammarRuleOrchestrationService.draftGrammarRules
+    verifies:
+      - REQ-GLG-001
+    cases:
+      - invalid_admin_key_throws
+
+  - id: T-GLG-002
+    type: direct_behavior
+    target: GrammarRuleOrchestrationService.draftGrammarRules
+    verifies:
+      - REQ-GLG-002
+      - REQ-GLG-006
+    cases:
+      - missing_level_defaults_to_a1
+      - lowercase_level_normalized_to_uppercase
+
+  - id: T-GLG-003
+    type: direct_behavior
+    target: GrammarRuleOrchestrationService.draftGrammarRules
+    verifies:
+      - REQ-GLG-003
+    cases:
+      - grammar_repo_findAll_used_as_global_catalog_source
+
+  - id: T-GLG-004
+    type: boundary_contract
+    target: LLMPort.proposeGrammarRules and PromptsGenerator.grammarRuleDrafts
+    verifies:
+      - REQ-GLG-004
+      - REQ-GLG-005
+    cases:
+      - prompt_contains_existing_catalog_context
+      - prompt_contains_global_nonduplication_instruction
+      - prompt_contains_level_appropriateness_instruction
+
+  - id: T-GLG-005
+    type: integration
+    target: GrammarRuleController.admin/drafts/v1
+    verifies:
+      - REQ-GLG-001
+      - REQ-GLG-002
+      - REQ-GLG-006
+    cases:
+      - request_accepts_level_and_admin_key_only
+      - response_shape_matches_existing_draft_response

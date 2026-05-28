@@ -1,0 +1,4 @@
+flowchart TD
+    A[Validate admin key and normalize level] --> B[Load all existing grammar rules across levels]
+    B --> C[Generate level-appropriate non-duplicate draft rules via LLM]
+    C --> D[Normalize identifiers and return draft responses]

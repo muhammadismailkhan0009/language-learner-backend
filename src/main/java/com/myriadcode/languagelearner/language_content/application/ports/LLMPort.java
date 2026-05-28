@@ -10,6 +10,10 @@ import com.myriadcode.languagelearner.language_content.application.externals.Rea
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftDetailsPort;
+import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftProposalPort;
 
 import java.util.List;
 
@@ -58,6 +62,13 @@ public interface LLMPort {
                                                                String referenceGermanParagraph,
                                                                String submittedGermanParagraph);
 
+    default WritingSubmissionFeedback generateWritingSubmissionFeedback(String englishParagraph,
+                                                                       String referenceGermanParagraph,
+                                                                       String submittedGermanParagraph,
+                                                                       List<GrammarRuleCatalogItem> grammarCatalog) {
+        return generateWritingSubmissionFeedback(englishParagraph, referenceGermanParagraph, submittedGermanParagraph);
+    }
+
     VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
                                                           List<VocabularyClozeGenerationSeed> vocabulary);
 
@@ -66,5 +77,18 @@ public interface LLMPort {
                                               String answerTranslation,
                                               String hint,
                                               String userAnswer);
+
+    default StudyAnswerEvaluation evaluateStudyAnswer(String sentenceWithBlank,
+                                                      String expectedAnswer,
+                                                      String answerTranslation,
+                                                      String hint,
+                                                      String userAnswer,
+                                                      List<GrammarRuleCatalogItem> grammarCatalog) {
+        return evaluateStudyAnswer(sentenceWithBlank, expectedAnswer, answerTranslation, hint, userAnswer);
+    }
+
+    List<GrammarRuleDraftProposalPort> proposeGrammarRules(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules);
+
+    GrammarRuleDraftDetailsPort generateGrammarRuleDetails(String identifier, String name, String level, String targetLanguage);
 
 }

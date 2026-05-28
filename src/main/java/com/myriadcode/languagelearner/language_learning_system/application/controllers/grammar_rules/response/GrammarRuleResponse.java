@@ -2,13 +2,15 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import java.util.List;
 
-public record GrammarRuleResponse(String id, String name, List<String> explanationParagraphs,
-                                  GrammarScenarioResponse scenario) {
+public record GrammarRuleResponse(String id,
+                                  String identifier,
+                                  String name,
+                                  String level,
+                                  boolean active,
+                                  List<String> explanationParagraphs,
+                                  List<GrammarExplanationExampleResponse> explanationExamples) {
 
-    public record GrammarScenarioResponse(String id, String title, String description, String targetLanguage,
-                                          boolean isFixed, List<GrammarScenarioSentenceResponse> sentences) {
+    public record GrammarExplanationExampleResponse(String sentence, String translation, String note) {
     }
 
-    public record GrammarScenarioSentenceResponse(String sentence, String translation) {
-    }
 }
