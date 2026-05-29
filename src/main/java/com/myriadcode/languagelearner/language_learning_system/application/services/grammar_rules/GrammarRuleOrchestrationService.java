@@ -82,6 +82,24 @@ public class GrammarRuleOrchestrationService {
         return GRAMMAR_RULE_API_MAPPER.toResponse(grammarRuleRepo.save(toSave));
     }
 
+    public GrammarRuleResponse deleteGrammarRuleExplanation(String grammarRuleId, DeleteGrammarRuleExplanationRequest request) {
+        validateAdminKey(request.adminKey());
+        var existing = grammarRuleRepo.findById(grammarRuleId)
+                .orElseThrow(() -> new IllegalArgumentException("Grammar rule not found"));
+
+        var updated = new GrammarRule(
+                existing.id(),
+                existing.identifier(),
+                existing.name(),
+                existing.level(),
+                existing.status(),
+                existing.active(),
+                List.of(),
+                existing.grammarScenario()
+        );
+        return GRAMMAR_RULE_API_MAPPER.toResponse(grammarRuleRepo.save(updated));
+    }
+
     public List<GrammarRuleResponse> fetchGrammarRules() {
         return grammarRuleRepo.findAll().stream()
                 .filter(rule -> !STATUS_DRAFT.equalsIgnoreCase(rule.status()))

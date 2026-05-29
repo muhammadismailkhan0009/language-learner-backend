@@ -136,6 +136,66 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
         assertThat(updatedRule.identifier()).isEqualTo("case-endings-a2");
     }
 
+    @Test
+    @DisplayName("feature flow: delete explanation clears explanation paragraphs while preserving rule identity")
+    void deleteExplanationClearsParagraphs() {
+        var created = grammarRuleOrchestrationService.createGrammarRule(new CreateGrammarRuleRequest(
+                "present-tense-basics",
+                "Present Tense Basics",
+                "A1",
+                true,
+                List.of(
+                        "Use present tense for routine actions.",
+                        "Verb agrees with subject."
+                ),
+                new CreateGrammarRuleRequest.GrammarScenarioRequest(
+                        "Explanation examples",
+                        "Examples",
+                        "de",
+                        List.of(new CreateGrammarRuleRequest.GrammarScenarioSentenceRequest("Ich lerne jeden Tag.", "I learn every day."))
+                ),
+                "112233"
+        ));
+
+        var cleared = grammarRuleOrchestrationService.deleteGrammarRuleExplanation(
+                created.id(),
+                new com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.DeleteGrammarRuleExplanationRequest("112233")
+        );
+
+        assertThat(cleared.id()).isEqualTo(created.id());
+        assertThat(cleared.identifier()).isEqualTo(created.identifier());
+        assertThat(cleared.name()).isEqualTo(created.name());
+        assertThat(cleared.explanationParagraphs()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("feature flow: delete explanation rejects invalid admin key")
+    void deleteExplanationRejectsInvalidAdminKey() {
+        var created = grammarRuleOrchestrationService.createGrammarRule(new CreateGrammarRuleRequest(
+                "present-tense-basics",
+                "Present Tense Basics",
+                "A1",
+                true,
+                List.of("Use present tense."),
+                new CreateGrammarRuleRequest.GrammarScenarioRequest(
+                        "Explanation examples",
+                        "Examples",
+                        "de",
+                        List.of(new CreateGrammarRuleRequest.GrammarScenarioSentenceRequest("Ich lerne.", "I learn."))
+                ),
+                "112233"
+        ));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                grammarRuleOrchestrationService.deleteGrammarRuleExplanation(
+                        created.id(),
+                        new com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.DeleteGrammarRuleExplanationRequest("wrong-key")
+                )
+        )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Invalid admin key");
+    }
+
     @TestConfiguration
     static class Config {
         @Bean(name = "grammarRuleCurationLlmAdapter")

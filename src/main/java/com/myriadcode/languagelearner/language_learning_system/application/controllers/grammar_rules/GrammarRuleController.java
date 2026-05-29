@@ -39,6 +39,15 @@ public class GrammarRuleController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
+    @DeleteMapping("{grammarRuleId}/explanation/v1")
+    public ResponseEntity<ApiResponse<GrammarRuleResponse>> deleteGrammarRuleExplanation(
+            @PathVariable("grammarRuleId") String grammarRuleId,
+            @RequestBody DeleteGrammarRuleExplanationRequest request
+    ) {
+        var response = grammarRuleOrchestrationService.deleteGrammarRuleExplanation(grammarRuleId, request);
+        return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
     @GetMapping("v1")
     public ResponseEntity<ApiResponse<List<GrammarRuleResponse>>> fetchGrammarRules() {
         var response = grammarRuleOrchestrationService.fetchGrammarRules();
