@@ -84,6 +84,7 @@ public class GrammarRuleOrchestrationService {
 
     public List<GrammarRuleResponse> fetchGrammarRules() {
         return grammarRuleRepo.findAll().stream()
+                .filter(rule -> !STATUS_DRAFT.equalsIgnoreCase(rule.status()))
                 .map(GRAMMAR_RULE_API_MAPPER::toResponse)
                 .toList();
     }
