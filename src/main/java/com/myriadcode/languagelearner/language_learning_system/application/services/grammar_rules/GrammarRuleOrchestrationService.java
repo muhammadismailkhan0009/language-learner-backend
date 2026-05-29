@@ -86,18 +86,8 @@ public class GrammarRuleOrchestrationService {
         validateAdminKey(request.adminKey());
         var existing = grammarRuleRepo.findById(grammarRuleId)
                 .orElseThrow(() -> new IllegalArgumentException("Grammar rule not found"));
-
-        var updated = new GrammarRule(
-                existing.id(),
-                existing.identifier(),
-                existing.name(),
-                existing.level(),
-                existing.status(),
-                existing.active(),
-                List.of(),
-                existing.grammarScenario()
-        );
-        return GRAMMAR_RULE_API_MAPPER.toResponse(grammarRuleRepo.save(updated));
+        grammarRuleRepo.deleteById(grammarRuleId);
+        return GRAMMAR_RULE_API_MAPPER.toResponse(existing);
     }
 
     public List<GrammarRuleResponse> fetchGrammarRules() {

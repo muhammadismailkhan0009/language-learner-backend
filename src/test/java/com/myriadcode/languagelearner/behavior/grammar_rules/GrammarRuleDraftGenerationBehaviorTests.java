@@ -134,5 +134,10 @@ class GrammarRuleDraftGenerationBehaviorTests {
         public List<GrammarRule> findByStatus(String status) {
             return data.values().stream().filter(rule -> status.equals(rule.status())).toList();
         }
+
+        @Override
+        public void deleteById(String grammarRuleId) {
+            data.remove(grammarRuleId);
+        }
     }
 }

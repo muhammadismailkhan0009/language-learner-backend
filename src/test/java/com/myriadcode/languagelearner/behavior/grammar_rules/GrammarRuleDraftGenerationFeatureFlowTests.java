@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(properties = "spring.main.allow-bean-definition-overriding=true")
 @ActiveProfiles("test")
@@ -137,8 +138,8 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
     }
 
     @Test
-    @DisplayName("feature flow: delete explanation clears explanation paragraphs while preserving rule identity")
-    void deleteExplanationClearsParagraphs() {
+    @DisplayName("feature flow: delete explanation removes entire grammar rule aggregate")
+    void deleteExplanationRemovesEntireRuleAggregate() {
         var created = grammarRuleOrchestrationService.createGrammarRule(new CreateGrammarRuleRequest(
                 "present-tense-basics",
                 "Present Tense Basics",
@@ -157,15 +158,17 @@ class GrammarRuleDraftGenerationFeatureFlowTests {
                 "112233"
         ));
 
-        var cleared = grammarRuleOrchestrationService.deleteGrammarRuleExplanation(
+        var deleted = grammarRuleOrchestrationService.deleteGrammarRuleExplanation(
                 created.id(),
                 new com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.DeleteGrammarRuleExplanationRequest("112233")
         );
 
-        assertThat(cleared.id()).isEqualTo(created.id());
-        assertThat(cleared.identifier()).isEqualTo(created.identifier());
-        assertThat(cleared.name()).isEqualTo(created.name());
-        assertThat(cleared.explanationParagraphs()).isEmpty();
+        assertThat(deleted.id()).isEqualTo(created.id());
+        assertThat(deleted.identifier()).isEqualTo(created.identifier());
+        assertThat(deleted.name()).isEqualTo(created.name());
+        assertThatThrownBy(() -> grammarRuleOrchestrationService.fetchGrammarRule(created.id()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Grammar rule not found");
     }
 
     @Test

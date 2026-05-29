@@ -56,4 +56,10 @@ public class GrammarRuleJpaRepoImpl implements GrammarRuleRepo {
                 .map(GRAMMAR_RULE_JPA_MAPPER::toDomain)
                 .toList();
     }
+
+    @Override
+    @Transactional
+    public void deleteById(String grammarRuleId) {
+        grammarRuleEntityJpaRepo.deleteById(grammarRuleId);
+    }
 }

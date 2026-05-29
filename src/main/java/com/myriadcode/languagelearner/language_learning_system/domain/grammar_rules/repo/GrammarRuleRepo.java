@@ -14,4 +14,6 @@ public interface GrammarRuleRepo {
     List<GrammarRule> findAll();
 
     List<GrammarRule> findByStatus(String status);
+
+    void deleteById(String grammarRuleId);
 }
