@@ -198,6 +198,10 @@ public class WritingPracticeService {
     }
 
     public void submitAnswer(String userId, String sessionId, String submittedAnswer) {
+        submitAnswer(userId, sessionId, submittedAnswer, false);
+    }
+
+    public void submitAnswer(String userId, String sessionId, String submittedAnswer, boolean draft) {
         var normalizedUserId = requireUserId(userId);
         var sanitizedAnswer = sanitizeSubmission(submittedAnswer);
         if (sanitizedAnswer.isBlank()) {
@@ -205,6 +209,18 @@ public class WritingPracticeService {
         }
         var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
+
+        if (draft) {
+            writingPracticeRepo.updateSubmission(
+                    sessionId,
+                    normalizedUserId,
+                    sanitizedAnswer,
+                    null,
+                    null,
+                    null
+            );
+            return;
+        }
 
         WritingSubmissionFeedbackResult feedback;
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {

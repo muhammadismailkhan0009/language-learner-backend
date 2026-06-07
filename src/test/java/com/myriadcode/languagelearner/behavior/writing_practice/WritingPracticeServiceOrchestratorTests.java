@@ -300,6 +300,39 @@ class WritingPracticeServiceOrchestratorTests {
     }
 
     @Test
+    @DisplayName("submitAnswer: draft stores learner answer without feedback generation")
+    void submitAnswerDraftStoresAnswerWithoutFeedback() {
+        var session = new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId("session-1"),
+                new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
+                "Topic",
+                "English paragraph.",
+                "German paragraph.",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                List.of()
+        );
+        when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
+
+        service.submitAnswer("user-1", "session-1", "  My draft  ", true);
+
+        verify(writingPracticeRepo).updateSubmission(
+                eq("session-1"),
+                eq("user-1"),
+                eq("My draft"),
+                isNull(),
+                isNull(),
+                isNull()
+        );
+        verifyNoInteractions(writingSubmissionFeedbackLlmApi);
+        verify(grammarFeedbackOrchestrationService, never()).buildCatalog();
+    }
+
+    @Test
     @DisplayName("submitAnswer: appends grammar explanation into persisted feedback text")
     void submitAnswerAppendsGrammarExplanationIntoFeedbackText() {
         var session = new WritingPracticeSession(

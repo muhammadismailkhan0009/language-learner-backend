@@ -285,6 +285,31 @@ class WritingPracticeSessionFlowTests {
         assertThat(listed).anyMatch(WritingPracticeSessionSummaryResponse::submitted);
     }
 
+    @Test
+    @DisplayName("submitAnswer: draft stores answer without marking session submitted")
+    void submitAnswerDraftStoresAnswerWithoutSubmission() {
+        writingPracticeService.createSession("user-1");
+        var sessionId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
+
+        writingPracticeService.submitAnswer("user-1", sessionId, "My draft answer", true);
+
+        var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
+        assertThat(persisted.getSubmittedAnswer()).isEqualTo("My draft answer");
+        assertThat(persisted.getSubmittedAt()).isNull();
+        assertThat(persisted.getFeedbackText()).isNull();
+        assertThat(persisted.getFeedbackGeneratedAt()).isNull();
+        assertThat(stubWritingSubmissionFeedbackLlmApi.lastFeedback).isNull();
+
+        var response = writingPracticeService.getSession("user-1", sessionId);
+        assertThat(response.submittedAnswer()).isEqualTo("My draft answer");
+        assertThat(response.submittedAt()).isNull();
+        assertThat(response.feedbackText()).isNull();
+        assertThat(response.feedbackGeneratedAt()).isNull();
+
+        var listed = writingPracticeService.listSessions("user-1");
+        assertThat(listed).noneMatch(WritingPracticeSessionSummaryResponse::submitted);
+    }
+
     static class WritingPracticeTestDoubles {
 
         @Bean

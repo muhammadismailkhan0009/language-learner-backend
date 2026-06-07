@@ -49,8 +49,9 @@ public class WritingPracticeController {
 
     @PostMapping("{sessionId}/submission")
     public ResponseEntity<Void> submitAnswer(@PathVariable("sessionId") String sessionId,
+                                             @RequestParam(value = "draft", defaultValue = "false") boolean draft,
                                              @RequestBody SubmitWritingPracticeAnswerRequest request) {
-        writingPracticeService.submitAnswer(request.userId(), sessionId, request.submittedAnswer());
+        writingPracticeService.submitAnswer(request.userId(), sessionId, request.submittedAnswer(), draft);
         return ResponseEntity.ok().build();
     }
 

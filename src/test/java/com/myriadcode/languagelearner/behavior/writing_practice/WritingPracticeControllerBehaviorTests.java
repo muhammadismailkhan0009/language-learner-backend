@@ -158,7 +158,22 @@ class WritingPracticeControllerBehaviorTests {
                         .content("{\"userId\":\"user-1\",\"submittedAnswer\":\"My answer\"}"))
                 .andExpect(status().isOk());
 
-        verify(service).submitAnswer("user-1", "session-1", "My answer");
+        verify(service).submitAnswer("user-1", "session-1", "My answer", false);
+    }
+
+    @Test
+    @DisplayName("Submit answer API: forwards draft query flag")
+    void submitAnswerForwardsDraftFlag() throws Exception {
+        var service = mock(WritingPracticeService.class);
+        MockMvc mockMvc = mockMvcFor(service);
+
+        mockMvc.perform(post("/api/v1/writing-practice/sessions/{sessionId}/submission", "session-1")
+                        .queryParam("draft", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"userId\":\"user-1\",\"submittedAnswer\":\"My draft\"}"))
+                .andExpect(status().isOk());
+
+        verify(service).submitAnswer("user-1", "session-1", "My draft", true);
     }
 
     @Test
