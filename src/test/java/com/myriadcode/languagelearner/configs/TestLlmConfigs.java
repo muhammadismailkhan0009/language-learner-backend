@@ -111,7 +111,14 @@ public class TestLlmConfigs {
             @Override
             public WritingVocabularyEvaluationResult evaluateWritingVocabulary(String learnerLevel, String englishPrompt, String referenceGermanParagraph, String learnerGermanAnswer, List<WritingFeedbackVocabularyItem> selectedVocabulary, WritingMeaningAnalysisResult meaningAnalysis) {
                 return new WritingVocabularyEvaluationResult(selectedVocabulary.stream()
-                        .map(item -> new WritingVocabularyEvaluationResult.Item(item.vocabularyId(), item.germanTarget(), "correct", "no_update", item.germanTarget(), "test"))
+                        .map(item -> new WritingVocabularyEvaluationResult.Item(
+                                item.vocabularyId(),
+                                item.germanTarget(),
+                                WritingVocabularyEvaluationResult.VocabularyStatus.correct,
+                                WritingVocabularyEvaluationResult.VocabularyMemorySignal.no_update,
+                                item.germanTarget(),
+                                "test"
+                        ))
                         .toList());
             }
 

@@ -6,17 +6,8 @@ import com.myriadcode.languagelearner.language_content.application.externals.Wri
 import com.myriadcode.languagelearner.language_content.application.externals.WritingVocabularyEvaluationResult;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-
 @Component
 public class WritingFeedbackOutputValidator {
-
-    private static final Set<String> VOCAB_STATUSES = Set.of(
-            "correct", "partially_correct", "missing", "wrong", "used_english", "no_evidence"
-    );
-    private static final Set<String> MEMORY_SIGNALS = Set.of(
-            "production_good", "production_hard", "production_again", "no_update"
-    );
 
     public void validateMeaning(WritingMeaningAnalysisResult result) {
         if (result == null || blank(result.overallCoverage())) {
@@ -32,11 +23,11 @@ public class WritingFeedbackOutputValidator {
             if (item == null || blank(item.vocabularyId())) {
                 throw new IllegalArgumentException("Vocabulary evaluation item is missing vocabulary id");
             }
-            if (!VOCAB_STATUSES.contains(normalize(item.status()))) {
-                throw new IllegalArgumentException("Unsupported vocabulary status: " + item.status());
+            if (item.status() == null) {
+                throw new IllegalArgumentException("Vocabulary evaluation item is missing status");
             }
-            if (!MEMORY_SIGNALS.contains(normalize(item.memorySignal()))) {
-                throw new IllegalArgumentException("Unsupported vocabulary memory signal: " + item.memorySignal());
+            if (item.memorySignal() == null) {
+                throw new IllegalArgumentException("Vocabulary evaluation item is missing memory signal");
             }
         }
     }
@@ -65,9 +56,5 @@ public class WritingFeedbackOutputValidator {
 
     private boolean blank(String value) {
         return value == null || value.isBlank();
-    }
-
-    private String normalize(String value) {
-        return value == null ? "" : value.trim();
     }
 }

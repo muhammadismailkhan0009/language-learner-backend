@@ -15,9 +15,16 @@ class WritingFeedbackOutputValidatorTest {
     private final WritingFeedbackOutputValidator validator = new WritingFeedbackOutputValidator();
 
     @Test
-    void rejectsUnsupportedVocabularyStatus() {
+    void rejectsMissingVocabularyStatus() {
         var result = new WritingVocabularyEvaluationResult(List.of(
-                new WritingVocabularyEvaluationResult.Item("vocab-1", "Zug", "almost", "production_good", "Zug", "bad enum")
+                new WritingVocabularyEvaluationResult.Item(
+                        "vocab-1",
+                        "Zug",
+                        null,
+                        WritingVocabularyEvaluationResult.VocabularyMemorySignal.production_good,
+                        "Zug",
+                        "missing status"
+                )
         ));
 
         assertThrows(IllegalArgumentException.class, () -> validator.validateVocabulary(result));
@@ -26,7 +33,14 @@ class WritingFeedbackOutputValidatorTest {
     @Test
     void acceptsAllowedVocabularyStatusAndMemorySignal() {
         var result = new WritingVocabularyEvaluationResult(List.of(
-                new WritingVocabularyEvaluationResult.Item("vocab-1", "Zug", "partially_correct", "production_hard", "Zug", "wrong article")
+                new WritingVocabularyEvaluationResult.Item(
+                        "vocab-1",
+                        "Zug",
+                        WritingVocabularyEvaluationResult.VocabularyStatus.partially_correct,
+                        WritingVocabularyEvaluationResult.VocabularyMemorySignal.production_hard,
+                        "Zug",
+                        "wrong article"
+                )
         ));
 
         assertDoesNotThrow(() -> validator.validateVocabulary(result));
