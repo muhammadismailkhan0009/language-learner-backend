@@ -12,6 +12,11 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingGrammarIssueDetectionResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingMeaningAnalysisResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingStructuredFeedbackResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingVocabularyEvaluationResult;
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftDetailsPort;
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftProposalPort;
 
@@ -68,6 +73,35 @@ public interface LLMPort {
                                                                        List<GrammarRuleCatalogItem> grammarCatalog) {
         return generateWritingSubmissionFeedback(englishParagraph, referenceGermanParagraph, submittedGermanParagraph);
     }
+
+    WritingMeaningAnalysisResult analyzeWritingMeaning(String learnerLevel,
+                                                       String englishPrompt,
+                                                       String referenceGermanParagraph,
+                                                       String learnerGermanAnswer);
+
+    WritingVocabularyEvaluationResult evaluateWritingVocabulary(String learnerLevel,
+                                                                String englishPrompt,
+                                                                String referenceGermanParagraph,
+                                                                String learnerGermanAnswer,
+                                                                List<WritingFeedbackVocabularyItem> selectedVocabulary,
+                                                                WritingMeaningAnalysisResult meaningAnalysis);
+
+    WritingGrammarIssueDetectionResult detectWritingGrammarIssues(String learnerLevel,
+                                                                  String englishPrompt,
+                                                                  String referenceGermanParagraph,
+                                                                  String learnerGermanAnswer,
+                                                                  List<GrammarRuleCatalogItem> grammarCatalog,
+                                                                  WritingMeaningAnalysisResult meaningAnalysis,
+                                                                  WritingVocabularyEvaluationResult vocabularyEvaluation);
+
+    WritingStructuredFeedbackResult composeWritingFeedback(String learnerLevel,
+                                                           String englishPrompt,
+                                                           String referenceGermanParagraph,
+                                                           String learnerGermanAnswer,
+                                                           WritingMeaningAnalysisResult meaningAnalysis,
+                                                           WritingVocabularyEvaluationResult vocabularyEvaluation,
+                                                           WritingGrammarIssueDetectionResult grammarIssues,
+                                                           List<WritingGrammarIssueDetectionResult.Issue> selectedTopIssues);
 
     VocabularyClozeBatch generateVocabularyClozeSentences(String topic,
                                                           List<VocabularyClozeGenerationSeed> vocabulary);

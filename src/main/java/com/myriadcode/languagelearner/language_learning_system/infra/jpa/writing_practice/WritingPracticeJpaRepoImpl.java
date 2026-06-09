@@ -1,11 +1,18 @@
 package com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingGrammarIssueAnalytics;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingSentencePair;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingStructuredFeedback;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingGrammarIssueAnalyticsEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeSessionEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.mappers.WritingPracticeJpaMapper;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingGrammarIssueAnalyticsJpaRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -23,15 +30,22 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     private static final WritingPracticeJpaMapper WRITING_PRACTICE_JPA_MAPPER = WritingPracticeJpaMapper.INSTANCE;
 
     private final WritingPracticeSessionJpaRepo writingPracticeSessionJpaRepo;
+    private final WritingGrammarIssueAnalyticsJpaRepo analyticsJpaRepo;
+    private final ObjectMapper objectMapper;
 
-    public WritingPracticeJpaRepoImpl(WritingPracticeSessionJpaRepo writingPracticeSessionJpaRepo) {
+    public WritingPracticeJpaRepoImpl(WritingPracticeSessionJpaRepo writingPracticeSessionJpaRepo,
+                                      WritingGrammarIssueAnalyticsJpaRepo analyticsJpaRepo,
+                                      ObjectMapper objectMapper) {
         this.writingPracticeSessionJpaRepo = writingPracticeSessionJpaRepo;
+        this.analyticsJpaRepo = analyticsJpaRepo;
+        this.objectMapper = objectMapper;
     }
 
     @Override
     @Transactional
     public WritingPracticeSession save(WritingPracticeSession session) {
         var entity = WRITING_PRACTICE_JPA_MAPPER.toEntity(session);
+        entity.setStructuredFeedbackJson(toJson(session.structuredFeedback()));
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Instant.now());
         }
@@ -90,14 +104,35 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                                                    String submittedAnswer,
                                                    Instant submittedAt,
                                                    String feedbackText,
+                                                   WritingStructuredFeedback structuredFeedback,
                                                    Instant feedbackGeneratedAt) {
         var entity = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
         entity.setSubmittedAnswer(submittedAnswer);
         entity.setSubmittedAt(submittedAt);
         entity.setFeedbackText(feedbackText);
+        entity.setStructuredFeedbackJson(toJson(structuredFeedback));
         entity.setFeedbackGeneratedAt(feedbackGeneratedAt);
         return toDomain(writingPracticeSessionJpaRepo.save(entity));
+    }
+
+    @Override
+    @Transactional
+    public void saveGrammarIssueAnalytics(List<WritingGrammarIssueAnalytics> analytics) {
+        if (analytics == null || analytics.isEmpty()) {
+            return;
+        }
+        analyticsJpaRepo.saveAll(analytics.stream()
+                .map(this::toAnalyticsEntity)
+                .toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<WritingGrammarIssueAnalytics> findGrammarIssueAnalytics(String sessionId, String userId) {
+        return analyticsJpaRepo.findAllBySessionIdAndUserIdOrderByPriorityDescCreatedAtAsc(sessionId, userId).stream()
+                .map(this::toAnalyticsDomain)
+                .toList();
     }
 
     @Override
@@ -141,6 +176,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                 base.submittedAnswer(),
                 base.submittedAt(),
                 base.feedbackText(),
+                fromJson(entity.getStructuredFeedbackJson()),
                 base.feedbackGeneratedAt(),
                 sentencePairs,
                 usages
@@ -162,9 +198,64 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                 base.submittedAnswer(),
                 base.submittedAt(),
                 base.feedbackText(),
+                fromJson(entity.getStructuredFeedbackJson()),
                 base.feedbackGeneratedAt(),
                 List.of(),
                 usages
         );
+    }
+
+    private WritingGrammarIssueAnalyticsEntity toAnalyticsEntity(WritingGrammarIssueAnalytics analytics) {
+        var entity = new WritingGrammarIssueAnalyticsEntity();
+        entity.setId(analytics.id().id());
+        entity.setSessionId(analytics.sessionId().id());
+        entity.setUserId(analytics.userId().id());
+        entity.setGrammarRuleIdentifier(analytics.grammarRuleIdentifier());
+        entity.setIssueType(analytics.issueType());
+        entity.setPriority(analytics.priority());
+        entity.setLearnerText(analytics.learnerText());
+        entity.setCorrectedText(analytics.correctedText());
+        entity.setShortExplanation(analytics.shortExplanation());
+        entity.setOccurrenceCount(analytics.occurrenceCount());
+        entity.setCreatedAt(analytics.createdAt() == null ? Instant.now() : analytics.createdAt());
+        return entity;
+    }
+
+    private WritingGrammarIssueAnalytics toAnalyticsDomain(WritingGrammarIssueAnalyticsEntity entity) {
+        return new WritingGrammarIssueAnalytics(
+                new WritingGrammarIssueAnalytics.WritingGrammarIssueAnalyticsId(entity.getId()),
+                new WritingPracticeSession.WritingPracticeSessionId(entity.getSessionId()),
+                new UserId(entity.getUserId()),
+                entity.getGrammarRuleIdentifier(),
+                entity.getIssueType(),
+                entity.getPriority(),
+                entity.getLearnerText(),
+                entity.getCorrectedText(),
+                entity.getShortExplanation(),
+                entity.getOccurrenceCount(),
+                entity.getCreatedAt()
+        );
+    }
+
+    private String toJson(WritingStructuredFeedback feedback) {
+        if (feedback == null) {
+            return null;
+        }
+        try {
+            return objectMapper.writeValueAsString(feedback);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Unable to serialize writing structured feedback", exception);
+        }
+    }
+
+    private WritingStructuredFeedback fromJson(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(json, WritingStructuredFeedback.class);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Unable to deserialize writing structured feedback", exception);
+        }
     }
 }

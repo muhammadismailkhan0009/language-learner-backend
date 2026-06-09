@@ -15,12 +15,31 @@ public record WritingPracticeSession(
         String submittedAnswer,
         Instant submittedAt,
         String feedbackText,
+        WritingStructuredFeedback structuredFeedback,
         Instant feedbackGeneratedAt,
         List<WritingSentencePair> sentencePairs,
         List<WritingVocabularyUsage> vocabularyUsages
 ) {
 
     public WritingPracticeSession {
+    }
+
+    public WritingPracticeSession(
+            WritingPracticeSessionId id,
+            UserId userId,
+            String topic,
+            String englishParagraph,
+            String germanParagraph,
+            Instant createdAt,
+            String submittedAnswer,
+            Instant submittedAt,
+            String feedbackText,
+            Instant feedbackGeneratedAt,
+            List<WritingSentencePair> sentencePairs,
+            List<WritingVocabularyUsage> vocabularyUsages
+    ) {
+        this(id, userId, topic, englishParagraph, germanParagraph, createdAt, submittedAnswer, submittedAt,
+                feedbackText, null, feedbackGeneratedAt, sentencePairs, vocabularyUsages);
     }
 
     public WritingPracticeSessionId id() {
@@ -57,6 +76,10 @@ public record WritingPracticeSession(
 
     public String feedbackText() {
         return feedbackText;
+    }
+
+    public WritingStructuredFeedback structuredFeedback() {
+        return structuredFeedback;
     }
 
     public Instant feedbackGeneratedAt() {

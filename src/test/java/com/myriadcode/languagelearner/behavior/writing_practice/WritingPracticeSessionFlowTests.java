@@ -310,7 +310,7 @@ class WritingPracticeSessionFlowTests {
         assertThat(listed).noneMatch(WritingPracticeSessionSummaryResponse::submitted);
     }
 
-    static class WritingPracticeTestDoubles {
+    public static class WritingPracticeTestDoubles {
 
         @Bean
         @Primary

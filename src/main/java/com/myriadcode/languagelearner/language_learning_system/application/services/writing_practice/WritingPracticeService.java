@@ -5,7 +5,7 @@ import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
@@ -26,6 +26,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.writing_pr
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -52,9 +53,13 @@ public class WritingPracticeService {
     private final PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
     private final WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
     private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
+    private final WritingFeedbackPipelineService writingFeedbackPipelineService;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
+
+    @Value("${writing.feedback.structured-enabled:true}")
+    private boolean structuredFeedbackEnabled = true;
 
     @Autowired
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
@@ -63,7 +68,8 @@ public class WritingPracticeService {
                                   WritingPracticeLlmApi writingPracticeLlmApi,
                                   PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
                                   WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService) {
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
+                                  WritingFeedbackPipelineService writingFeedbackPipelineService) {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
@@ -71,6 +77,26 @@ public class WritingPracticeService {
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
         this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
         this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
+        this.writingFeedbackPipelineService = writingFeedbackPipelineService;
+    }
+
+    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
+                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
+                                  WritingPracticeLlmApi writingPracticeLlmApi,
+                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
+                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService) {
+        this(
+                writingPracticeRepo,
+                vocabularyFlashcardReviewsApi,
+                fetchPrivateVocabularyApi,
+                writingPracticeLlmApi,
+                practiceVocabularyReferenceRepo,
+                writingSubmissionFeedbackLlmApi,
+                grammarFeedbackOrchestrationService,
+                null
+        );
     }
 
     public void createSessionReactive(String userId) {
@@ -166,6 +192,7 @@ public class WritingPracticeService {
                 null,
                 null,
                 null,
+                null,
                 sentencePairs,
                 usages
         );
@@ -211,50 +238,53 @@ public class WritingPracticeService {
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
 
         if (draft) {
+            writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, null, null, null);
+            return;
+        }
+
+        WritingFeedbackPipelineService.WritingFeedbackPipelineResult feedback;
+        try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
+            if (!structuredFeedbackEnabled || writingFeedbackPipelineService == null) {
+                if (grammarFeedbackOrchestrationService == null) {
+                    feedback = new WritingFeedbackPipelineService.WritingFeedbackPipelineResult(
+                            null,
+                            writingSubmissionFeedbackLlmApi.generateFeedback(session.englishParagraph(), session.germanParagraph(), sanitizedAnswer)
+                    );
+                } else {
+                    var legacyResult = writingSubmissionFeedbackLlmApi.generateFeedback(
+                                session.englishParagraph(),
+                                session.germanParagraph(),
+                                sanitizedAnswer,
+                                grammarFeedbackOrchestrationService.buildCatalog()
+                        );
+                    feedback = new WritingFeedbackPipelineService.WritingFeedbackPipelineResult(
+                            null,
+                            grammarFeedbackOrchestrationService.appendGrammarExplanations(legacyResult.feedback(), legacyResult.grammarIssues())
+                    );
+                }
+            } else {
+                feedback = writingFeedbackPipelineService.generateFeedback(
+                        session,
+                        DIFFICULTY_LEVEL,
+                        sanitizedAnswer,
+                        buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages())
+                );
+            }
+        }
+        var submittedAt = Instant.now();
+        if (feedback.structuredFeedback() == null) {
+            writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, submittedAt, feedback.feedbackText(), submittedAt);
+        } else {
             writingPracticeRepo.updateSubmission(
                     sessionId,
                     normalizedUserId,
                     sanitizedAnswer,
-                    null,
-                    null,
-                    null
+                    submittedAt,
+                    feedback.feedbackText(),
+                    feedback.structuredFeedback(),
+                    submittedAt
             );
-            return;
         }
-
-        WritingSubmissionFeedbackResult feedback;
-        try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
-            if (grammarFeedbackOrchestrationService == null) {
-                feedback = new WritingSubmissionFeedbackResult(
-                        writingSubmissionFeedbackLlmApi.generateFeedback(
-                                session.englishParagraph(),
-                                session.germanParagraph(),
-                                sanitizedAnswer
-                        ),
-                        List.of()
-                );
-            } else {
-                feedback = writingSubmissionFeedbackLlmApi.generateFeedback(
-                        session.englishParagraph(),
-                        session.germanParagraph(),
-                        sanitizedAnswer,
-                        grammarFeedbackOrchestrationService.buildCatalog()
-                );
-            }
-        }
-        String enrichedFeedback = feedback.feedback();
-        if (grammarFeedbackOrchestrationService != null) {
-            enrichedFeedback = grammarFeedbackOrchestrationService.appendGrammarExplanations(feedback.feedback(), feedback.grammarIssues());
-        }
-        var submittedAt = Instant.now();
-        writingPracticeRepo.updateSubmission(
-                sessionId,
-                normalizedUserId,
-                sanitizedAnswer,
-                submittedAt,
-                enrichedFeedback,
-                submittedAt
-        );
     }
 
     private WritingPracticeSessionResponse toSessionResponse(WritingPracticeSession session, String userId) {
@@ -268,6 +298,7 @@ public class WritingPracticeService {
                 mapped.submittedAnswer(),
                 mapped.submittedAt(),
                 mapped.feedbackText(),
+                mapped.structuredFeedback(),
                 mapped.feedbackGeneratedAt(),
                 mapped.sentencePairs(),
                 mapped.vocabFlashcards(),
@@ -286,6 +317,33 @@ public class WritingPracticeService {
 
         return usages.stream()
                 .map(usage -> toFlashcardView(usage, vocabRecords.get(usage.vocabularyId())))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    private List<WritingFeedbackVocabularyItem> buildFeedbackVocabulary(String userId,
+                                                                        List<WritingVocabularyUsage> usages) {
+        if (usages == null || usages.isEmpty()) {
+            return List.of();
+        }
+        var vocabIds = usages.stream().map(WritingVocabularyUsage::vocabularyId).distinct().toList();
+        var records = fetchPrivateVocabularyApi.getVocabularyRecords(vocabIds, userId).stream()
+                .collect(Collectors.toMap(PrivateVocabularyRecord::id, Function.identity()));
+
+        return usages.stream()
+                .map(usage -> {
+                    var record = records.get(usage.vocabularyId());
+                    if (record == null) {
+                        return null;
+                    }
+                    return new WritingFeedbackVocabularyItem(
+                            record.id(),
+                            record.surface(),
+                            record.translation(),
+                            record.entryKind(),
+                            true
+                    );
+                })
                 .filter(java.util.Objects::nonNull)
                 .toList();
     }

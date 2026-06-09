@@ -15,8 +15,13 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingGrammarIssueDetectionResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingMeaningAnalysisResult;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingStructuredFeedbackResult;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingVocabularyEvaluationResult;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
@@ -193,6 +198,83 @@ public class LLMGenerator implements LLMPort {
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingSubmissionFeedback>() {
+        });
+    }
+
+    @Override
+    public WritingMeaningAnalysisResult analyzeWritingMeaning(String learnerLevel,
+                                                              String englishPrompt,
+                                                              String referenceGermanParagraph,
+                                                              String learnerGermanAnswer) {
+        var prompt = PromptsGenerator.writingMeaningAnalyzer(learnerLevel, englishPrompt, referenceGermanParagraph, learnerGermanAnswer);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingMeaningAnalysisResult>() {
+        });
+    }
+
+    @Override
+    public WritingVocabularyEvaluationResult evaluateWritingVocabulary(String learnerLevel,
+                                                                       String englishPrompt,
+                                                                       String referenceGermanParagraph,
+                                                                       String learnerGermanAnswer,
+                                                                       List<WritingFeedbackVocabularyItem> selectedVocabulary,
+                                                                       WritingMeaningAnalysisResult meaningAnalysis) {
+        var prompt = PromptsGenerator.writingVocabularyEvaluator(
+                learnerLevel,
+                englishPrompt,
+                referenceGermanParagraph,
+                learnerGermanAnswer,
+                selectedVocabulary,
+                meaningAnalysis
+        );
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingVocabularyEvaluationResult>() {
+        });
+    }
+
+    @Override
+    public WritingGrammarIssueDetectionResult detectWritingGrammarIssues(String learnerLevel,
+                                                                         String englishPrompt,
+                                                                         String referenceGermanParagraph,
+                                                                         String learnerGermanAnswer,
+                                                                         List<GrammarRuleCatalogItem> grammarCatalog,
+                                                                         WritingMeaningAnalysisResult meaningAnalysis,
+                                                                         WritingVocabularyEvaluationResult vocabularyEvaluation) {
+        var prompt = PromptsGenerator.writingGrammarIssueDetector(
+                learnerLevel,
+                englishPrompt,
+                referenceGermanParagraph,
+                learnerGermanAnswer,
+                grammarCatalog,
+                meaningAnalysis,
+                vocabularyEvaluation
+        );
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingGrammarIssueDetectionResult>() {
+        });
+    }
+
+    @Override
+    public WritingStructuredFeedbackResult composeWritingFeedback(String learnerLevel,
+                                                                  String englishPrompt,
+                                                                  String referenceGermanParagraph,
+                                                                  String learnerGermanAnswer,
+                                                                  WritingMeaningAnalysisResult meaningAnalysis,
+                                                                  WritingVocabularyEvaluationResult vocabularyEvaluation,
+                                                                  WritingGrammarIssueDetectionResult grammarIssues,
+                                                                  List<WritingGrammarIssueDetectionResult.Issue> selectedTopIssues) {
+        var prompt = PromptsGenerator.writingFeedbackComposer(
+                learnerLevel,
+                englishPrompt,
+                referenceGermanParagraph,
+                learnerGermanAnswer,
+                meaningAnalysis,
+                vocabularyEvaluation,
+                grammarIssues,
+                selectedTopIssues
+        );
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<WritingStructuredFeedbackResult>() {
         });
     }
 

@@ -43,6 +43,9 @@ public class WritingPracticeSessionEntity {
     @Column(name = "feedback_text", columnDefinition = "text")
     private String feedbackText;
 
+    @Column(name = "structured_feedback_json", columnDefinition = "text")
+    private String structuredFeedbackJson;
+
     @Column(name = "feedback_generated_at")
     private Instant feedbackGeneratedAt;
 
@@ -82,6 +85,8 @@ public class WritingPracticeSessionEntity {
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
     public String getFeedbackText() { return feedbackText; }
     public void setFeedbackText(String feedbackText) { this.feedbackText = feedbackText; }
+    public String getStructuredFeedbackJson() { return structuredFeedbackJson; }
+    public void setStructuredFeedbackJson(String structuredFeedbackJson) { this.structuredFeedbackJson = structuredFeedbackJson; }
     public Instant getFeedbackGeneratedAt() { return feedbackGeneratedAt; }
     public void setFeedbackGeneratedAt(Instant feedbackGeneratedAt) { this.feedbackGeneratedAt = feedbackGeneratedAt; }
     public Instant getCreatedAt() { return createdAt; }

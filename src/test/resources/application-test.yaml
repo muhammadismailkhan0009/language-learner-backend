@@ -18,3 +18,7 @@ llm:
 
 api-keys: >-
   ${DEEPSEEK_API_KEY:}
+
+writing:
+  feedback:
+    structured-enabled: false
