@@ -43,11 +43,15 @@ import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
 @Service
+@Slf4j
 public class LLMGenerator implements LLMPort {
 
     @Autowired
@@ -197,7 +201,7 @@ public class LLMGenerator implements LLMPort {
                 grammarCatalog
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingSubmissionFeedback>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingSubmissionFeedback>() {
         });
     }
 
@@ -208,7 +212,7 @@ public class LLMGenerator implements LLMPort {
                                                               String learnerGermanAnswer) {
         var prompt = PromptsGenerator.writingMeaningAnalyzer(learnerLevel, englishPrompt, referenceGermanParagraph, learnerGermanAnswer);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingMeaningAnalysisResult>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingMeaningAnalysisResult>() {
         });
     }
 
@@ -228,7 +232,7 @@ public class LLMGenerator implements LLMPort {
                 meaningAnalysis
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingVocabularyEvaluationResult>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingVocabularyEvaluationResult>() {
         });
     }
 
@@ -250,7 +254,7 @@ public class LLMGenerator implements LLMPort {
                 vocabularyEvaluation
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingGrammarIssueDetectionResult>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingGrammarIssueDetectionResult>() {
         });
     }
 
@@ -274,7 +278,7 @@ public class LLMGenerator implements LLMPort {
                 selectedTopIssues
         );
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<WritingStructuredFeedbackResult>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<WritingStructuredFeedbackResult>() {
         });
     }
 
@@ -412,12 +416,36 @@ public class LLMGenerator implements LLMPort {
             String model
     ) {
         RuntimeException lastException = null;
+        var responseType = typeReference.getType().getTypeName();
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            var startedAt = Instant.now();
             try {
-                return doRunLLM(llmPrompt, typeReference, model);
+                log.info("LLM call started: model='{}', responseType='{}', attempt={}/{}",
+                        model,
+                        responseType,
+                        attempt,
+                        MAX_ATTEMPTS
+                );
+                var result = doRunLLM(llmPrompt, typeReference, model);
+                log.info("LLM call finished: model='{}', responseType='{}', attempt={}/{}, durationMs={}",
+                        model,
+                        responseType,
+                        attempt,
+                        MAX_ATTEMPTS,
+                        Duration.between(startedAt, Instant.now()).toMillis()
+                );
+                return result;
             } catch (RuntimeException ex) {
                 lastException = ex;
+                log.warn("LLM call failed: model='{}', responseType='{}', attempt={}/{}, durationMs={}, error='{}'",
+                        model,
+                        responseType,
+                        attempt,
+                        MAX_ATTEMPTS,
+                        Duration.between(startedAt, Instant.now()).toMillis(),
+                        ex.getMessage()
+                );
 
                 if (attempt == MAX_ATTEMPTS) {
                     break;
