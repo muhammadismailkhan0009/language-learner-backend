@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.writing_pr
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingStructuredFeedback;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @Service
+@Slf4j
 public class WritingFeedbackPipelineService {
 
     private final WritingFeedbackPipelineLlmApi llmApi;
@@ -56,14 +58,17 @@ public class WritingFeedbackPipelineService {
                 : grammarFeedbackOrchestrationService.buildCatalog();
 
         var meaning = callWithSingleRetry(
+                "meaning-analysis",
                 () -> llmApi.analyzeMeaning(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer),
                 validator::validateMeaning
         );
         var vocabulary = callWithSingleRetry(
+                "vocabulary-evaluation",
                 () -> llmApi.evaluateVocabulary(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, selectedVocabulary, meaning),
                 validator::validateVocabulary
         );
         var grammarIssues = callWithSingleRetry(
+                "grammar-issue-detection",
                 () -> llmApi.detectGrammarIssues(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, grammarCatalog, meaning, vocabulary),
                 validator::validateGrammar
         );
@@ -71,6 +76,7 @@ public class WritingFeedbackPipelineService {
         var topIssues = issueSelector.selectTopIssues(grammarIssues);
 
         var feedback = callWithSingleRetry(
+                "feedback-composition",
                 () -> llmApi.composeFeedback(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, meaning, vocabulary, grammarIssues, topIssues),
                 validator::validateFeedback
         );
@@ -83,17 +89,25 @@ public class WritingFeedbackPipelineService {
         return new WritingFeedbackPipelineResult(toDomainFeedback(feedback), toFeedbackText(feedback));
     }
 
-    private <T> T callWithSingleRetry(Supplier<T> call, Consumer<T> validation) {
+    private <T> T callWithSingleRetry(String stage, Supplier<T> call, Consumer<T> validation) {
         RuntimeException failure = null;
-        for (int attempt = 0; attempt < 2; attempt++) {
+        for (int attempt = 1; attempt <= 2; attempt++) {
             try {
+                log.info("Writing feedback pipeline stage started: stage='{}', attempt={}/2", stage, attempt);
                 var result = call.get();
                 validation.accept(result);
+                log.info("Writing feedback pipeline stage finished: stage='{}', attempt={}/2", stage, attempt);
                 return result;
             } catch (RuntimeException exception) {
                 failure = exception;
+                log.warn("Writing feedback pipeline stage failed: stage='{}', attempt={}/2, error='{}'",
+                        stage,
+                        attempt,
+                        exception.getMessage()
+                );
             }
         }
+        log.error("Writing feedback pipeline stage exhausted retries: stage='{}'", stage, failure);
         throw failure;
     }
 
