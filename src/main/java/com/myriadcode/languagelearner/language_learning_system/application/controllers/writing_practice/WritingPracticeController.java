@@ -55,6 +55,12 @@ public class WritingPracticeController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("{sessionId}/feedback/re-evaluate")
+    public ResponseEntity<ApiResponse<WritingPracticeSessionResponse>> reEvaluateFeedback(@PathVariable("sessionId") String sessionId,
+                                                                                         @RequestParam("userId") String userId) {
+        return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.reEvaluateFeedback(userId, sessionId)));
+    }
+
     @DeleteMapping("{sessionId}")
     public ResponseEntity<Void> deleteSession(@PathVariable("sessionId") String sessionId,
                                               @RequestParam("userId") String userId) {

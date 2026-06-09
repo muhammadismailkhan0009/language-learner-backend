@@ -41,6 +41,9 @@ public interface WritingPracticeRepo {
         return List.of();
     }
 
+    default void deleteGrammarIssueAnalytics(String sessionId, String userId) {
+    }
+
     void deleteByIdAndUserId(String sessionId, String userId);
 
     void detachFlashcard(String userId, String sessionId, String flashcardId);

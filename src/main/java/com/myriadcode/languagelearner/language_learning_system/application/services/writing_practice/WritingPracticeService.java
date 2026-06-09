@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -285,6 +286,43 @@ public class WritingPracticeService {
                     submittedAt
             );
         }
+    }
+
+    @Transactional
+    public WritingPracticeSessionResponse reEvaluateFeedback(String userId, String sessionId) {
+        var normalizedUserId = requireUserId(userId);
+        var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
+                .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
+        var submittedAnswer = sanitizeSubmission(session.submittedAnswer());
+        if (submittedAnswer.isBlank() || session.submittedAt() == null) {
+            throw new IllegalArgumentException("Writing session must have a submitted answer before re-evaluation");
+        }
+        if (writingFeedbackPipelineService == null) {
+            throw new IllegalStateException("Structured writing feedback pipeline is not available");
+        }
+
+        WritingFeedbackPipelineService.WritingFeedbackPipelineResult feedback;
+        try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
+            feedback = writingFeedbackPipelineService.generateFeedback(
+                    session,
+                    DIFFICULTY_LEVEL,
+                    submittedAnswer,
+                    buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages()),
+                    true
+            );
+        }
+
+        var generatedAt = Instant.now();
+        var updated = writingPracticeRepo.updateSubmission(
+                sessionId,
+                normalizedUserId,
+                submittedAnswer,
+                session.submittedAt(),
+                feedback.feedbackText(),
+                feedback.structuredFeedback(),
+                generatedAt
+        );
+        return toSessionResponse(updated, normalizedUserId);
     }
 
     private WritingPracticeSessionResponse toSessionResponse(WritingPracticeSession session, String userId) {

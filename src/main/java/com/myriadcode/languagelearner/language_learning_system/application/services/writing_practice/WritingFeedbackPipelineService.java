@@ -43,6 +43,14 @@ public class WritingFeedbackPipelineService {
                                                           String learnerLevel,
                                                           String learnerGermanAnswer,
                                                           List<WritingFeedbackVocabularyItem> selectedVocabulary) {
+        return generateFeedback(session, learnerLevel, learnerGermanAnswer, selectedVocabulary, false);
+    }
+
+    public WritingFeedbackPipelineResult generateFeedback(WritingPracticeSession session,
+                                                          String learnerLevel,
+                                                          String learnerGermanAnswer,
+                                                          List<WritingFeedbackVocabularyItem> selectedVocabulary,
+                                                          boolean replaceExistingAnalytics) {
         var grammarCatalog = grammarFeedbackOrchestrationService == null
                 ? List.<com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem>of()
                 : grammarFeedbackOrchestrationService.buildCatalog();
@@ -61,12 +69,16 @@ public class WritingFeedbackPipelineService {
         );
 
         var topIssues = issueSelector.selectTopIssues(grammarIssues);
-        writingPracticeRepo.saveGrammarIssueAnalytics(toAnalytics(session, grammarIssues));
 
         var feedback = callWithSingleRetry(
                 () -> llmApi.composeFeedback(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, meaning, vocabulary, grammarIssues, topIssues),
                 validator::validateFeedback
         );
+
+        if (replaceExistingAnalytics) {
+            writingPracticeRepo.deleteGrammarIssueAnalytics(session.id().id(), session.userId().id());
+        }
+        writingPracticeRepo.saveGrammarIssueAnalytics(toAnalytics(session, grammarIssues));
 
         return new WritingFeedbackPipelineResult(toDomainFeedback(feedback), toFeedbackText(feedback));
     }

@@ -137,6 +137,12 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
 
     @Override
     @Transactional
+    public void deleteGrammarIssueAnalytics(String sessionId, String userId) {
+        analyticsJpaRepo.deleteBySessionIdAndUserId(sessionId, userId);
+    }
+
+    @Override
+    @Transactional
     public void deleteByIdAndUserId(String sessionId, String userId) {
         writingPracticeSessionJpaRepo.deleteByIdAndUserId(sessionId, userId);
     }

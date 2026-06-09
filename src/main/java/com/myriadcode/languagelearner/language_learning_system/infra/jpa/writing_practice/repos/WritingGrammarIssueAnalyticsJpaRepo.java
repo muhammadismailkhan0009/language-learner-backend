@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface WritingGrammarIssueAnalyticsJpaRepo extends JpaRepository<WritingGrammarIssueAnalyticsEntity, String> {
     List<WritingGrammarIssueAnalyticsEntity> findAllBySessionIdAndUserIdOrderByPriorityDescCreatedAtAsc(String sessionId, String userId);
+
+    void deleteBySessionIdAndUserId(String sessionId, String userId);
 }
