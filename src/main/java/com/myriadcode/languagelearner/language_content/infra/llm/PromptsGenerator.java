@@ -7,6 +7,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Rea
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
 
 import java.util.List;
 
@@ -1469,6 +1470,78 @@ Rule name: %s
 Level: %s
 Target language: %s
 """.formatted(identifier, name, level, targetLanguage);
+  }
+
+  public static String grammarLevelReassignment(List<GrammarLevelReassignmentInput> grammarRules) {
+    String rules = (grammarRules == null || grammarRules.isEmpty())
+        ? "(none)"
+        : grammarRules.stream()
+            .map(rule -> """
+                ID: %s
+                Title: %s
+                Current difficulty level: %s
+                Explanation/content:
+                %s
+                Examples:
+                %s
+                """.formatted(
+                rule.id(),
+                rule.title(),
+                rule.currentLevel(),
+                String.join("\n", rule.explanationParagraphs() == null ? List.of() : rule.explanationParagraphs()),
+                formatGrammarExamples(rule.examples())
+            ))
+            .reduce((a, b) -> a + "\n---\n" + b)
+            .orElse("(none)");
+
+    return """
+You are reviewing existing German grammar rules for a language-learning platform.
+
+Your task is to verify whether each grammar rule is assigned to the correct CEFR difficulty level and propose a corrected level only when necessary.
+
+You will receive a collection of grammar rules. Each rule may contain:
+- its stable ID,
+- title,
+- current difficulty level,
+- explanation or rule content,
+- examples.
+
+Review every rule independently.
+
+For each grammar rule:
+
+1. Determine the CEFR level at which the grammar concept should normally be introduced or actively practiced.
+2. Compare that level with the rule's current assigned level.
+3. Keep the current level when it is already appropriate.
+4. Propose a different level only when the current assignment is meaningfully incorrect.
+5. Provide a short reason for the decision.
+
+Classification rules:
+
+- Judge the complexity of the grammar concept itself.
+- Do not raise the level merely because an example contains difficult vocabulary.
+- Do not lower the level merely because the explanation is written simply.
+- Classify according to the knowledge required to understand and use the rule.
+- Prefer the earliest realistic CEFR level at which the learner can actively practise the rule.
+- Use only difficulty levels supported by the application: A1, A2, B1, B2, C1.
+- Preserve every grammar-rule ID exactly.
+- Process every supplied rule once.
+- Do not rewrite, merge, split, delete, or generate grammar rules.
+- Return only the structured output expected by the framework.
+
+Grammar rules:
+%s
+""".formatted(rules);
+  }
+
+  private static String formatGrammarExamples(List<GrammarLevelReassignmentInput.GrammarExample> examples) {
+    if (examples == null || examples.isEmpty()) {
+      return "(none)";
+    }
+    return examples.stream()
+        .map(example -> "- %s -> %s".formatted(example.sentence(), example.translation()))
+        .reduce((a, b) -> a + "\n" + b)
+        .orElse("(none)");
   }
 
 }

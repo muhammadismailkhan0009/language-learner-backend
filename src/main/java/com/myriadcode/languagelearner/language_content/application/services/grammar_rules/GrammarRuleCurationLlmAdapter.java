@@ -2,6 +2,8 @@ package com.myriadcode.languagelearner.language_content.application.services.gra
 
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCurationLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentProposal;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleDraftDetails;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleDraftProposal;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
@@ -49,5 +51,22 @@ public class GrammarRuleCurationLlmAdapter implements GrammarRuleCurationLlmApi 
                         ))
                         .toList()
         );
+    }
+
+    @Override
+    public List<GrammarLevelReassignmentProposal> reassignGrammarLevels(List<GrammarLevelReassignmentInput> grammarRules) {
+        var result = llmPort.reassignGrammarLevels(grammarRules);
+        if (result == null) {
+            return List.of();
+        }
+        return result.stream()
+                .map(item -> new GrammarLevelReassignmentProposal(
+                        item.grammarRuleId(),
+                        item.currentLevel(),
+                        item.proposedLevel(),
+                        item.changeRequired(),
+                        item.reason()
+                ))
+                .toList();
     }
 }

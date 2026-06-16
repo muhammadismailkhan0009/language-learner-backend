@@ -1,0 +1,186 @@
+feature_id: grammar_user_level_alignment_upgrade_v1
+phase: 3
+status: draft
+
+no_op_slices:
+  - slice: manual_grammar_editing
+    reason: Existing grammar edit feature already exists and user requested no further improvements.
+    tests: NO-OP
+
+phases:
+  - name: direct_behavior_tests
+    tests:
+      - id: T-GULA-001
+        target: LanguageLevel enum/value parser
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/LanguageLevelBehaviorTests.java
+        verifies:
+          - REQ-005
+          - REQ-015
+        cases:
+          - accepts_supported_levels_A1_A2_B1_B2_C1
+          - rejects_unknown_or_blank_levels
+
+      - id: T-GULA-002
+        target: GrammarLevelReassignmentValidator
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/GrammarLevelReassignmentValidatorBehaviorTests.java
+        verifies:
+          - REQ-003
+          - REQ-004
+          - REQ-005
+          - REQ-006
+          - REQ-007
+        cases:
+          - rejects_unknown_returned_rule_id
+          - rejects_duplicate_returned_rule_id
+          - rejects_unsupported_proposed_level
+          - permits_omitted_rules_as_unchanged
+          - marks_update_only_when_change_required_and_level_differs
+
+      - id: T-GULA-003
+        target: GrammarContentAuthorizationService
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/GrammarContentAuthorizationBehaviorTests.java
+        verifies:
+          - REQ-001
+        cases:
+          - authenticated_user_allowed_to_reassign_grammar_levels
+          - missing_user_rejected_if_current_auth_pattern_exposes_missing_user
+
+      - id: T-GULA-004
+        target: UserProfileService
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/user_profile/UserProfileServiceBehaviorTests.java
+        verifies:
+          - REQ-012
+          - REQ-013
+          - REQ-015
+          - REQ-016
+          - REQ-017
+        cases:
+          - get_profile_creates_missing_profile_with_A1
+          - update_level_creates_missing_profile_and_saves_selected_level
+          - update_level_rejects_unsupported_level
+          - service_uses_only_user_profile_repo_and_does_not_touch_progress_repositories
+
+  - name: boundary_contract_tests
+    tests:
+      - id: T-GULA-005
+        target: GrammarLevelReassignmentLlmApi prompt/input contract
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/GrammarLevelReassignmentLlmBoundaryTests.java
+        verifies:
+          - REQ-002
+        cases:
+          - prompt_contains_feature_classification_rules
+          - llm_input_contains_only_id_title_current_level_content_and_examples
+          - llm_input_excludes_persistence_metadata
+
+      - id: T-GULA-006
+        target: GrammarRuleController.reassign-levels
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/GrammarLevelReassignmentControllerBehaviorTests.java
+        verifies:
+          - REQ-001
+          - REQ-002
+          - REQ-007
+        cases:
+          - post_reassign_levels_returns_reviewed_changed_unchanged_summary
+          - changed_records_include_rule_name_previous_level_proposed_level_and_reason
+
+      - id: T-GULA-007
+        target: UserProfileController
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/user_profile/UserProfileControllerBehaviorTests.java
+        verifies:
+          - REQ-014
+          - REQ-015
+        cases:
+          - get_me_profile_returns_userId_difficultyLevel_createdAt_updatedAt
+          - patch_difficulty_level_accepts_enum_value
+          - patch_difficulty_level_rejects_invalid_value
+
+      - id: T-GULA-008
+        target: UserProfile JPA mapper/repository boundary
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/user_profile/UserProfilePersistenceBoundaryTests.java
+        verifies:
+          - REQ-012
+          - REQ-013
+          - REQ-014
+          - REQ-016
+        cases:
+          - saves_and_loads_profile_by_user_id
+          - persists_difficulty_level_as_string_enum_value
+          - createdAt_and_updatedAt_are_persisted
+
+  - name: integration_or_composition_tests
+    tests:
+      - id: T-GULA-009
+        target: GrammarLevelReassignmentService
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/level_alignment/GrammarLevelReassignmentServiceFlowTests.java
+        verifies:
+          - REQ-002
+          - REQ-003
+          - REQ-004
+          - REQ-005
+          - REQ-006
+          - REQ-007
+        cases:
+          - one_llm_call_reviews_existing_catalog_and_updates_only_changed_levels
+          - unchanged_and_omitted_rules_are_not_saved
+          - invalid_llm_response_prevents_all_updates
+
+      - id: T-GULA-010
+        target: UserProfile current-user flow
+        planned_file: src/test/java/com/myriadcode/languagelearner/behavior/user_profile/UserProfileFlowTests.java
+        verifies:
+          - REQ-012
+          - REQ-013
+          - REQ-014
+          - REQ-016
+          - REQ-017
+        cases:
+          - get_then_patch_profile_preserves_same_user_profile
+          - updating_level_does_not_require_or_modify_any_learning_progress_state
+
+  - name: frontend_feature_and_interaction_checks
+    tests:
+      - id: T-GULA-011
+        target: Profile difficulty UI
+        planned_verification: pnpm lint and pnpm build; no frontend test runner exists in package.json
+        verifies:
+          - REQ-014
+          - REQ-015
+          - REQ-016
+          - REQ-017
+        cases:
+          - profile_page_renders_level_selector_and_non_reset_helper_text
+          - saving_profile_level_calls_profile_server_action
+          - invalid_level_not_representable_from_selector
+
+      - id: T-GULA-012
+        target: Grammar reassignment UI
+        planned_verification: pnpm lint and pnpm build; no frontend test runner exists in package.json
+        verifies:
+          - REQ-001
+          - REQ-002
+          - REQ-007
+        cases:
+          - grammar_page_exposes_reassign_grammar_levels_action
+          - reassignment_success_displays_reviewed_changed_unchanged_summary
+          - reassignment_failure_keeps_existing_list_visible_and_shows_error
+
+mock_review:
+  decisions:
+    - test: GrammarLevelReassignmentServiceFlowTests
+      why_mock_allowed: LLM is external and nondeterministic; fake LLM API returns deterministic proposals.
+      excluded_behavior: provider/network/model quality.
+      lower_level_coverage_reference:
+        - GrammarLevelReassignmentLlmBoundaryTests
+        - GrammarLevelReassignmentValidatorBehaviorTests
+    - test: UserProfileServiceBehaviorTests
+      why_mock_allowed: fake/in-memory profile repo may be used only for direct service behavior.
+      excluded_behavior: JPA persistence semantics.
+      lower_level_coverage_reference:
+        - UserProfilePersistenceBoundaryTests
+
+verification_commands:
+  backend:
+    - ./mvnw test
+  frontend:
+    - pnpm lint
+    - pnpm build

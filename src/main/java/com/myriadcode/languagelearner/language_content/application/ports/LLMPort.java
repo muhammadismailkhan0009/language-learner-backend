@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Rea
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
@@ -124,5 +125,9 @@ public interface LLMPort {
     List<GrammarRuleDraftProposalPort> proposeGrammarRules(String level, String targetLanguage, int count, List<GrammarRuleCatalogContext> existingRules);
 
     GrammarRuleDraftDetailsPort generateGrammarRuleDetails(String identifier, String name, String level, String targetLanguage);
+
+    default List<GrammarLevelReassignmentProposalPort> reassignGrammarLevels(List<GrammarLevelReassignmentInput> grammarRules) {
+        return List.of();
+    }
 
 }

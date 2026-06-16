@@ -4,8 +4,11 @@ import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.request.*;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleDraftDetailsResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleDraftResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarLevelReassignmentSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarLevelReassignmentService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,9 +20,17 @@ import java.util.List;
 public class GrammarRuleController {
 
     private final GrammarRuleOrchestrationService grammarRuleOrchestrationService;
+    private final GrammarLevelReassignmentService grammarLevelReassignmentService;
+
+    @Autowired
+    public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService,
+                                 GrammarLevelReassignmentService grammarLevelReassignmentService) {
+        this.grammarRuleOrchestrationService = grammarRuleOrchestrationService;
+        this.grammarLevelReassignmentService = grammarLevelReassignmentService;
+    }
 
     public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService) {
-        this.grammarRuleOrchestrationService = grammarRuleOrchestrationService;
+        this(grammarRuleOrchestrationService, null);
     }
 
     @PostMapping("v1")
@@ -52,6 +63,16 @@ public class GrammarRuleController {
     public ResponseEntity<ApiResponse<List<GrammarRuleResponse>>> fetchGrammarRules() {
         var response = grammarRuleOrchestrationService.fetchGrammarRules();
         return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("reassign-levels/v1")
+    public ResponseEntity<ApiResponse<GrammarLevelReassignmentSummaryResponse>> reassignGrammarLevels(
+            @RequestParam("userId") String userId
+    ) {
+        if (grammarLevelReassignmentService == null) {
+            throw new IllegalStateException("Grammar level reassignment service is not configured");
+        }
+        return ResponseEntity.ok(new ApiResponse<>(grammarLevelReassignmentService.reassignLevels(userId)));
     }
 
     @GetMapping("{grammarRuleId}/v1")

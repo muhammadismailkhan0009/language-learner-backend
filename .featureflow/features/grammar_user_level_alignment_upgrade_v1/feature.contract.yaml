@@ -1,0 +1,232 @@
+feature:
+  id: grammar_user_level_alignment_upgrade_v1
+  name: Grammar and User Level Alignment Upgrade
+  status: draft
+  mode: feature
+
+source_documents:
+  - project_features/grammar_user_level_alignment_upgrade.md
+  - AGENTS.md
+
+goal:
+  summary: >
+    Align existing grammar rules with enum-backed CEFR levels through reassignment
+    and persist each user's manually selected learning difficulty level for future
+    generation flows. Manual grammar editing already exists and is intentionally
+    treated as a no-op for this feature.
+
+scope:
+  backend:
+    included:
+      - enum-backed language difficulty levels
+      - authenticated grammar level reassignment endpoint
+      - one-call LLM grammar level reassignment flow
+      - validation of reassignment IDs, duplicates, and enum values
+      - user profile persistence with lazy creation
+      - current-user profile read and difficulty-level update endpoints
+    excluded:
+      - grammar generation redesign
+      - grammar deletion
+      - manual grammar editing changes because the feature already exists
+      - grammar mastery, FSRS, prerequisite graph, or automatic level estimation
+      - automatic grammar selection for reading, writing, or cloze
+      - multi-step preview or approval workflow
+  frontend:
+    included:
+      - one-click grammar level reassignment action and summary display
+      - profile difficulty-level selector with non-reset helper text
+    excluded:
+      - administration role UI
+      - grammar deletion UI
+      - manual grammar editing changes because the feature already exists
+      - automatic level estimation UI
+      - grammar generation UI redesign
+
+inputs:
+  - authenticated_user_id
+  - existing_grammar_rule_catalog
+  - grammar_reassignment_llm_response
+  - grammar_rule_update_request
+  - profile_difficulty_level_request
+
+outputs:
+  - grammar_reassignment_summary
+  - updated_grammar_rule
+  - current_user_profile
+  - persisted_user_difficulty_level
+
+flow:
+  - id: authorize_authenticated_action
+    behavior: >
+      Centralize authorization for grammar reassignment and profile updates. For
+      this feature version, any authenticated user is allowed.
+    input:
+      - authenticated_user_id
+    output:
+      - authorization_decision
+    must:
+      - REQ-001
+    test_strategy:
+      primary: direct_behavior
+      isolation: pure
+      mock_policy: no_mocks
+
+  - id: reassign_grammar_levels
+    behavior: >
+      Load existing grammar rules, send only classification-relevant fields to the
+      LLM in one structured-output call, validate returned IDs and LanguageLevel
+      values, update only changed difficulty levels, and return a compact summary.
+    input:
+      - authenticated_user_id
+      - existing_grammar_rule_catalog
+      - grammar_reassignment_llm_response
+    output:
+      - grammar_reassignment_summary
+    must:
+      - REQ-002
+      - REQ-003
+      - REQ-004
+      - REQ-005
+      - REQ-006
+      - REQ-007
+    test_strategy:
+      primary: integration
+      isolation: composed_runtime
+      mock_policy: external_only
+
+  - id: get_or_create_user_profile
+    behavior: >
+      Return the current authenticated user's profile, lazily creating one with
+      LanguageLevel.A1 when absent unless an existing onboarding source supplies a
+      different supported level.
+    input:
+      - authenticated_user_id
+    output:
+      - current_user_profile
+    must:
+      - REQ-012
+      - REQ-013
+      - REQ-014
+    test_strategy:
+      primary: integration
+      isolation: composed_runtime
+      mock_policy: no_mocks
+
+  - id: update_user_difficulty_level
+    behavior: >
+      Validate an enum-compatible difficulty level, lazily create the current user's
+      profile when absent, persist the selected level, and leave existing progress,
+      flashcards, sessions, and grammar levels unchanged.
+    input:
+      - authenticated_user_id
+      - profile_difficulty_level_request
+    output:
+      - current_user_profile
+    must:
+      - REQ-015
+      - REQ-016
+      - REQ-017
+    test_strategy:
+      primary: integration
+      isolation: composed_runtime
+      mock_policy: no_mocks
+
+requirements:
+  - id: REQ-001
+    behavior_step: authorize_authenticated_action
+    guarantee: Authorization is centralized and currently allows any authenticated user for grammar reassignment and own-profile updates.
+    risk: medium
+
+  - id: REQ-002
+    behavior_step: reassign_grammar_levels
+    guarantee: Reassignment sends one LLM call containing only rule ID, title, current level, content/explanation, and examples when available.
+    risk: high
+
+  - id: REQ-003
+    behavior_step: reassign_grammar_levels
+    guarantee: Reassignment validates every returned grammar-rule ID exists and rejects unknown IDs.
+    risk: high
+
+  - id: REQ-004
+    behavior_step: reassign_grammar_levels
+    guarantee: Reassignment rejects duplicate returned results for the same grammar-rule ID.
+    risk: high
+
+  - id: REQ-005
+    behavior_step: reassign_grammar_levels
+    guarantee: Reassignment accepts only values supported by the LanguageLevel enum.
+    risk: high
+
+  - id: REQ-006
+    behavior_step: reassign_grammar_levels
+    guarantee: Omitted grammar rules remain unchanged and do not cause reassignment failure.
+    risk: medium
+
+  - id: REQ-007
+    behavior_step: reassign_grammar_levels
+    guarantee: Reassignment updates only the difficulty-level field when changeRequired is true and proposedLevel differs from the current level.
+    risk: high
+
+  - id: REQ-012
+    behavior_step: get_or_create_user_profile
+    guarantee: Profile read lazily creates a missing current-user profile.
+    risk: medium
+
+  - id: REQ-013
+    behavior_step: get_or_create_user_profile
+    guarantee: Lazily created profiles default to LanguageLevel.A1 when no existing onboarding level is available.
+    risk: medium
+
+  - id: REQ-014
+    behavior_step: get_or_create_user_profile
+    guarantee: Profile responses expose userId, difficultyLevel, createdAt, and updatedAt.
+    risk: medium
+
+  - id: REQ-015
+    behavior_step: update_user_difficulty_level
+    guarantee: Difficulty-level update accepts only values supported by the LanguageLevel enum.
+    risk: high
+
+  - id: REQ-016
+    behavior_step: update_user_difficulty_level
+    guarantee: Difficulty-level update creates a missing current-user profile before saving the selected level.
+    risk: medium
+
+  - id: REQ-017
+    behavior_step: update_user_difficulty_level
+    guarantee: Changing difficulty level does not reset vocabulary progress, flashcards, FSRS state, existing sessions, previous answers, or grammar-rule levels.
+    risk: high
+
+test_strategy:
+  phases:
+    - direct_behavior_tests_for_authorization_enum_validation_and_reassignment_decisions
+    - boundary_contract_tests_for_llm_prompt_inputs_and_api_request_response_shapes
+    - integration_tests_for_profile_persistence_and_reassignment_persistence
+    - frontend_feature_and_interaction_tests_for_reassign_and_profile_level_journeys
+    - system_tests_for_critical_authenticated_journeys_only_if_existing_project_supports_them
+
+mock_policy:
+  default: do_not_mock_business_behavior
+  allowed_when:
+    - dependency_is_external_or_nondeterministic
+    - dependency_behavior_is_already_directly_tested
+    - test_does_not_claim_to_verify_mocked_behavior
+  forbidden_when:
+    - dependency_contains_business_rule_under_test
+    - dependency_contains_persistence_semantics_under_test
+    - dependency_contains_contract_semantics_under_test
+    - mock_is_used_only_for_convenience
+
+visibility:
+  required_views:
+    - feature_flow
+    - requirement_to_test_map
+    - test_to_code_map
+    - affected_test_map
+  canonical_source:
+    - feature.contract.yaml
+    - test.plan.yaml
+    - traceability.report.yaml
+    - visibility/feature-flow.mmd
+    - visibility/requirement-test-map.mmd
+    - visibility/test-code-map.mmd

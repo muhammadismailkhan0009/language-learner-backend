@@ -7,12 +7,14 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.ports.StudyAnswerEvaluation;
+import com.myriadcode.languagelearner.language_content.application.ports.GrammarLevelReassignmentProposalPort;
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftDetailsPort;
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftProposalPort;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
@@ -333,6 +335,14 @@ public class LLMGenerator implements LLMPort {
         var prompt = PromptsGenerator.grammarRuleDetails(identifier, name, level, targetLanguage);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<GrammarRuleDraftDetailsPort>() {
+        });
+    }
+
+    @Override
+    public List<GrammarLevelReassignmentProposalPort> reassignGrammarLevels(List<GrammarLevelReassignmentInput> grammarRules) {
+        var prompt = PromptsGenerator.grammarLevelReassignment(grammarRules);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runFastLLM(messages, new ParameterizedTypeReference<List<GrammarLevelReassignmentProposalPort>>() {
         });
     }
 
