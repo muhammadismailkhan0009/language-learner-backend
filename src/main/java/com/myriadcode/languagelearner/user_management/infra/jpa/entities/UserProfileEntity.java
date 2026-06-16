@@ -5,25 +5,24 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.MapsId;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_profiles")
 public class UserProfileEntity {
 
     @Id
-    @Column(name = "user_id")
-    private String userId;
+    @Column(name = "id")
+    private String id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @MapsId
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private UserInfoEntity userInfo;
 
     @Column(name = "difficulty_level", nullable = false)
@@ -38,6 +37,9 @@ public class UserProfileEntity {
     @PrePersist
     public void onCreate() {
         var now = Instant.now();
+        if (id == null) {
+            id = UUID.randomUUID().toString();
+        }
         if (createdAt == null) {
             createdAt = now;
         }
@@ -49,12 +51,19 @@ public class UserProfileEntity {
         updatedAt = Instant.now();
     }
 
-    public String getUserId() {
-        return userId;
+    public String getId() {
+        return id;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getUserId() {
+        if (userInfo == null) {
+            return null;
+        }
+        return userInfo.getId();
     }
 
     public UserInfoEntity getUserInfo() {

@@ -24,13 +24,13 @@ public class UserProfileJpaRepoAdapter implements UserProfileRepo {
 
     @Override
     public Optional<UserProfile> findByUserId(String userId) {
-        return userProfileJpaRepo.findById(userId).map(this::toDomain);
+        return userProfileJpaRepo.findByUserInfoId(userId).map(this::toDomain);
     }
 
     @Override
     public UserProfile save(UserProfile profile) {
-        var entity = new UserProfileEntity();
-        entity.setUserId(profile.userId());
+        var entity = userProfileJpaRepo.findByUserInfoId(profile.userId())
+                .orElseGet(UserProfileEntity::new);
         entity.setUserInfo(entityManager.getReference(UserInfoEntity.class, profile.userId()));
         entity.setDifficultyLevel(profile.difficultyLevel().name());
         entity.setCreatedAt(profile.createdAt());
