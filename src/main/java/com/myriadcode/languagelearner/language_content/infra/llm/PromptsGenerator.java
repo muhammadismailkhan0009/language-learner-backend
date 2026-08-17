@@ -275,92 +275,133 @@ public final class PromptsGenerator {
   }
 
   public static String readingContentParagraphs(
-      String topic,
-      List<ReadingPracticeVocabularySeed> vocabulary,
-      LanguageLevel difficultyLevel,
-      List<String> grammarRuleTitles) {
+    String topic,
+    List<ReadingPracticeVocabularySeed> vocabulary,
+    LanguageLevel difficultyLevel,
+    List<String> grammarRuleTitles) {
 
-    String vocabList = formatVocabulary(vocabulary);
-    String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
-        ? "(none provided)"
-        : grammarRuleTitles.stream()
-            .filter(title -> title != null && !title.isBlank())
-            .map(title -> "- " + title.trim())
-            .collect(java.util.stream.Collectors.joining("\n"));
+  String vocabList = formatVocabulary(vocabulary);
+  String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
+      ? "(none provided)"
+      : grammarRuleTitles.stream()
+          .filter(title -> title != null && !title.isBlank())
+          .map(title -> "- " + title.trim())
+          .collect(java.util.stream.Collectors.joining("\n"));
 
-    return """
-                Act as an expert German language teacher. You generate German reading practice text.
+  return """
+      Act as an expert German language teacher.
+      Generate natural German reading and listening practice material.
 
-        CEFR Level: %s
-        Topic: "%s"
+      CEFR Level: %s
+      Topic: "%s"
 
-        Goal:
-        Write one or more natural, coherent German paragraphs that help the learner
-        practice the provided vocabulary in context.
+      Primary Goal:
+      Create natural, coherent, idiomatic German at the requested CEFR level.
+      The text should help the learner repeatedly encounter useful known vocabulary
+      in meaningful context without sounding artificial or repetitive.
 
-        Core Requirements:
-        - Return 1 or more separate paragraphs (as needed).
-        - Each paragraph must read naturally, not like isolated sentences.
-        - Sentences should connect logically and flow around the topic.
+      Priority:
+      Follow this priority order:
+      1. Natural and idiomatic German.
+      2. Clear and coherent progression of meaning.
+      3. Appropriate difficulty for the requested CEFR level.
+      4. Useful reuse of learner vocabulary.
+      5. Natural exposure to suitable grammar structures.
 
-        Vocabulary Usage:
-        - Use the learner vocabulary as much as possible.
-        - Select a subset of the provided vocabulary that fits the topic naturally.
-        - Prefer reusing selected words multiple times across sentences instead of covering all vocabulary.
-        - Do NOT try to include most or all vocabulary items if it reduces repetition.
-        - Important words should appear multiple times when natural.
-        - Important vocabulary should appear across multiple different sentences, not just once or twice.
-        - Combine multiple learner vocabulary words in the same sentence when natural.
+      Coherence and Progression:
+      - Build the text around a real situation, event, experience, conversation,
+        or connected sequence of thoughts.
+      - Sentences must connect logically.
+      - Each sentence should normally add new information or move the situation forward.
+      - Do not repeat the same idea merely using slightly different wording.
+      - When appropriate, give the text a clear beginning, development, and ending.
+      - The result must read like a small genuine text, not like vocabulary drills
+        joined together.
 
-        Repetition Guidance:
-        - Words used only once are weak for learning.
-        - Prefer using fewer words multiple times rather than many words once.
-        - Reuse important vocabulary across different sentences when natural.
+      Vocabulary Usage:
+      - Select only the provided learner vocabulary that fits the topic naturally.
+      - Do NOT try to include most or all provided vocabulary.
+      - Natural German is more important than vocabulary coverage.
+      - Reuse useful target vocabulary when it naturally belongs in multiple sentences.
+      - A selected vocabulary item may normally appear around 1-3 times.
+      - More repetition is allowed only when it is genuinely natural in the situation.
+      - Never repeat an idea solely to create another occurrence of a target word.
+      - Never use awkward expressions, unusual nominalizations, or unnatural sentence
+        constructions merely to include supplied vocabulary.
+      - Use natural inflected forms of vocabulary where appropriate.
+      - Multiple learner vocabulary items may occur in the same sentence when natural.
 
-        Paragraph Guidelines:
-        - Minimum paragraphs: 1
-        - Maximum paragraphs: 3
-        - Minimum Sentences per paragraph: 4
-        - Maximum Sententeces per paragraph: 7
-        - Vary sentence structure when possible.
-        - Total sentences across the text should normally stay between 5 and 18.
+      Additional Vocabulary:
+      - The supplied learner vocabulary should guide the content, but it must not
+        restrict all words in the text.
+      - Freely use common everyday vocabulary appropriate to the requested CEFR level
+        when needed for natural and coherent German.
+      - Avoid unnecessary rare, literary, technical, or highly specialized words.
+      - Do not deliberately introduce large amounts of new thematic vocabulary.
 
-        Sentence Guidelines:
+      Grammar Usage:
+      - Use natural German grammar appropriate to the requested CEFR level.
+      - Eligible grammar-rule titles are provided below.
+      - Choose only grammar rules that fit the topic and text naturally.
+      - You do not need to use every eligible grammar rule.
+      - Prefer approximately 1-3 relevant grammar structures in a text when suitable.
+      - An important grammar structure may naturally recur several times for reinforcement.
+      - Do not force a grammar structure into every sentence.
+      - Do not avoid useful repetition of grammar merely for the sake of structural variety.
+      - Ordinary CEFR-appropriate grammar may also be used even when it is not explicitly
+        listed among the eligible grammar-rule titles.
+      - Questions, modal verbs, negation, subordinate clauses, connectors, separable verbs,
+        perfect tense, and other appropriate structures may occur naturally according
+        to the learner level.
 
-        - Sentence length: 6–12 words
-        - Vary sentence structure when possible.
+      Sentence Difficulty:
+      Adapt sentence complexity to the requested CEFR level.
 
-        Grammar Usage:
-        - Use natural German grammar appropriate for the learner's CEFR level.
-        - Eligible grammar-rule titles are provided below.
-        - Choose only the grammar rules that suit the topic, vocabulary, and learner level naturally.
-        - You do not need to use every eligible grammar rule.
-        - Do not force a grammar rule when it makes the text less natural.
-        - Present tense is common, but perfect tense, modal verbs, questions,
-          and connectors (z.B. weil, aber, oder, dann) may appear naturally.
-        - Avoid repeating the same grammatical pattern in many sentences.
+      - A1:
+        Usually about 5-10 words per sentence.
+        Prefer simple main clauses and very common structures.
 
-        Additional Vocabulary:
-        - Prefer the provided learner vocabulary whenever possible.
-        - If extra words are necessary for natural language, introduce only a small
-          number of common everyday words.
-        - Avoid introducing many new thematic words.
+      - A2:
+        Usually about 6-14 words per sentence.
+        Allow common connectors, modal verbs, perfect tense, subordinate clauses,
+        and moderately varied word order.
 
-        Difficulty Control:
-        - Difficulty is controlled by CEFR level and not amount of vocabulary.
+      - B1:
+        Usually about 8-18 words per sentence.
+        Allow connected clauses, subordinate clauses, varied word order,
+        explanations, reasons, conditions, and more developed thoughts.
 
-        Style:
-        - Keep the language clear and readable.
-        - Do not include bullet points or numbering.
+      These are guidelines rather than strict limits.
+      Occasional shorter or longer sentences are allowed when natural.
 
-        Learner Vocabulary (German - translation):
-        %s
+      Paragraph Guidelines:
+      - Minimum paragraphs: 1
+      - Maximum paragraphs: 2
+      - Usually 4-7 sentences per paragraph.
+      - Usually 5-12 sentences total.
+      - Keep paragraphs focused and internally coherent.
+      - Start a second paragraph only when there is a meaningful change in time,
+        subtopic, perspective, or stage of the situation.
 
-        Eligible Grammar-Rule Titles:
-        %s
-                """.formatted(difficultyLevel, topic, vocabList, grammarTitles);
-  }
+      Style:
+      - Use clear, contemporary, everyday German.
+      - Prefer language that a German speaker could naturally say or write.
+      - Avoid textbook-like semantic repetition.
+      - Avoid producing a sequence of nearly identical sentence structures.
+      - Do not include explanations, translations, headings, bullet points, or numbering.
+      - Output only the German practice text requested by the response schema.
 
+      Learner Vocabulary (German - translation):
+      %s
+
+      Eligible Grammar-Rule Titles:
+      %s
+      """.formatted(
+          difficultyLevel,
+          topic,
+          vocabList,
+          grammarTitles);
+}
   public static String readingParagraphCloze(
       String topic,
       List<ReadingPracticeVocabularySeed> vocabulary,
