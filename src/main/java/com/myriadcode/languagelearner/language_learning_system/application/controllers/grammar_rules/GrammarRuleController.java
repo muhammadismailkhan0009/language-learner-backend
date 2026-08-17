@@ -8,6 +8,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarLevelReassignmentService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.ProfileGrammarRuleQueryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,16 +22,19 @@ public class GrammarRuleController {
 
     private final GrammarRuleOrchestrationService grammarRuleOrchestrationService;
     private final GrammarLevelReassignmentService grammarLevelReassignmentService;
+    private final ProfileGrammarRuleQueryService profileGrammarRuleQueryService;
 
     @Autowired
     public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService,
-                                 GrammarLevelReassignmentService grammarLevelReassignmentService) {
+                                 GrammarLevelReassignmentService grammarLevelReassignmentService,
+                                 ProfileGrammarRuleQueryService profileGrammarRuleQueryService) {
         this.grammarRuleOrchestrationService = grammarRuleOrchestrationService;
         this.grammarLevelReassignmentService = grammarLevelReassignmentService;
+        this.profileGrammarRuleQueryService = profileGrammarRuleQueryService;
     }
 
     public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService) {
-        this(grammarRuleOrchestrationService, null);
+        this(grammarRuleOrchestrationService, null, null);
     }
 
     @PostMapping("v1")
@@ -60,8 +64,13 @@ public class GrammarRuleController {
     }
 
     @GetMapping("v1")
-    public ResponseEntity<ApiResponse<List<GrammarRuleResponse>>> fetchGrammarRules() {
-        var response = grammarRuleOrchestrationService.fetchGrammarRules();
+    public ResponseEntity<ApiResponse<List<GrammarRuleResponse>>> fetchGrammarRules(
+            @RequestParam("userId") String userId
+    ) {
+        if (profileGrammarRuleQueryService == null) {
+            throw new IllegalStateException("Profile grammar rule query service is not configured");
+        }
+        var response = profileGrammarRuleQueryService.fetchGrammarRules(userId);
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 

@@ -2,6 +2,8 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.ProfileGrammarRuleQueryService;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarExplanationParagraph;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarRule;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarScenario;
@@ -52,10 +54,11 @@ public class GrammarRuleControllerTests {
         var repo = new FakeGrammarRuleRepo();
         repo.save(sampleGrammarRule("rule-1"));
         GrammarRuleOrchestrationService service = new GrammarRuleOrchestrationService(repo);
-        var controller = new GrammarRuleController(service);
+        var queryService = new ProfileGrammarRuleQueryService(repo, userId -> LanguageLevel.A1);
+        var controller = new GrammarRuleController(service, null, queryService);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
-        mockMvc.perform(get("/api/v1/grammar-rules/v1")
+        mockMvc.perform(get("/api/v1/grammar-rules/v1").param("userId", "user-1")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.response[0].id").value("rule-1"))
