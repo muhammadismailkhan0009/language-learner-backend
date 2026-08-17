@@ -67,7 +67,7 @@ public class LLMGenerator implements LLMPort {
                                                 List<Chunk.ChunkData> previousChunks) {
         var prompt = PromptsGenerator.chunkGenerator(langconfigs, sentences, previousChunks);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        var result = runLLM(messages, new ParameterizedTypeReference<List<Chunk.ChunkData>>() {
+        var result = runFastLLM(messages, new ParameterizedTypeReference<List<Chunk.ChunkData>>() {
         });
         return result;
     }
@@ -89,7 +89,7 @@ public class LLMGenerator implements LLMPort {
                                                               List<Sentence.SentenceData> sentences) {
         var prompt = PromptsGenerator.vocabGenerator(langconfigs, chunkData, sentences);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        var llmVocab = runLLM(messages, new ParameterizedTypeReference<List<LLMVocabulary>>() {
+        var llmVocab = runFastLLM(messages, new ParameterizedTypeReference<List<LLMVocabulary>>() {
         });
         var result = LLMVocabMapper.INSTANCE.toDomainVocabulary(llmVocab);
         return result;
@@ -101,7 +101,7 @@ public class LLMGenerator implements LLMPort {
                                                                      LanguageLevel difficultyLevel) {
         var prompt = PromptsGenerator.readingTopicSelection(vocabulary, previousTopics, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<ReadingTopicSelection>() {
+        return runFastLLM(messages, new ParameterizedTypeReference<ReadingTopicSelection>() {
         });
     }
 
@@ -122,7 +122,7 @@ public class LLMGenerator implements LLMPort {
 
         var splitPrompt = PromptsGenerator.readingContentParagraphSentenceSplit(paragraphs.paragraphs());
         var splitMessages = generatePrompt(new SystemPrompt(""), new UserPrompt(splitPrompt));
-        var sentenceSplit = runLLM(splitMessages, new ParameterizedTypeReference<ReadingParagraphSentenceSplit>() {
+        var sentenceSplit = runFastLLM(splitMessages, new ParameterizedTypeReference<ReadingParagraphSentenceSplit>() {
         });
 
         var paragraphList = buildReadingContent(paragraphs, sentenceSplit);
