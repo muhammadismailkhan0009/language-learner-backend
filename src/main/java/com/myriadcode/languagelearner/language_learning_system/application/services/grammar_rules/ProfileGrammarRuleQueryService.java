@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules;
 
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleDraftResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.grammar_rules.GrammarRuleApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.repo.GrammarRuleRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.services.GrammarRuleVisibilityPolicy;
@@ -27,6 +28,20 @@ public class ProfileGrammarRuleQueryService {
         return grammarRuleRepo.findAll().stream()
                 .filter(rule -> GrammarRuleVisibilityPolicy.isVisibleTo(rule, profileLevel))
                 .map(GRAMMAR_RULE_API_MAPPER::toResponse)
+                .toList();
+    }
+
+    public List<GrammarRuleDraftResponse> fetchDraftGrammarRules(String userId) {
+        var profileLevel = userDifficultyLevelApi.getDifficultyLevel(userId);
+        return grammarRuleRepo.findAll().stream()
+                .filter(rule -> GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule, profileLevel))
+                .map(rule -> new GrammarRuleDraftResponse(
+                        rule.id().id(),
+                        rule.identifier(),
+                        rule.name(),
+                        rule.level(),
+                        "de"
+                ))
                 .toList();
     }
 }

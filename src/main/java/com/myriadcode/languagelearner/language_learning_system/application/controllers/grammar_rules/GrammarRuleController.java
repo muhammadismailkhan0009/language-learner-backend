@@ -101,9 +101,14 @@ public class GrammarRuleController {
 
     @GetMapping("admin/drafts/v1")
     public ResponseEntity<ApiResponse<List<GrammarRuleDraftResponse>>> fetchDraftGrammarRules(
-            @RequestParam("admin_key") String adminKey
+            @RequestParam("admin_key") String adminKey,
+            @RequestParam("userId") String userId
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.fetchDraftGrammarRules(adminKey)));
+        grammarRuleOrchestrationService.validateAdminAccess(adminKey);
+        if (profileGrammarRuleQueryService == null) {
+            throw new IllegalStateException("Profile grammar rule query service is not configured");
+        }
+        return ResponseEntity.ok(new ApiResponse<>(profileGrammarRuleQueryService.fetchDraftGrammarRules(userId)));
     }
 
     @PostMapping("admin/drafts/{draftId}/details/v1")

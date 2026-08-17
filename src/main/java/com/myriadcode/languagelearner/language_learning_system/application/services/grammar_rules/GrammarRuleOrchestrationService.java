@@ -147,6 +147,10 @@ public class GrammarRuleOrchestrationService {
                 .toList();
     }
 
+    public void validateAdminAccess(String adminKey) {
+        validateAdminKey(adminKey);
+    }
+
     public GrammarRuleDraftDetailsResponse generateDraftDetailsForDraftId(String draftId, GenerateGrammarRuleDraftDetailsRequest request) {
         validateAdminKey(request.adminKey());
         var draftRule = grammarRuleRepo.findById(draftId)

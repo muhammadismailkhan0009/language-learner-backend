@@ -89,6 +89,46 @@ public class GrammarRuleControllerTests {
                 .andExpect(jsonPath("$.response").isArray());
     }
 
+    @Test
+    @DisplayName("Fetch grammar drafts API: filters drafts using user profile level")
+    public void fetchGrammarDraftsFiltersUsingUserProfileLevel() throws Exception {
+        var repo = new FakeGrammarRuleRepo();
+        repo.save(rule("a1-draft", "A1", "DRAFT", false));
+        repo.save(rule("b1-draft", "B1", "DRAFT", false));
+        var service = new GrammarRuleOrchestrationService(repo);
+        var queryService = new ProfileGrammarRuleQueryService(repo, userId -> LanguageLevel.A1);
+        var controller = new GrammarRuleController(service, null, queryService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/api/v1/grammar-rules/admin/drafts/v1")
+                        .param("admin_key", "112233")
+                        .param("userId", "user-1")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.response.length()").value(1))
+                .andExpect(jsonPath("$.response[0].id").value("a1-draft"))
+                .andExpect(jsonPath("$.response[0].level").value("A1"));
+    }
+
+    @Test
+    @DisplayName("Fetch grammar drafts API: requires user id")
+    public void fetchGrammarDraftsRequiresUserId() throws Exception {
+        var repo = new FakeGrammarRuleRepo();
+        var service = new GrammarRuleOrchestrationService(repo);
+        var queryService = new ProfileGrammarRuleQueryService(repo, userId -> LanguageLevel.A1);
+        var controller = new GrammarRuleController(service, null, queryService);
+        MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        mockMvc.perform(get("/api/v1/grammar-rules/admin/drafts/v1")
+                        .param("admin_key", "112233")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
+
+    private GrammarRule rule(String id, String level, String status, boolean active) {
+        return new GrammarRule(new GrammarRule.GrammarRuleId(id), id, id, level, status, active, List.of(), null);
+    }
+
     private GrammarRule sampleGrammarRule(String ruleId) {
         return new GrammarRule(
                 new GrammarRule.GrammarRuleId(ruleId),

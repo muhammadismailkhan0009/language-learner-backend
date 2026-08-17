@@ -22,4 +22,16 @@ public final class GrammarRuleVisibilityPolicy {
             return false;
         }
     }
+
+    public static boolean isDraftVisibleTo(GrammarRule rule, LanguageLevel profileLevel) {
+        if (rule == null || profileLevel == null || !STATUS_DRAFT.equalsIgnoreCase(rule.status())) {
+            return false;
+        }
+
+        try {
+            return LanguageLevel.from(rule.level()).ordinal() <= profileLevel.ordinal();
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
 }

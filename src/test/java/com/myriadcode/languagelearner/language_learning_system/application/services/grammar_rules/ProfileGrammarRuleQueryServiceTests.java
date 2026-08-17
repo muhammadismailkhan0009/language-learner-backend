@@ -31,6 +31,23 @@ class ProfileGrammarRuleQueryServiceTests {
                 .containsExactly("a1-first", "a2-second");
     }
 
+    @Test
+    void filtersDraftsForProfileAndPreservesRepositoryOrder() {
+        var repo = new OrderedGrammarRuleRepo(List.of(
+                rule("a1-first", "A1", "DRAFT", false),
+                rule("b1-hidden", "B1", "DRAFT", false),
+                rule("a2-second", "A2", "DRAFT", false),
+                rule("ready-hidden", "A1", "READY", true),
+                rule("invalid-hidden", "unknown", "DRAFT", false)
+        ));
+        var service = new ProfileGrammarRuleQueryService(repo, userId -> LanguageLevel.A2);
+
+        var result = service.fetchDraftGrammarRules("user-1");
+
+        assertThat(result).extracting(rule -> rule.id())
+                .containsExactly("a1-first", "a2-second");
+    }
+
     private GrammarRule rule(String id, String level, String status, boolean active) {
         return new GrammarRule(new GrammarRule.GrammarRuleId(id), id, id, level, status, active, List.of(), null);
     }

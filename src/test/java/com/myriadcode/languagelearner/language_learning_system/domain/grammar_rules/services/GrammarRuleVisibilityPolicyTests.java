@@ -20,6 +20,15 @@ class GrammarRuleVisibilityPolicyTests {
         assertThat(visible(rule("invalid", "READY", true), LanguageLevel.B1)).isFalse();
     }
 
+    @Test
+    void showsOnlyDraftRulesAtOrBelowProfileLevel() {
+        assertThat(GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule("A1", "DRAFT", false), LanguageLevel.A2)).isTrue();
+        assertThat(GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule("A2", "DRAFT", false), LanguageLevel.A2)).isTrue();
+        assertThat(GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule("B1", "DRAFT", false), LanguageLevel.A2)).isFalse();
+        assertThat(GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule("A1", "READY", true), LanguageLevel.A2)).isFalse();
+        assertThat(GrammarRuleVisibilityPolicy.isDraftVisibleTo(rule("invalid", "DRAFT", false), LanguageLevel.A2)).isFalse();
+    }
+
     private boolean visible(GrammarRule rule, LanguageLevel level) {
         return GrammarRuleVisibilityPolicy.isVisibleTo(rule, level);
     }
