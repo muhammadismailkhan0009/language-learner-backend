@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.infra.llm.adapters;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingParagraphSentenceSplit;
@@ -97,7 +98,7 @@ public class LLMGenerator implements LLMPort {
     @Override
     public ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
                                                                      List<String> previousTopics,
-                                                                     String difficultyLevel) {
+                                                                     LanguageLevel difficultyLevel) {
         var prompt = PromptsGenerator.readingTopicSelection(vocabulary, previousTopics, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<ReadingTopicSelection>() {
@@ -107,8 +108,10 @@ public class LLMGenerator implements LLMPort {
     @Override
     public ReadingContent generateReadingContent(String topic,
                                                  List<ReadingPracticeVocabularySeed> vocabulary,
-                                                 String difficultyLevel) {
-        var paragraphsPrompt = PromptsGenerator.readingContentParagraphs(topic, vocabulary, difficultyLevel);
+                                                 LanguageLevel difficultyLevel,
+                                                 List<String> grammarRuleTitles) {
+        var paragraphsPrompt = PromptsGenerator.readingContentParagraphs(
+                topic, vocabulary, difficultyLevel, grammarRuleTitles);
         var paragraphsMessages = generatePrompt(new SystemPrompt(""), new UserPrompt(paragraphsPrompt));
         var paragraphs = runLLM(paragraphsMessages, new ParameterizedTypeReference<ReadingParagraphs>() {
         });

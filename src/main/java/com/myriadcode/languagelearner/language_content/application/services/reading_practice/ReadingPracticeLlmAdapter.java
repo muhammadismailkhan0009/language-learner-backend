@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.services.reading_practice;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
@@ -21,7 +22,7 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     @Override
     public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
                                                List<String> previousTopics,
-                                               String difficultyLevel) {
+                                               LanguageLevel difficultyLevel) {
         if (vocabulary == null || vocabulary.isEmpty()) {
             return null;
         }
@@ -31,11 +32,12 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     @Override
     public ReadingPracticeReadingContent generateReadingContent(String topic,
                                                                 List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                String difficultyLevel) {
+                                                                LanguageLevel difficultyLevel,
+                                                                List<String> grammarRuleTitles) {
         if (vocabulary == null || vocabulary.isEmpty()) {
             return new ReadingPracticeReadingContent(List.of());
         }
-        var content = llmPort.generateReadingContent(topic, vocabulary, difficultyLevel);
+        var content = llmPort.generateReadingContent(topic, vocabulary, difficultyLevel, grammarRuleTitles);
         if (content == null || content.paragraphs() == null) {
             return new ReadingPracticeReadingContent(List.of());
         }

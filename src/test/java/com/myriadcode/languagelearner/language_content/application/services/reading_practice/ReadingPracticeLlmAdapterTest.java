@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.services.reading_practice;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +22,7 @@ class ReadingPracticeLlmAdapterTest {
     void shouldNotCallLlmWhenSelectingTopicWithEmptyVocabulary() {
         var adapter = new ReadingPracticeLlmAdapter(llmPort);
 
-        var topic = adapter.selectTopicForTextGeneration(List.of(), List.of(), "B1");
+        var topic = adapter.selectTopicForTextGeneration(List.of(), List.of(), LanguageLevel.B1);
 
         assertThat(topic).isNull();
         verifyNoInteractions(llmPort);
@@ -31,7 +32,7 @@ class ReadingPracticeLlmAdapterTest {
     void shouldNotCallLlmWhenGeneratingContentWithEmptyVocabulary() {
         var adapter = new ReadingPracticeLlmAdapter(llmPort);
 
-        var content = adapter.generateReadingContent("topic", List.of(), "B1");
+        var content = adapter.generateReadingContent("topic", List.of(), LanguageLevel.B1, List.of());
 
         assertThat(content.paragraphs()).isEmpty();
         verifyNoInteractions(llmPort);

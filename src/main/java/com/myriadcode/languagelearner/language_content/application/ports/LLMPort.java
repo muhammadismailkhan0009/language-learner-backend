@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.ports;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -37,11 +38,12 @@ public interface LLMPort {
 
     ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
                                                               List<String> previousTopics,
-                                                              String difficultyLevel);
+                                                              LanguageLevel difficultyLevel);
 
     ReadingContent generateReadingContent(String topic,
                                           List<ReadingPracticeVocabularySeed> vocabulary,
-                                          String difficultyLevel);
+                                          LanguageLevel difficultyLevel,
+                                          List<String> grammarRuleTitles);
     ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
                                                                   List<ReadingPracticeVocabularySeed> vocabulary,
                                                                   String difficultyLevel);

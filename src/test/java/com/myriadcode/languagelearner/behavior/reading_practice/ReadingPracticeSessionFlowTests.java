@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.behavior.reading_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
@@ -13,8 +14,17 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarRule;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarScenario;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.repo.GrammarRuleRepo;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.grammar_rules.repos.GrammarRuleEntityJpaRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.repos.ReadingPracticeSessionJpaRepo;
+import com.myriadcode.languagelearner.user_management.application.services.UserProfileService;
+import com.myriadcode.languagelearner.user_management.infra.jpa.entities.UserInfoEntity;
+import com.myriadcode.languagelearner.user_management.infra.jpa.repos.UserInfoJpaRepo;
+import com.myriadcode.languagelearner.user_management.infra.jpa.repos.UserProfileJpaRepo;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,6 +55,21 @@ class ReadingPracticeSessionFlowTests {
     private ReadingPracticeSessionJpaRepo readingPracticeSessionJpaRepo;
 
     @Autowired
+    private GrammarRuleRepo grammarRuleRepo;
+
+    @Autowired
+    private GrammarRuleEntityJpaRepo grammarRuleEntityJpaRepo;
+
+    @Autowired
+    private UserProfileService userProfileService;
+
+    @Autowired
+    private UserProfileJpaRepo userProfileJpaRepo;
+
+    @Autowired
+    private UserInfoJpaRepo userInfoJpaRepo;
+
+    @Autowired
     private StubReadingPracticeLlmApi stubReadingPracticeLlmApi;
 
     @Autowired
@@ -53,12 +78,23 @@ class ReadingPracticeSessionFlowTests {
     @Autowired
     private StubFetchPrivateVocabularyApi stubFetchPrivateVocabularyApi;
 
+    @BeforeEach
+    void setUpUsers() {
+        userInfoJpaRepo.save(userInfo("user-1"));
+        userInfoJpaRepo.save(userInfo("user-2"));
+    }
+
     @AfterEach
     void tearDown() {
         readingPracticeSessionJpaRepo.deleteAll();
+        grammarRuleEntityJpaRepo.deleteAll();
+        userProfileJpaRepo.deleteAll();
+        userInfoJpaRepo.deleteAll();
         stubReadingPracticeLlmApi.lastSeeds = List.of();
         stubReadingPracticeLlmApi.lastTopic = null;
         stubReadingPracticeLlmApi.lastPreviousTopics = List.of();
+        stubReadingPracticeLlmApi.lastDifficultyLevel = null;
+        stubReadingPracticeLlmApi.lastGrammarRuleTitles = List.of();
         stubReadingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
@@ -89,6 +125,33 @@ class ReadingPracticeSessionFlowTests {
         readingPracticeService.createSession("user-1");
 
         assertThat(stubReadingPracticeLlmApi.lastPreviousTopics).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("createSession: supplies profile level and eligible grammar titles to reading generation")
+    void createSessionUsesProfileLevelAndEligibleGrammar() {
+        userProfileService.updateDifficultyLevel("user-1", "A2");
+        grammarRuleRepo.save(grammarRule("a1", "Present tense", "A1", true));
+        grammarRuleRepo.save(grammarRule("a2", "Modal verbs", "A2", true));
+        grammarRuleRepo.save(grammarRule("b1", "Relative clauses", "B1", true));
+        grammarRuleRepo.save(grammarRule("inactive", "Inactive basics", "A1", false));
+
+        readingPracticeService.createSession("user-1");
+
+        assertThat(stubReadingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A2);
+        assertThat(stubReadingPracticeLlmApi.lastGrammarRuleTitles)
+                .containsExactlyInAnyOrder("Present tense", "Modal verbs")
+                .doesNotContain("Relative clauses", "Inactive basics");
+        assertThat(readingPracticeSessionJpaRepo.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("createSession: creates missing profile and uses default reading level")
+    void createSessionUsesDefaultLevelForMissingProfile() {
+        readingPracticeService.createSession("user-2");
+
+        assertThat(stubReadingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A1);
+        assertThat(userProfileJpaRepo.findByUserInfoId("user-2")).isPresent();
     }
 
     @Test
@@ -285,22 +348,28 @@ class ReadingPracticeSessionFlowTests {
         private List<ReadingPracticeVocabularySeed> lastSeeds = List.of();
         private String lastTopic;
         private List<String> lastPreviousTopics = List.of();
+        private LanguageLevel lastDifficultyLevel;
+        private List<String> lastGrammarRuleTitles = List.of();
         private List<String> usedSurfacesOverride;
 
         @Override
         public String selectTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary,
                                                    List<String> previousTopics,
-                                                   String difficultyLevel) {
+                                                   LanguageLevel difficultyLevel) {
             this.lastSeeds = vocabulary;
             this.lastPreviousTopics = previousTopics;
+            this.lastDifficultyLevel = difficultyLevel;
             return "topic-1";
         }
 
         @Override
         public ReadingPracticeReadingContent generateReadingContent(String topic,
                                                                     List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                    String difficultyLevel) {
+                                                                    LanguageLevel difficultyLevel,
+                                                                    List<String> grammarRuleTitles) {
             this.lastTopic = topic;
+            this.lastDifficultyLevel = difficultyLevel;
+            this.lastGrammarRuleTitles = grammarRuleTitles;
             return new ReadingPracticeReadingContent(List.of(
                     new ReadingPracticeReadingContent.Paragraph(
                             "reading text",
@@ -335,6 +404,35 @@ class ReadingPracticeSessionFlowTests {
             }
             return vocabulary.stream().map(ReadingPracticeVocabularySeed::surface).toList();
         }
+    }
+
+    private GrammarRule grammarRule(String suffix, String title, String level, boolean active) {
+        return new GrammarRule(
+                new GrammarRule.GrammarRuleId("reading-grammar-" + suffix),
+                "reading-grammar-" + suffix,
+                title,
+                level,
+                "READY",
+                active,
+                List.of(),
+                new GrammarScenario(
+                        new GrammarScenario.GrammarScenarioId("reading-scenario-" + suffix),
+                        title,
+                        "Reading grammar fixture",
+                        "de",
+                        "SYSTEM",
+                        true,
+                        List.of()
+                )
+        );
+    }
+
+    private UserInfoEntity userInfo(String userId) {
+        var entity = new UserInfoEntity();
+        entity.setId(userId);
+        entity.setUsername(userId);
+        entity.setPassword("test-password");
+        return entity;
     }
 
     static class StubFetchVocabularyFlashcardReviewsApi implements FetchVocabularyFlashcardReviewsApi {

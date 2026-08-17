@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.infra.llm;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.language_settings.german.configs.LangConfigsAdaptive;
@@ -238,7 +239,7 @@ public final class PromptsGenerator {
   public static String readingTopicSelection(
       List<ReadingPracticeVocabularySeed> vocabulary,
       List<String> previousTopics,
-      String difficultyLevel) {
+      LanguageLevel difficultyLevel) {
 
     String vocabList = formatVocabulary(vocabulary);
     String topics = previousTopics == null || previousTopics.isEmpty()
@@ -276,9 +277,16 @@ public final class PromptsGenerator {
   public static String readingContentParagraphs(
       String topic,
       List<ReadingPracticeVocabularySeed> vocabulary,
-      String difficultyLevel) {
+      LanguageLevel difficultyLevel,
+      List<String> grammarRuleTitles) {
 
     String vocabList = formatVocabulary(vocabulary);
+    String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
+        ? "(none provided)"
+        : grammarRuleTitles.stream()
+            .filter(title -> title != null && !title.isBlank())
+            .map(title -> "- " + title.trim())
+            .collect(java.util.stream.Collectors.joining("\n"));
 
     return """
                 Act as an expert German language teacher. You generate German reading practice text.
@@ -323,7 +331,11 @@ public final class PromptsGenerator {
         - Vary sentence structure when possible.
 
         Grammar Usage:
-        - Use natural German grammar appropriate for the CEFR level.
+        - Use natural German grammar appropriate for the learner's CEFR level.
+        - Eligible grammar-rule titles are provided below.
+        - Choose only the grammar rules that suit the topic, vocabulary, and learner level naturally.
+        - You do not need to use every eligible grammar rule.
+        - Do not force a grammar rule when it makes the text less natural.
         - Present tense is common, but perfect tense, modal verbs, questions,
           and connectors (z.B. weil, aber, oder, dann) may appear naturally.
         - Avoid repeating the same grammatical pattern in many sentences.
@@ -343,7 +355,10 @@ public final class PromptsGenerator {
 
         Learner Vocabulary (German - translation):
         %s
-                """.formatted(difficultyLevel, topic, vocabList);
+
+        Eligible Grammar-Rule Titles:
+        %s
+                """.formatted(difficultyLevel, topic, vocabList, grammarTitles);
   }
 
   public static String readingParagraphCloze(

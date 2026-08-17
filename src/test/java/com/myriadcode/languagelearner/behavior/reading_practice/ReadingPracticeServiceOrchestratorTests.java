@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.behavior.reading_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
@@ -9,6 +10,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingGenerationContext;
+import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingGenerationContextService;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
@@ -25,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +39,7 @@ class ReadingPracticeServiceOrchestratorTests {
     private FetchVocabularyFlashcardReviewsApi flashcardReviewsApi;
     private FetchPrivateVocabularyApi privateVocabularyApi;
     private ReadingPracticeLlmApi readingPracticeLlmApi;
+    private ReadingGenerationContextService readingGenerationContextService;
 
     private ReadingPracticeService service;
 
@@ -44,12 +49,16 @@ class ReadingPracticeServiceOrchestratorTests {
         flashcardReviewsApi = mock(FetchVocabularyFlashcardReviewsApi.class);
         privateVocabularyApi = mock(FetchPrivateVocabularyApi.class);
         readingPracticeLlmApi = mock(ReadingPracticeLlmApi.class);
+        readingGenerationContextService = mock(ReadingGenerationContextService.class);
+        lenient().when(readingGenerationContextService.build("user-1"))
+                .thenReturn(new ReadingGenerationContext(LanguageLevel.B1, List.of()));
 
         service = new ReadingPracticeService(
                 readingPracticeRepo,
                 flashcardReviewsApi,
                 privateVocabularyApi,
-                readingPracticeLlmApi
+                readingPracticeLlmApi,
+                readingGenerationContextService
         );
     }
 
@@ -83,7 +92,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("No vocabulary candidates found for reading practice");
 
-        verify(readingPracticeLlmApi, never()).generateReadingContent(any(), any(), any());
+        verify(readingPracticeLlmApi, never()).generateReadingContent(any(), any(), any(), any());
         verify(readingPracticeRepo, never()).save(any());
     }
 
@@ -98,8 +107,8 @@ class ReadingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(readingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of("Old topic"));
-        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq("B1"))).thenReturn("");
-        when(readingPracticeLlmApi.generateReadingContent(eq("General practice"), any(), eq("B1")))
+        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1))).thenReturn("");
+        when(readingPracticeLlmApi.generateReadingContent(eq("General practice"), any(), eq(LanguageLevel.B1), eq(List.of())))
                 .thenReturn(new ReadingPracticeReadingContent(List.of(
                         new ReadingPracticeReadingContent.Paragraph(
                                 "fallback reading",
@@ -111,8 +120,8 @@ class ReadingPracticeServiceOrchestratorTests {
 
         service.createSession("user-1");
 
-        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq("B1"));
-        verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq("B1"));
+        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1));
+        verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq(LanguageLevel.B1), eq(List.of()));
         verify(readingPracticeLlmApi).identifyUsedVocabulary(any(), eq("fallback reading"));
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));
     }
@@ -128,9 +137,9 @@ class ReadingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(readingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
-        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of()), eq("B1")))
+        when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of()), eq(LanguageLevel.B1)))
                 .thenReturn("topic");
-        when(readingPracticeLlmApi.generateReadingContent(eq("topic"), any(), eq("B1")))
+        when(readingPracticeLlmApi.generateReadingContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
                 .thenReturn(new ReadingPracticeReadingContent(List.of()));
 
         assertThatThrownBy(() -> service.createSession("user-1"))

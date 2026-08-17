@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.configs;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
@@ -59,12 +60,13 @@ public class TestLlmConfigs {
             }
 
             @Override
-            public ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary, List<String> previousTopics, String difficultyLevel) {
+            public ReadingTopicSelection selectReadingTopicForTextGeneration(List<ReadingPracticeVocabularySeed> vocabulary, List<String> previousTopics, LanguageLevel difficultyLevel) {
                 return new ReadingTopicSelection("Test reading topic");
             }
 
             @Override
-            public ReadingContent generateReadingContent(String topic, List<ReadingPracticeVocabularySeed> vocabulary, String difficultyLevel) {
+            public ReadingContent generateReadingContent(String topic, List<ReadingPracticeVocabularySeed> vocabulary,
+                                                         LanguageLevel difficultyLevel, List<String> grammarRuleTitles) {
                 return new ReadingContent(List.of(new ReadingContent.Paragraph("Ein Testabsatz.", List.of("Ein Testabsatz."))));
             }
 

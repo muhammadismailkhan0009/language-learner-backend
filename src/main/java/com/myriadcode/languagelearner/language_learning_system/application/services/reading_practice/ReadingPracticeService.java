@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 @Service
 public class ReadingPracticeService {
 
-    private static final String DIFFICULTY_LEVEL = "B1";
     private static final int RECENT_TOPIC_LIMIT = 10;
     private static final ReadingPracticeApiMapper READING_PRACTICE_API_MAPPER = ReadingPracticeApiMapper.INSTANCE;
 
@@ -45,17 +44,20 @@ public class ReadingPracticeService {
     private final FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi;
     private final FetchPrivateVocabularyApi fetchPrivateVocabularyApi;
     private final ReadingPracticeLlmApi readingPracticeLlmApi;
+    private final ReadingGenerationContextService readingGenerationContextService;
 
     private final ReadingPracticePolicy readingPracticePolicy = new ReadingPracticePolicy();
 
     public ReadingPracticeService(ReadingPracticeRepo readingPracticeRepo,
                                   FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
                                   FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  ReadingPracticeLlmApi readingPracticeLlmApi) {
+                                  ReadingPracticeLlmApi readingPracticeLlmApi,
+                                  ReadingGenerationContextService readingGenerationContextService) {
         this.readingPracticeRepo = readingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
         this.readingPracticeLlmApi = readingPracticeLlmApi;
+        this.readingGenerationContextService = readingGenerationContextService;
     }
 
     public void createSession(String userId) {
@@ -86,17 +88,24 @@ public class ReadingPracticeService {
         }
 
         var previousTopics = readingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
+        var generationContext = readingGenerationContextService.build(userId);
         String topic;
         List<ReadingPracticeParagraph> paragraphs;
         String readingText;
         Set<String> usedVocabularySurfaces;
         try (var ignored = LlmUserContextHolder.scoped(userId)) {
-            topic = readingPracticeLlmApi.selectTopicForTextGeneration(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
+            topic = readingPracticeLlmApi.selectTopicForTextGeneration(
+                    selectedVocab, previousTopics, generationContext.learnerLevel());
             if (topic == null || topic.isBlank()) {
                 topic = "General practice";
             }
 
-            var generated = readingPracticeLlmApi.generateReadingContent(topic, selectedVocab, DIFFICULTY_LEVEL);
+            var generated = readingPracticeLlmApi.generateReadingContent(
+                    topic,
+                    selectedVocab,
+                    generationContext.learnerLevel(),
+                    generationContext.grammarRuleTitles()
+            );
             paragraphs = buildParagraphs(generated);
             readingText = joinParagraphs(paragraphs);
             if (paragraphs.isEmpty() || readingText.isBlank()) {
