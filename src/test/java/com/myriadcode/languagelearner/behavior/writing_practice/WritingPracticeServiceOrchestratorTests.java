@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.behavior.writing_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackResult;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarFeedbackIssueResult;
@@ -13,6 +14,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingGenerationContext;
+import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingGenerationContextService;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
@@ -49,6 +52,7 @@ class WritingPracticeServiceOrchestratorTests {
     private PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
     private WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
     private GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
+    private WritingGenerationContextService writingGenerationContextService;
 
     private WritingPracticeService service;
 
@@ -61,6 +65,9 @@ class WritingPracticeServiceOrchestratorTests {
         practiceVocabularyReferenceRepo = mock(PracticeVocabularyReferenceRepo.class);
         writingSubmissionFeedbackLlmApi = mock(WritingSubmissionFeedbackLlmApi.class);
         grammarFeedbackOrchestrationService = mock(GrammarFeedbackOrchestrationService.class);
+        writingGenerationContextService = mock(WritingGenerationContextService.class);
+        when(writingGenerationContextService.build(any()))
+                .thenReturn(new WritingGenerationContext(LanguageLevel.B1, List.of()));
 
         service = new WritingPracticeService(
                 writingPracticeRepo,
@@ -69,7 +76,8 @@ class WritingPracticeServiceOrchestratorTests {
                 writingPracticeLlmApi,
                 practiceVocabularyReferenceRepo,
                 writingSubmissionFeedbackLlmApi,
-                grammarFeedbackOrchestrationService
+                grammarFeedbackOrchestrationService,
+                writingGenerationContextService
         );
     }
 
@@ -108,7 +116,7 @@ class WritingPracticeServiceOrchestratorTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("No vocabulary candidates found for writing practice");
 
-        verify(writingPracticeLlmApi, never()).generateBilingualContent(any(), any(), any());
+        verify(writingPracticeLlmApi, never()).generateBilingualContent(any(), any(), any(), any());
         verify(writingPracticeRepo, never()).save(any());
     }
 
@@ -154,8 +162,11 @@ class WritingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of("Old topic"));
-        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of("Old topic")), eq("B1"))).thenReturn("");
-        when(writingPracticeLlmApi.generateBilingualContent(eq("General writing practice"), any(), eq("B1")))
+        when(writingGenerationContextService.build("user-1"))
+                .thenReturn(new WritingGenerationContext(LanguageLevel.A2, List.of("Present Tense", "Modal Verbs")));
+        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of("Old topic")), eq(LanguageLevel.A2))).thenReturn("");
+        when(writingPracticeLlmApi.generateBilingualContent(
+                eq("General writing practice"), any(), eq(LanguageLevel.A2), eq(List.of("Present Tense", "Modal Verbs"))))
                 .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
         when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
                 .thenReturn(List.of("surface-v-1"));
@@ -164,8 +175,9 @@ class WritingPracticeServiceOrchestratorTests {
 
         service.createSession("user-1");
 
-        verify(writingPracticeLlmApi).selectTopicForWriting(any(), eq(List.of("Old topic")), eq("B1"));
-        verify(writingPracticeLlmApi).generateBilingualContent(eq("General writing practice"), any(), eq("B1"));
+        verify(writingPracticeLlmApi).selectTopicForWriting(any(), eq(List.of("Old topic")), eq(LanguageLevel.A2));
+        verify(writingPracticeLlmApi).generateBilingualContent(
+                eq("General writing practice"), any(), eq(LanguageLevel.A2), eq(List.of("Present Tense", "Modal Verbs")));
         verify(writingPracticeLlmApi).identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz."));
         verify(writingPracticeRepo).save(any(WritingPracticeSession.class));
     }
@@ -181,8 +193,8 @@ class WritingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
-        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq("B1"))).thenReturn("topic");
-        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq("B1")))
+        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq(LanguageLevel.B1))).thenReturn("topic");
+        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
                 .thenReturn(new WritingPracticeBilingualContent("", ""));
 
         assertThatThrownBy(() -> service.createSession("user-1"))
@@ -428,8 +440,8 @@ class WritingPracticeServiceOrchestratorTests {
         when(privateVocabularyApi.getVocabularyRecords(List.of("v-1"), "user-1"))
                 .thenReturn(List.of(vocab("v-1")));
         when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
-        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq("B1"))).thenReturn("topic");
-        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq("B1")))
+        when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq(LanguageLevel.B1))).thenReturn("topic");
+        when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
                 .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
         when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
                 .thenReturn(null);

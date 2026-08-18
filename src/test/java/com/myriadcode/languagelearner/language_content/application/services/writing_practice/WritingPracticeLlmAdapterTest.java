@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.services.writing_practice;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,7 +22,7 @@ class WritingPracticeLlmAdapterTest {
     void shouldNotCallLlmWhenSelectingTopicWithEmptyVocabulary() {
         var adapter = new WritingPracticeLlmAdapter(llmPort);
 
-        var topic = adapter.selectTopicForWriting(List.of(), List.of(), "B1");
+        var topic = adapter.selectTopicForWriting(List.of(), List.of(), LanguageLevel.B1);
 
         assertThat(topic).isNull();
         verifyNoInteractions(llmPort);
@@ -31,7 +32,7 @@ class WritingPracticeLlmAdapterTest {
     void shouldNotCallLlmWhenGeneratingBilingualContentWithEmptyVocabulary() {
         var adapter = new WritingPracticeLlmAdapter(llmPort);
 
-        var content = adapter.generateBilingualContent("topic", List.of(), "B1");
+        var content = adapter.generateBilingualContent("topic", List.of(), LanguageLevel.B1, List.of());
 
         assertThat(content.englishParagraph()).isEmpty();
         assertThat(content.germanParagraph()).isEmpty();

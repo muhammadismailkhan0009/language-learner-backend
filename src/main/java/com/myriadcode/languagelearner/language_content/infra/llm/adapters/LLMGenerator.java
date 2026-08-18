@@ -151,7 +151,7 @@ public class LLMGenerator implements LLMPort {
     @Override
     public WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary,
                                                                      List<String> previousTopics,
-                                                                     String difficultyLevel) {
+                                                                     LanguageLevel difficultyLevel) {
         var prompt = PromptsGenerator.writingTopicSelection(vocabulary, previousTopics, difficultyLevel);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runFastLLM(messages, new ParameterizedTypeReference<WritingTopicSelection>() {
@@ -161,8 +161,9 @@ public class LLMGenerator implements LLMPort {
     @Override
     public WritingBilingualContent generateWritingBilingualContent(String topic,
                                                                    List<WritingPracticeVocabularySeed> vocabulary,
-                                                                   String difficultyLevel) {
-        var prompt = PromptsGenerator.writingBilingualContent(topic, vocabulary, difficultyLevel);
+                                                                   LanguageLevel difficultyLevel,
+                                                                   List<String> grammarRuleTitles) {
+        var prompt = PromptsGenerator.writingBilingualContent(topic, vocabulary, difficultyLevel, grammarRuleTitles);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
         return runLLM(messages, new ParameterizedTypeReference<WritingBilingualContent>() {
         });

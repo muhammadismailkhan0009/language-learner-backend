@@ -53,11 +53,12 @@ public interface LLMPort {
 
     WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary,
                                                               List<String> previousTopics,
-                                                              String difficultyLevel);
+                                                              LanguageLevel difficultyLevel);
 
     WritingBilingualContent generateWritingBilingualContent(String topic,
                                                             List<WritingPracticeVocabularySeed> vocabulary,
-                                                            String difficultyLevel);
+                                                            LanguageLevel difficultyLevel,
+                                                            List<String> grammarRuleTitles);
 
     WritingUsedVocabularySelection identifyUsedWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
                                                                  String englishParagraph,

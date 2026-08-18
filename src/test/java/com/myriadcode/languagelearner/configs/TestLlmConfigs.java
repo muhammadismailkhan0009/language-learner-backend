@@ -81,12 +81,12 @@ public class TestLlmConfigs {
             }
 
             @Override
-            public WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary, List<String> previousTopics, String difficultyLevel) {
+            public WritingTopicSelection selectWritingTopicForTextGeneration(List<WritingPracticeVocabularySeed> vocabulary, List<String> previousTopics, LanguageLevel difficultyLevel) {
                 return new WritingTopicSelection("Test writing topic");
             }
 
             @Override
-            public WritingBilingualContent generateWritingBilingualContent(String topic, List<WritingPracticeVocabularySeed> vocabulary, String difficultyLevel) {
+            public WritingBilingualContent generateWritingBilingualContent(String topic, List<WritingPracticeVocabularySeed> vocabulary, LanguageLevel difficultyLevel, List<String> grammarRuleTitles) {
                 return new WritingBilingualContent("I write about my daily routine.", "Ich schreibe ueber meinen Alltag.");
             }
 

@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.behavior.writing_practice;
 
 import com.myriadcode.fsrs.api.enums.State;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
@@ -19,6 +20,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
+import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -70,6 +72,8 @@ class WritingPracticeSessionFlowTests {
         stubWritingPracticeLlmApi.lastSeeds = List.of();
         stubWritingPracticeLlmApi.lastTopic = null;
         stubWritingPracticeLlmApi.lastPreviousTopics = List.of();
+        stubWritingPracticeLlmApi.lastDifficultyLevel = null;
+        stubWritingPracticeLlmApi.lastGrammarRuleTitles = List.of();
         stubWritingPracticeLlmApi.usedSurfacesOverride = null;
         stubFetchVocabularyFlashcardReviewsApi.reset();
         stubFetchPrivateVocabularyApi.reset();
@@ -94,6 +98,8 @@ class WritingPracticeSessionFlowTests {
         assertThat(session.getSentencePairs()).hasSize(2);
         assertThat(session.getVocabularyUsages()).hasSize(12);
         assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(12);
+        assertThat(stubWritingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A1);
+        assertThat(stubWritingPracticeLlmApi.lastGrammarRuleTitles).isEmpty();
     }
 
     @Test
@@ -341,25 +347,36 @@ class WritingPracticeSessionFlowTests {
         StubWritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi() {
             return new StubWritingSubmissionFeedbackLlmApi();
         }
+
+        @Bean
+        @Primary
+        UserDifficultyLevelApi userDifficultyLevelApi() {
+            return userId -> LanguageLevel.A1;
+        }
     }
 
     static class StubWritingPracticeLlmApi implements WritingPracticeLlmApi {
         private List<WritingPracticeVocabularySeed> lastSeeds = List.of();
         private String lastTopic;
         private List<String> lastPreviousTopics = List.of();
+        private LanguageLevel lastDifficultyLevel;
+        private List<String> lastGrammarRuleTitles = List.of();
         private List<String> usedSurfacesOverride;
 
         @Override
-        public String selectTopicForWriting(List<WritingPracticeVocabularySeed> vocabulary, List<String> previousTopics, String difficultyLevel) {
+        public String selectTopicForWriting(List<WritingPracticeVocabularySeed> vocabulary, List<String> previousTopics, LanguageLevel difficultyLevel) {
             this.lastSeeds = vocabulary;
             this.lastPreviousTopics = previousTopics;
+            this.lastDifficultyLevel = difficultyLevel;
             this.lastTopic = "topic-1";
             return lastTopic;
         }
 
         @Override
-        public WritingPracticeBilingualContent generateBilingualContent(String topic, List<WritingPracticeVocabularySeed> vocabulary, String difficultyLevel) {
+        public WritingPracticeBilingualContent generateBilingualContent(String topic, List<WritingPracticeVocabularySeed> vocabulary, LanguageLevel difficultyLevel, List<String> grammarRuleTitles) {
             this.lastTopic = topic;
+            this.lastDifficultyLevel = difficultyLevel;
+            this.lastGrammarRuleTitles = grammarRuleTitles;
             return new WritingPracticeBilingualContent(
                     "I write about my daily routine.",
                     "Ich schreibe ueber meinen Alltag."

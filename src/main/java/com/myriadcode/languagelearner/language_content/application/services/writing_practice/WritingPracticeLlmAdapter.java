@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.language_content.application.services.writing_practice;
 
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
@@ -21,7 +22,7 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     @Override
     public String selectTopicForWriting(List<WritingPracticeVocabularySeed> vocabulary,
                                         List<String> previousTopics,
-                                        String difficultyLevel) {
+                                        LanguageLevel difficultyLevel) {
         if (vocabulary == null || vocabulary.isEmpty()) {
             return null;
         }
@@ -32,11 +33,12 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
     @Override
     public WritingPracticeBilingualContent generateBilingualContent(String topic,
                                                                     List<WritingPracticeVocabularySeed> vocabulary,
-                                                                    String difficultyLevel) {
+                                                                    LanguageLevel difficultyLevel,
+                                                                    List<String> grammarRuleTitles) {
         if (vocabulary == null || vocabulary.isEmpty()) {
             return new WritingPracticeBilingualContent("", "");
         }
-        var result = llmPort.generateWritingBilingualContent(topic, vocabulary, difficultyLevel);
+        var result = llmPort.generateWritingBilingualContent(topic, vocabulary, difficultyLevel, grammarRuleTitles);
         if (result == null) {
             return new WritingPracticeBilingualContent("", "");
         }

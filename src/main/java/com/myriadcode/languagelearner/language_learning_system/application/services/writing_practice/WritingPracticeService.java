@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WritingPracticeService {
 
-    private static final String DIFFICULTY_LEVEL = "B1";
+    private static final String FEEDBACK_DIFFICULTY_LEVEL = "B1";
     private static final int RECENT_TOPIC_LIMIT = 10;
     private static final WritingPracticeApiMapper WRITING_PRACTICE_API_MAPPER = WritingPracticeApiMapper.INSTANCE;
 
@@ -55,6 +55,7 @@ public class WritingPracticeService {
     private final WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
     private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
     private final WritingFeedbackPipelineService writingFeedbackPipelineService;
+    private final WritingGenerationContextService writingGenerationContextService;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
@@ -70,7 +71,8 @@ public class WritingPracticeService {
                                   PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
                                   WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
                                   GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
-                                  WritingFeedbackPipelineService writingFeedbackPipelineService) {
+                                  WritingFeedbackPipelineService writingFeedbackPipelineService,
+                                  WritingGenerationContextService writingGenerationContextService) {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
@@ -79,6 +81,7 @@ public class WritingPracticeService {
         this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
         this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
         this.writingFeedbackPipelineService = writingFeedbackPipelineService;
+        this.writingGenerationContextService = writingGenerationContextService;
     }
 
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
@@ -96,7 +99,29 @@ public class WritingPracticeService {
                 practiceVocabularyReferenceRepo,
                 writingSubmissionFeedbackLlmApi,
                 grammarFeedbackOrchestrationService,
+                null,
                 null
+        );
+    }
+
+    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
+                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
+                                  WritingPracticeLlmApi writingPracticeLlmApi,
+                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
+                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
+                                  WritingGenerationContextService writingGenerationContextService) {
+        this(
+                writingPracticeRepo,
+                vocabularyFlashcardReviewsApi,
+                fetchPrivateVocabularyApi,
+                writingPracticeLlmApi,
+                practiceVocabularyReferenceRepo,
+                writingSubmissionFeedbackLlmApi,
+                grammarFeedbackOrchestrationService,
+                null,
+                writingGenerationContextService
         );
     }
 
@@ -147,18 +172,27 @@ public class WritingPracticeService {
         }
 
         var previousTopics = writingPracticeRepo.findRecentTopicsByUserId(normalizedUserId, RECENT_TOPIC_LIMIT);
+        var generationContext = writingGenerationContextService == null
+                ? new WritingGenerationContext(com.myriadcode.languagelearner.common.enums.LanguageLevel.B1, List.of())
+                : writingGenerationContextService.build(normalizedUserId);
         String topic;
         String englishParagraph;
         String germanParagraph;
         Set<String> usedVocabularySurfaces;
         List<WritingSentencePair> sentencePairs;
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
-            topic = writingPracticeLlmApi.selectTopicForWriting(selectedVocab, previousTopics, DIFFICULTY_LEVEL);
+            topic = writingPracticeLlmApi.selectTopicForWriting(
+                    selectedVocab, previousTopics, generationContext.learnerLevel());
             if (topic == null || topic.isBlank()) {
                 topic = "General writing practice";
             }
 
-            var bilingualContent = writingPracticeLlmApi.generateBilingualContent(topic, selectedVocab, DIFFICULTY_LEVEL);
+            var bilingualContent = writingPracticeLlmApi.generateBilingualContent(
+                    topic,
+                    selectedVocab,
+                    generationContext.learnerLevel(),
+                    generationContext.grammarRuleTitles()
+            );
             englishParagraph = contentAssembler.sanitizeParagraph(bilingualContent.englishParagraph());
             germanParagraph = contentAssembler.sanitizeParagraph(bilingualContent.germanParagraph());
             if (englishParagraph.isBlank() || germanParagraph.isBlank()) {
@@ -266,7 +300,7 @@ public class WritingPracticeService {
             } else {
                 feedback = writingFeedbackPipelineService.generateFeedback(
                         session,
-                        DIFFICULTY_LEVEL,
+                        FEEDBACK_DIFFICULTY_LEVEL,
                         sanitizedAnswer,
                         buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages())
                 );
@@ -305,7 +339,7 @@ public class WritingPracticeService {
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
             feedback = writingFeedbackPipelineService.generateFeedback(
                     session,
-                    DIFFICULTY_LEVEL,
+                    FEEDBACK_DIFFICULTY_LEVEL,
                     submittedAnswer,
                     buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages()),
                     true

@@ -537,7 +537,7 @@ public final class PromptsGenerator {
   public static String writingTopicSelection(
       List<WritingPracticeVocabularySeed> vocabulary,
       List<String> previousTopics,
-      String difficultyLevel) {
+      LanguageLevel difficultyLevel) {
     String vocabList = formatWritingVocabulary(vocabulary);
     String topics = previousTopics == null || previousTopics.isEmpty()
         ? "(none)"
@@ -576,73 +576,225 @@ public final class PromptsGenerator {
   }
 
   public static String writingBilingualContent(
-      String topic,
-      List<WritingPracticeVocabularySeed> vocabulary,
-      String difficultyLevel) {
-    String vocabList = formatWritingVocabulary(vocabulary);
+    String topic,
+    List<WritingPracticeVocabularySeed> vocabulary,
+    LanguageLevel difficultyLevel,
+    List<String> grammarRuleTitles) {
 
-    return """
-                You are an expert German language teacher creating a guided writing exercise.
+  String vocabList = formatWritingVocabulary(vocabulary);
 
-        CEFR Level: %s
-        Topic: "%s"
+  String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
+      ? "(none provided)"
+      : grammarRuleTitles.stream()
+          .filter(title -> title != null && !title.isBlank())
+          .map(title -> "- " + title.trim())
+          .collect(java.util.stream.Collectors.joining("\n"));
 
-        Goal:
-        Create a short bilingual writing exercise for a learner.
+  return """
+      You are an expert German language teacher creating a guided
+      English-to-German writing exercise.
 
-        Output Structure:
-        1. One English paragraph (for the learner to translate into German).
-        2. One correct German reference paragraph.
+      CEFR Level: %s
+      Topic: "%s"
 
-        Both paragraphs must express the SAME meaning.
+      Primary Goal:
+      Create one natural, coherent everyday situation that the learner can first
+      read in English and then translate into German.
 
-        English Paragraph Rules:
-        - 4 to 8 sentences.
-        - Sentences must be clear and easy to translate.
-        - Prefer simple but natural sentence structures.
-        - Avoid idioms or complex expressions.
-        - Sentences should connect naturally into one paragraph.
+      The exercise should practice useful learner vocabulary and suitable grammar,
+      but natural meaning and coherence are more important than vocabulary coverage.
 
-        German Paragraph Rules:
-        - Translate the English paragraph naturally.
-        - Use grammar appropriate for the CEFR level.
-        - Prefer present tense, perfect tense, and modal verbs where natural.
-        - Sentences should remain clear and readable.
+      Priority Order:
+      Follow this priority order strictly:
 
-        Sentence Guidelines:
-        - Sentence length: 4–12 words.
-        - Vary sentence structure when possible.
+      1. A coherent and realistic situation.
+      2. Natural English in the learner prompt.
+      3. Natural and idiomatic German in the reference answer.
+      4. Appropriate difficulty for the requested CEFR level.
+      5. Useful practice of a suitable subset of learner vocabulary.
+      6. Natural exposure to eligible grammar rules.
 
-        Vocabulary Usage Rules:
-        - Use provided learner vocabulary when natural.
-        - Select a subset of vocabulary that fits the topic best.
-        - Prefer reusing selected words multiple times instead of covering many words once.
-        - Do NOT try to use a fixed portion (e.g. half) of the vocabulary.
-        - Vocabulary may appear in any grammatical form (e.g., conjugated verbs, plural nouns).
-        - Combine multiple learner vocabulary words in the same sentence when natural.
-        - Do not force vocabulary if it makes the sentence unnatural.
-        - Important words should appear multiple times when natural.
-        - Important vocabulary should appear across multiple different sentences, not just once or twice.
+      Output Structure:
+      Return:
 
-        Repetition Guidance:
-        - Prefer repeated usage of important vocabulary across sentences.
-        - Avoid using many words only once.
+      1. One English paragraph for the learner to translate into German.
+      2. One correct German reference paragraph.
 
-        Vocabulary Control:
-        - Introduce at most 3–5 new content words not in the learner vocabulary list.
-        - Function words (articles, pronouns, connectors) are allowed.
-        - Prefer reusing the learner vocabulary instead of adding new thematic words.
+      The English and German paragraphs must express exactly the same meaning.
 
-        Style:
-        - Write natural, coherent paragraphs.
-        - Do not include bullet points, numbering, labels, or explanations.
-        - Output only the two paragraphs: English first, German second.
+      Prefer the same number of sentences in both languages.
+      Each English sentence should correspond clearly to one German sentence.
+      Do not add, remove, or substantially rearrange information between languages.
 
-        Learner Vocabulary (German - translation):
-        %s
-                """.formatted(difficultyLevel, topic, vocabList);
-  }
+      Situation and Coherence:
+      - Build the paragraph around ONE clear situation, event, experience,
+        decision, problem, conversation, or sequence of actions.
+      - Every sentence should belong naturally to that same situation.
+      - Each sentence should normally add new information or move the situation forward.
+      - Do not add unrelated information merely to use additional vocabulary.
+      - Do not repeat the same idea using slightly different wording.
+      - When appropriate, give the paragraph a simple beginning,
+        development, and conclusion.
+      - The result must feel like a genuine mini-situation, not a vocabulary list
+        disguised as a paragraph.
 
+      English Paragraph Rules:
+      - Write natural contemporary English.
+      - The English must sound natural independently of the German reference.
+      - Do NOT create awkward English by translating German structures literally.
+      - Do NOT reverse-engineer unnatural English merely to force a German
+        vocabulary item into the reference paragraph.
+      - Prefer expressions a normal English speaker would actually use.
+      - Keep the meaning reasonably direct so that translation into German
+        remains appropriate for the requested CEFR level.
+      - Avoid idioms, literary expressions, unnecessarily abstract ideas,
+        and complicated English syntax.
+
+      German Paragraph Rules:
+      - Express exactly the same meaning as the English paragraph.
+      - Use natural, idiomatic German.
+      - Do not translate the English mechanically word-for-word when German
+        requires a different natural structure.
+      - Use grammar and sentence complexity appropriate to the requested CEFR level.
+      - Prefer common everyday constructions.
+      - Present tense, Perfekt, modal verbs, subordinate clauses, questions,
+        connectors, and other structures may appear when appropriate to the level.
+
+      Vocabulary Selection:
+      - The learner vocabulary is a pool of possible target vocabulary,
+        NOT a checklist.
+      - First decide which vocabulary items genuinely fit the topic and situation.
+      - Use only that coherent subset.
+      - It is completely acceptable to leave many provided vocabulary items unused.
+      - Never add an unrelated sentence merely because unused vocabulary remains.
+      - Never sacrifice coherence or naturalness to increase vocabulary coverage.
+      - Prefer vocabulary that naturally works together in the same semantic situation.
+      - Combine several compatible learner vocabulary items in one sentence when natural.
+      - Vocabulary may appear in any grammatically correct inflected form.
+
+      Vocabulary Repetition:
+      - Reuse a selected vocabulary item only when it naturally recurs in the situation.
+      - One natural occurrence is sufficient.
+      - A useful item may appear 2-3 times when repetition genuinely fits the text.
+      - Do not repeat an idea simply to repeat a vocabulary item.
+      - Do not force important vocabulary into multiple different sentences.
+      - Natural contextual usage is more valuable than artificial repetition.
+
+      Vocabulary Meaning:
+      - Vocabulary translations may contain several possible meanings,
+        senses, or notes separated by punctuation such as commas,
+        semicolons, slashes, or parentheses.
+      - Choose ONLY the meaning that naturally fits the current situation.
+      - Do not attempt to represent every supplied English gloss.
+      - If a vocabulary item's supplied meaning does not fit the topic naturally,
+        leave that vocabulary item unused.
+      - Prefer the common everyday meaning when several meanings are possible.
+
+      Behavior to Avoid:
+      - Do not add unrelated sentences merely to consume remaining target vocabulary.
+      - Do not create unnatural English by translating a desired German structure literally.
+      - Do not create multiple sentences with essentially the same meaning merely
+        to repeat vocabulary.
+      - Do not construct a paragraph by independently fitting vocabulary items
+        into sentences and then joining those sentences together.
+      - Do not prefer vocabulary coverage over a believable sequence of ideas.
+
+      Additional Vocabulary:
+      - Use learner vocabulary whenever it fits naturally.
+      - Additional vocabulary is allowed when necessary for coherent and natural expression.
+      - Additional words should be common, useful, and appropriate to the requested
+        CEFR level.
+      - Avoid unnecessary rare, literary, technical, or highly specialized vocabulary.
+
+      Additional Vocabulary by Level:
+      - A1:
+        Keep additional content vocabulary tightly controlled.
+        Normally introduce only about 3-5 additional content words in the full exercise.
+        If the situation requires many unfamiliar words, simplify the situation instead.
+
+      - A2:
+        Common additional vocabulary may be used when needed for natural expression,
+        but avoid introducing a large amount of new thematic vocabulary at once.
+
+      - B1:
+        Common CEFR-appropriate vocabulary may be used more freely when needed
+        for coherent and natural expression.
+        Still avoid unnecessary lexical complexity.
+
+      Function words, articles, pronouns, prepositions, auxiliaries,
+      and ordinary connectors do not count as additional content vocabulary.
+
+      Grammar Usage:
+      - Eligible grammar-rule titles are provided below.
+      - Choose only rules that naturally fit the topic, vocabulary,
+        and requested CEFR level.
+      - You do NOT need to use every eligible grammar rule.
+      - It is acceptable to use no eligible rule if none fits naturally.
+      - A useful grammar structure may recur a few times when natural.
+      - Never distort either paragraph merely to demonstrate a grammar rule.
+      - Ordinary grammar appropriate to the requested CEFR level may also be used.
+
+      Difficulty and Sentence Length:
+      Adapt sentence complexity to the requested CEFR level.
+
+      A1:
+      - Usually 4-10 words per sentence.
+      - Prefer very common vocabulary and straightforward main clauses.
+      - Use more advanced structures mainly when they are explicitly eligible
+        grammar rules.
+
+      A2:
+      - Usually 6-14 words per sentence.
+      - Allow common connectors, modal verbs, Perfekt, subordinate clauses,
+        and moderately varied word order.
+
+      B1:
+      - Usually 8-18 words per sentence.
+      - Allow connected clauses, explanations, reasons, conditions,
+        subordinate clauses, and more developed thoughts.
+
+      These are guidelines, not hard limits.
+      Occasional shorter or longer sentences are allowed when natural.
+
+      Paragraph Length:
+      - Usually 4-7 sentences.
+      - Prefer a compact coherent exercise over a longer paragraph
+        containing filler or unrelated ideas.
+
+      Final Quality Check:
+      Before returning the answer, internally verify:
+
+      - Does the English sound natural on its own?
+      - Does the German sound natural on its own?
+      - Do both paragraphs express the same meaning?
+      - Does every sentence belong to the same situation?
+      - Does each sentence add meaningful information?
+      - Did any sentence exist mainly to force vocabulary?
+      - Did you use a sensible vocabulary subset rather than trying to cover the list?
+      - Are ambiguous vocabulary items used only in a meaning appropriate
+        to the context?
+      - Is additional vocabulary appropriate to the requested CEFR level?
+      - Is the grammar appropriate to the requested CEFR level?
+
+      If any sentence fails these checks, revise it before returning the result.
+
+      Style:
+      - Clear, contemporary, everyday language.
+      - No bullet points, numbering, headings, explanations, or teaching notes
+        inside the generated exercise.
+      - Output only the bilingual exercise required by the response schema.
+
+      Learner Vocabulary (German - translation):
+      %s
+
+      Eligible Grammar-Rule Titles:
+      %s
+      """.formatted(
+          difficultyLevel,
+          topic,
+          vocabList,
+          grammarTitles);
+}
   public static String writingUsedVocabularySelection(
       List<WritingPracticeVocabularySeed> vocabulary,
       String englishParagraph,
