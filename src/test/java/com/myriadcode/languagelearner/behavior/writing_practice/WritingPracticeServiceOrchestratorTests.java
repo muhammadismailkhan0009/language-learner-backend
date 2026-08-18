@@ -14,6 +14,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingFeedbackPipelineService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingGenerationContext;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingGenerationContextService;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
@@ -22,6 +23,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
+import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,6 +55,8 @@ class WritingPracticeServiceOrchestratorTests {
     private WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
     private GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
     private WritingGenerationContextService writingGenerationContextService;
+    private WritingFeedbackPipelineService writingFeedbackPipelineService;
+    private UserDifficultyLevelApi userDifficultyLevelApi;
 
     private WritingPracticeService service;
 
@@ -66,8 +70,11 @@ class WritingPracticeServiceOrchestratorTests {
         writingSubmissionFeedbackLlmApi = mock(WritingSubmissionFeedbackLlmApi.class);
         grammarFeedbackOrchestrationService = mock(GrammarFeedbackOrchestrationService.class);
         writingGenerationContextService = mock(WritingGenerationContextService.class);
+        writingFeedbackPipelineService = mock(WritingFeedbackPipelineService.class);
+        userDifficultyLevelApi = mock(UserDifficultyLevelApi.class);
         when(writingGenerationContextService.build(any()))
                 .thenReturn(new WritingGenerationContext(LanguageLevel.B1, List.of()));
+        when(userDifficultyLevelApi.getDifficultyLevel(any())).thenReturn(LanguageLevel.A2);
 
         service = new WritingPracticeService(
                 writingPracticeRepo,
@@ -77,7 +84,9 @@ class WritingPracticeServiceOrchestratorTests {
                 practiceVocabularyReferenceRepo,
                 writingSubmissionFeedbackLlmApi,
                 grammarFeedbackOrchestrationService,
-                writingGenerationContextService
+                writingFeedbackPipelineService,
+                writingGenerationContextService,
+                userDifficultyLevelApi
         );
     }
 
@@ -289,16 +298,6 @@ class WritingPracticeServiceOrchestratorTests {
                 List.of()
         );
         when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
-        when(grammarFeedbackOrchestrationService.buildCatalog()).thenReturn(List.of());
-        when(writingSubmissionFeedbackLlmApi.generateFeedback(
-                eq("English paragraph."),
-                eq("German paragraph."),
-                eq("My answer"),
-                anyList()
-        )).thenReturn(new WritingSubmissionFeedbackResult("Feedback", List.of()));
-        when(grammarFeedbackOrchestrationService.appendGrammarExplanations(eq("Feedback"), anyList()))
-                .thenReturn("Feedback");
-
         service.submitAnswer("user-1", "session-1", "  My answer  ");
 
         verify(writingPracticeRepo).updateSubmission(
@@ -306,9 +305,11 @@ class WritingPracticeServiceOrchestratorTests {
                 eq("user-1"),
                 eq("My answer"),
                 any(),
-                eq("Feedback"),
-                any()
+                isNull(),
+                isNull()
         );
+        verifyNoInteractions(writingFeedbackPipelineService);
+        verifyNoInteractions(writingSubmissionFeedbackLlmApi);
     }
 
     @Test
@@ -345,8 +346,8 @@ class WritingPracticeServiceOrchestratorTests {
     }
 
     @Test
-    @DisplayName("submitAnswer: appends grammar explanation into persisted feedback text")
-    void submitAnswerAppendsGrammarExplanationIntoFeedbackText() {
+    @DisplayName("reEvaluateFeedback: uses profile level for explicit feedback")
+    void reEvaluateFeedbackUsesProfileLevel() {
         var session = new WritingPracticeSession(
                 new WritingPracticeSession.WritingPracticeSessionId("session-1"),
                 new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
@@ -354,48 +355,52 @@ class WritingPracticeServiceOrchestratorTests {
                 "English paragraph.",
                 "German paragraph.",
                 Instant.parse("2026-01-01T00:00:00Z"),
-                null,
-                null,
+                "My answer",
+                Instant.parse("2026-01-01T01:00:00Z"),
                 null,
                 null,
                 List.of(),
                 List.of()
         );
         when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
-        var serviceWithGrammar = new WritingPracticeService(
-                writingPracticeRepo,
-                flashcardReviewsApi,
-                privateVocabularyApi,
-                writingPracticeLlmApi,
-                practiceVocabularyReferenceRepo,
-                writingSubmissionFeedbackLlmApi,
-                grammarFeedbackOrchestrationService
-        );
-        when(grammarFeedbackOrchestrationService.buildCatalog()).thenReturn(List.of());
-        when(grammarFeedbackOrchestrationService.appendGrammarExplanations(eq("Feedback"), anyList()))
-                .thenReturn("Feedback\n\nGrammar notes: Use ordinal adjective before counted noun.");
-        when(writingSubmissionFeedbackLlmApi.generateFeedback(eq("English paragraph."), eq("German paragraph."), eq("My answer"), anyList()))
-                .thenReturn(new WritingSubmissionFeedbackResult(
-                        "Feedback",
-                        List.of(new GrammarFeedbackIssueResult(
-                                "erst",
-                                "Use ordinal adjective form.",
-                                "erste",
-                                "",
-                                "Use ordinal adjective before counted noun."
-                        ))
-                ));
+        when(writingFeedbackPipelineService.generateFeedback(eq(session), eq("A2"), eq("My answer"), eq(List.of()), eq(true)))
+                .thenReturn(new WritingFeedbackPipelineService.WritingFeedbackPipelineResult(null, "Feedback"));
+        when(writingPracticeRepo.updateSubmission(
+                eq("session-1"), eq("user-1"), eq("My answer"), any(), eq("Feedback"), isNull(), any()
+        )).thenReturn(session);
 
-        serviceWithGrammar.submitAnswer("user-1", "session-1", "My answer");
+        service.reEvaluateFeedback("user-1", "session-1");
 
-        verify(writingPracticeRepo).updateSubmission(
-                eq("session-1"),
-                eq("user-1"),
-                eq("My answer"),
-                any(),
-                eq("Feedback\n\nGrammar notes: Use ordinal adjective before counted noun."),
-                any()
+        verify(userDifficultyLevelApi).getDifficultyLevel("user-1");
+        verify(writingFeedbackPipelineService).generateFeedback(session, "A2", "My answer", List.of(), true);
+    }
+
+    @Test
+    @DisplayName("reEvaluateFeedback: leaves stored submission untouched when feedback fails")
+    void reEvaluateFeedbackLeavesSubmissionUntouchedWhenFeedbackFails() {
+        var session = new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId("session-1"),
+                new com.myriadcode.languagelearner.common.ids.UserId("user-1"),
+                "Topic",
+                "English paragraph.",
+                "German paragraph.",
+                Instant.parse("2026-01-01T00:00:00Z"),
+                "My answer",
+                Instant.parse("2026-01-01T01:00:00Z"),
+                "Existing feedback",
+                Instant.parse("2026-01-01T01:01:00Z"),
+                List.of(),
+                List.of()
         );
+        when(writingPracticeRepo.findByIdAndUserId("session-1", "user-1")).thenReturn(Optional.of(session));
+        when(writingFeedbackPipelineService.generateFeedback(eq(session), eq("A2"), eq("My answer"), eq(List.of()), eq(true)))
+                .thenThrow(new IllegalStateException("provider unavailable"));
+
+        assertThatThrownBy(() -> service.reEvaluateFeedback("user-1", "session-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("provider unavailable");
+
+        verify(writingPracticeRepo, never()).updateSubmission(any(), any(), any(), any(), any(), any());
     }
 
     @Test

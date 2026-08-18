@@ -277,15 +277,17 @@ class WritingPracticeSessionFlowTests {
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
         assertThat(persisted.getSubmittedAnswer()).isEqualTo("My written answer");
         assertThat(persisted.getSubmittedAt()).isNotNull();
-        assertThat(persisted.getFeedbackText()).isEqualTo("Feedback for submitted paragraph.");
-        assertThat(persisted.getFeedbackGeneratedAt()).isNotNull();
+        assertThat(persisted.getFeedbackText()).isNull();
+        assertThat(persisted.getFeedbackGeneratedAt()).isNull();
 
         var response = writingPracticeService.getSession("user-1", sessionId);
         assertThat(response.submittedAnswer()).isEqualTo("My written answer");
         assertThat(response.submittedAt()).isNotNull();
-        assertThat(response.feedbackText()).isEqualTo("Feedback for submitted paragraph.");
-        assertThat(response.feedbackGeneratedAt()).isNotNull();
-        assertThat(stubWritingSubmissionFeedbackLlmApi.lastFeedback).isEqualTo("Feedback for submitted paragraph.");
+        assertThat(response.feedbackText()).isNull();
+        assertThat(response.feedbackGeneratedAt()).isNull();
+        assertThat(response.germanParagraph()).isEqualTo("Ich schreibe ueber meinen Alltag.");
+        assertThat(response.vocabFlashcards()).isNotEmpty();
+        assertThat(stubWritingSubmissionFeedbackLlmApi.lastFeedback).isNull();
 
         var listed = writingPracticeService.listSessions("user-1");
         assertThat(listed).anyMatch(WritingPracticeSessionSummaryResponse::submitted);

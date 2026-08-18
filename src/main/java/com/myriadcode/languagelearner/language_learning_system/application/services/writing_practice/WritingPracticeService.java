@@ -24,6 +24,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
+import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,33 +57,13 @@ public class WritingPracticeService {
     private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
     private final WritingFeedbackPipelineService writingFeedbackPipelineService;
     private final WritingGenerationContextService writingGenerationContextService;
+    private final UserDifficultyLevelApi userDifficultyLevelApi;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
 
     @Value("${writing.feedback.structured-enabled:true}")
     private boolean structuredFeedbackEnabled = true;
-
-    @Autowired
-    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
-                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
-                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  WritingPracticeLlmApi writingPracticeLlmApi,
-                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
-                                  WritingFeedbackPipelineService writingFeedbackPipelineService,
-                                  WritingGenerationContextService writingGenerationContextService) {
-        this.writingPracticeRepo = writingPracticeRepo;
-        this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
-        this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
-        this.writingPracticeLlmApi = writingPracticeLlmApi;
-        this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
-        this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
-        this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
-        this.writingFeedbackPipelineService = writingFeedbackPipelineService;
-        this.writingGenerationContextService = writingGenerationContextService;
-    }
 
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
                                   FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
@@ -100,8 +81,32 @@ public class WritingPracticeService {
                 writingSubmissionFeedbackLlmApi,
                 grammarFeedbackOrchestrationService,
                 null,
+                null,
                 null
         );
+    }
+
+    @Autowired
+    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
+                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
+                                  WritingPracticeLlmApi writingPracticeLlmApi,
+                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
+                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
+                                  WritingFeedbackPipelineService writingFeedbackPipelineService,
+                                  WritingGenerationContextService writingGenerationContextService,
+                                  UserDifficultyLevelApi userDifficultyLevelApi) {
+        this.writingPracticeRepo = writingPracticeRepo;
+        this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
+        this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
+        this.writingPracticeLlmApi = writingPracticeLlmApi;
+        this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
+        this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
+        this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
+        this.writingFeedbackPipelineService = writingFeedbackPipelineService;
+        this.writingGenerationContextService = writingGenerationContextService;
+        this.userDifficultyLevelApi = userDifficultyLevelApi;
     }
 
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
@@ -121,7 +126,8 @@ public class WritingPracticeService {
                 writingSubmissionFeedbackLlmApi,
                 grammarFeedbackOrchestrationService,
                 null,
-                writingGenerationContextService
+                writingGenerationContextService,
+                null
         );
     }
 
@@ -276,50 +282,8 @@ public class WritingPracticeService {
             writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, null, null, null);
             return;
         }
-
-        WritingFeedbackPipelineService.WritingFeedbackPipelineResult feedback;
-        try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
-            if (!structuredFeedbackEnabled || writingFeedbackPipelineService == null) {
-                if (grammarFeedbackOrchestrationService == null) {
-                    feedback = new WritingFeedbackPipelineService.WritingFeedbackPipelineResult(
-                            null,
-                            writingSubmissionFeedbackLlmApi.generateFeedback(session.englishParagraph(), session.germanParagraph(), sanitizedAnswer)
-                    );
-                } else {
-                    var legacyResult = writingSubmissionFeedbackLlmApi.generateFeedback(
-                                session.englishParagraph(),
-                                session.germanParagraph(),
-                                sanitizedAnswer,
-                                grammarFeedbackOrchestrationService.buildCatalog()
-                        );
-                    feedback = new WritingFeedbackPipelineService.WritingFeedbackPipelineResult(
-                            null,
-                            grammarFeedbackOrchestrationService.appendGrammarExplanations(legacyResult.feedback(), legacyResult.grammarIssues())
-                    );
-                }
-            } else {
-                feedback = writingFeedbackPipelineService.generateFeedback(
-                        session,
-                        FEEDBACK_DIFFICULTY_LEVEL,
-                        sanitizedAnswer,
-                        buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages())
-                );
-            }
-        }
         var submittedAt = Instant.now();
-        if (feedback.structuredFeedback() == null) {
-            writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, submittedAt, feedback.feedbackText(), submittedAt);
-        } else {
-            writingPracticeRepo.updateSubmission(
-                    sessionId,
-                    normalizedUserId,
-                    sanitizedAnswer,
-                    submittedAt,
-                    feedback.feedbackText(),
-                    feedback.structuredFeedback(),
-                    submittedAt
-            );
-        }
+        writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, submittedAt, null, null);
     }
 
     @Transactional
@@ -339,7 +303,7 @@ public class WritingPracticeService {
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
             feedback = writingFeedbackPipelineService.generateFeedback(
                     session,
-                    FEEDBACK_DIFFICULTY_LEVEL,
+                    feedbackLearnerLevel(normalizedUserId),
                     submittedAnswer,
                     buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages()),
                     true
@@ -357,6 +321,13 @@ public class WritingPracticeService {
                 generatedAt
         );
         return toSessionResponse(updated, normalizedUserId);
+    }
+
+    private String feedbackLearnerLevel(String userId) {
+        if (userDifficultyLevelApi == null) {
+            return FEEDBACK_DIFFICULTY_LEVEL;
+        }
+        return userDifficultyLevelApi.getDifficultyLevel(userId).name();
     }
 
     private WritingPracticeSessionResponse toSessionResponse(WritingPracticeSession session, String userId) {

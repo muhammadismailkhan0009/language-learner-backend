@@ -177,6 +177,19 @@ class WritingPracticeControllerBehaviorTests {
     }
 
     @Test
+    @DisplayName("Get feedback API: returns 200 and forwards user/session ids")
+    void getFeedbackReturnsOkAndForwardsArgs() throws Exception {
+        var service = mock(WritingPracticeService.class);
+        MockMvc mockMvc = mockMvcFor(service);
+
+        mockMvc.perform(post("/api/v1/writing-practice/sessions/{sessionId}/feedback/re-evaluate", "session-1")
+                        .queryParam("userId", "user-1"))
+                .andExpect(status().isOk());
+
+        verify(service).reEvaluateFeedback("user-1", "session-1");
+    }
+
+    @Test
     @DisplayName("List sessions API: requires userId query parameter")
     void listSessionsRequiresUserIdQueryParam() throws Exception {
         var service = mock(WritingPracticeService.class);

@@ -35,10 +35,13 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
 
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @Configuration
 @Profile("test")
 public class TestLlmConfigs {
+
+    public static final List<String> WRITING_FEEDBACK_LEVELS = new CopyOnWriteArrayList<>();
 
     @Bean
     @Primary
@@ -107,11 +110,13 @@ public class TestLlmConfigs {
 
             @Override
             public WritingMeaningAnalysisResult analyzeWritingMeaning(String learnerLevel, String englishPrompt, String referenceGermanParagraph, String learnerGermanAnswer) {
+                WRITING_FEEDBACK_LEVELS.add(learnerLevel);
                 return new WritingMeaningAnalysisResult("partial", List.of("daily routine"), List.of(), List.of(), List.of());
             }
 
             @Override
             public WritingVocabularyEvaluationResult evaluateWritingVocabulary(String learnerLevel, String englishPrompt, String referenceGermanParagraph, String learnerGermanAnswer, List<WritingFeedbackVocabularyItem> selectedVocabulary, WritingMeaningAnalysisResult meaningAnalysis) {
+                WRITING_FEEDBACK_LEVELS.add(learnerLevel);
                 return new WritingVocabularyEvaluationResult(selectedVocabulary.stream()
                         .map(item -> new WritingVocabularyEvaluationResult.Item(
                                 item.vocabularyId(),
@@ -126,11 +131,13 @@ public class TestLlmConfigs {
 
             @Override
             public WritingGrammarIssueDetectionResult detectWritingGrammarIssues(String learnerLevel, String englishPrompt, String referenceGermanParagraph, String learnerGermanAnswer, List<GrammarRuleCatalogItem> grammarCatalog, WritingMeaningAnalysisResult meaningAnalysis, WritingVocabularyEvaluationResult vocabularyEvaluation) {
+                WRITING_FEEDBACK_LEVELS.add(learnerLevel);
                 return new WritingGrammarIssueDetectionResult(List.of(new WritingGrammarIssueDetectionResult.Issue("", "word_order", 5, "Vielleicht ich gehe", "Vielleicht gehe ich", "Verb position needs practice.", true, 1)));
             }
 
             @Override
             public WritingStructuredFeedbackResult composeWritingFeedback(String learnerLevel, String englishPrompt, String referenceGermanParagraph, String learnerGermanAnswer, WritingMeaningAnalysisResult meaningAnalysis, WritingVocabularyEvaluationResult vocabularyEvaluation, WritingGrammarIssueDetectionResult grammarIssues, List<WritingGrammarIssueDetectionResult.Issue> selectedTopIssues) {
+                WRITING_FEEDBACK_LEVELS.add(learnerLevel);
                 return new WritingStructuredFeedbackResult(
                         "Meaning: partial.",
                         "Ich schreibe ueber meinen Alltag.",

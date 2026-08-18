@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.behavior.writing_practice;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
+import com.myriadcode.languagelearner.configs.TestLlmConfigs;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
@@ -30,22 +31,31 @@ class WritingFeedbackSubmissionFlowContextTest {
     @AfterEach
     void tearDown() {
         writingPracticeSessionJpaRepo.deleteAll();
+        TestLlmConfigs.WRITING_FEEDBACK_LEVELS.clear();
     }
 
     @Test
-    @DisplayName("submitAnswer: structured pipeline persists feedback and grammar analytics in real context")
-    void submitAnswerPersistsStructuredFeedbackAndGrammarAnalytics() {
+    @DisplayName("explicit feedback: uses profile level and persists feedback after submission")
+    void explicitFeedbackUsesProfileLevelAndPersistsFeedback() {
         writingPracticeService.createSession("user-1");
         var sessionId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
 
         writingPracticeService.submitAnswer("user-1", sessionId, "Vielleicht ich gehe.");
 
-        var response = writingPracticeService.getSession("user-1", sessionId);
-        assertThat(response.submittedAnswer()).isEqualTo("Vielleicht ich gehe.");
+        var submitted = writingPracticeService.getSession("user-1", sessionId);
+        assertThat(submitted.submittedAnswer()).isEqualTo("Vielleicht ich gehe.");
+        assertThat(submitted.submittedAt()).isNotNull();
+        assertThat(submitted.feedbackText()).isNull();
+        assertThat(submitted.structuredFeedback()).isNull();
+        assertThat(TestLlmConfigs.WRITING_FEEDBACK_LEVELS).isEmpty();
+
+        var response = writingPracticeService.reEvaluateFeedback("user-1", sessionId);
+
         assertThat(response.feedbackText()).contains("Overall: Meaning: partial.");
         assertThat(response.structuredFeedback()).isNotNull();
         assertThat(response.structuredFeedback().topFixes()).hasSize(1);
         assertThat(response.structuredFeedback().nextFocus()).contains("verb-second");
+        assertThat(TestLlmConfigs.WRITING_FEEDBACK_LEVELS).containsExactly("A1", "A1", "A1", "A1");
 
         var analytics = writingPracticeRepo.findGrammarIssueAnalytics(sessionId, "user-1");
         assertThat(analytics).hasSize(1);
