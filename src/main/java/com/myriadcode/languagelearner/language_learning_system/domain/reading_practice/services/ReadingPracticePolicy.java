@@ -8,116 +8,102 @@ import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class ReadingPracticePolicy {
 
-    private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.90;
+    private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.60;
     public static final int MAX_WORDS = 50;
     public static final double REVIEW_RATIO = 0.40;
     public static final double RE_LEARNING_RATIO = 0.30;
     public static final double LEARNING_RATIO = 0.20;
     public static final double NEW_RATIO = 0.10;
     public static final int MAX_VERY_WEAK_CARDS = 10;
+    private static final List<State> STATE_ORDER = List.of(
+            State.REVIEW, State.RE_LEARNING, State.LEARNING, State.NEW
+    );
 
-    public List<ReadingPracticeCandidate> selectCandidates(String userId,
-                                                           List<ReadingPracticeCandidate> candidates,
-                                                           Instant rotationHour) {
+    public List<ReadingPracticeCandidate> selectCandidates(List<ReadingPracticeCandidate> candidates,
+                                                           Instant now,
+                                                           Map<String, Integer> recentUsageCounts) {
         if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
-        var maxSelectable = Math.min(MAX_WORDS, candidates.size());
+        var safeNow = now == null ? Instant.EPOCH : now;
+        var usageCounts = recentUsageCounts == null ? Map.<String, Integer>of() : recentUsageCounts;
+        int capacity = Math.min(MAX_WORDS, candidates.size());
+        var grouped = groupAndSort(candidates, safeNow, usageCounts);
+        var selected = new ArrayList<ReadingPracticeCandidate>(capacity);
 
-        var grouped = groupByState(candidates, rotationHour, userId);
-        var selected = new ArrayList<ReadingPracticeCandidate>(maxSelectable);
-        var targets = calculateRatioTargets(maxSelectable);
+        representStates(grouped, selected, capacity);
+        var targets = calculateRatioTargets(capacity);
+        for (var state : STATE_ORDER) {
+            int remainingTarget = targets.getOrDefault(state, 0) - countState(selected, state);
+            addCandidates(selected, grouped.get(state), remainingTarget, capacity);
+        }
 
-        addCandidates(selected, grouped.get(State.REVIEW), targets.getOrDefault(State.REVIEW, 0));
-        addCandidates(selected, grouped.get(State.RE_LEARNING), targets.getOrDefault(State.RE_LEARNING, 0));
-        addCandidates(selected, grouped.get(State.LEARNING), targets.getOrDefault(State.LEARNING, 0));
-        addCandidates(selected, grouped.get(State.NEW), targets.getOrDefault(State.NEW, 0));
-
-        return selected.subList(0, Math.min(selected.size(), maxSelectable));
+        var remaining = candidates.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(candidate -> !selected.contains(candidate))
+                .sorted(crossStateComparator(safeNow, usageCounts))
+                .toList();
+        addCandidates(selected, remaining, capacity - selected.size(), capacity);
+        return List.copyOf(selected);
     }
 
-    private Map<State, List<ReadingPracticeCandidate>> groupByState(List<ReadingPracticeCandidate> candidates,
-                                                                    Instant now,
-                                                                    String userId) {
+    private Map<State, List<ReadingPracticeCandidate>> groupAndSort(
+            List<ReadingPracticeCandidate> candidates,
+            Instant now,
+            Map<String, Integer> usageCounts
+    ) {
         var grouped = new EnumMap<State, List<ReadingPracticeCandidate>>(State.class);
-        for (State state : State.values()) {
+        for (var state : STATE_ORDER) {
             grouped.put(state, new ArrayList<>());
         }
-        for (var candidate : candidates) {
-            grouped.computeIfAbsent(candidate.state(), ignored -> new ArrayList<>()).add(candidate);
-        }
-        for (var entry : grouped.entrySet()) {
-            entry.getValue().sort(fsrsPriorityComparator(now));
-            rotateBucket(entry.getValue(), userId, now, entry.getKey());
-        }
+        candidates.stream()
+                .filter(java.util.Objects::nonNull)
+                .filter(candidate -> candidate.state() != null)
+                .forEach(candidate -> grouped.computeIfAbsent(candidate.state(), ignored -> new ArrayList<>()).add(candidate));
+        grouped.forEach((state, bucket) -> bucket.sort(state == State.NEW
+                ? newCardComparator(usageCounts)
+                : revisionComparator(now, usageCounts)));
         return grouped;
     }
 
-    private void rotateBucket(List<ReadingPracticeCandidate> bucket,
-                              String userId,
-                              Instant now,
-                              State state) {
-        if (bucket == null || bucket.size() <= 1) {
+    private void representStates(Map<State, List<ReadingPracticeCandidate>> grouped,
+                                 List<ReadingPracticeCandidate> selected,
+                                 int capacity) {
+        long nonEmptyStates = STATE_ORDER.stream().filter(state -> !grouped.get(state).isEmpty()).count();
+        if (capacity < nonEmptyStates) {
             return;
         }
-        long timeSeed = now == null ? 0L : now.getEpochSecond();
-        int seed = Objects.hash(userId == null ? "" : userId, timeSeed, state == null ? "NULL" : state.name());
-        int offset = Math.floorMod(seed, bucket.size());
-        if (offset == 0) {
-            return;
+        for (var state : STATE_ORDER) {
+            addCandidates(selected, grouped.get(state), 1, capacity);
         }
-        var rotated = new ArrayList<ReadingPracticeCandidate>(bucket.size());
-        rotated.addAll(bucket.subList(offset, bucket.size()));
-        rotated.addAll(bucket.subList(0, offset));
-        bucket.clear();
-        bucket.addAll(rotated);
-    }
-
-    private Comparator<ReadingPracticeCandidate> fsrsPriorityComparator(Instant now) {
-        return Comparator
-                .comparing((ReadingPracticeCandidate candidate) -> dueBucket(candidate, now))
-                .thenComparing(candidate -> overdueDurationOrZero(candidate, now), Comparator.reverseOrder())
-                .thenComparing(candidate -> timeUntilDueOrMax(candidate, now))
-                .thenComparing(ReadingPracticeCandidate::retrievability)
-                .thenComparing(this::lastReviewOrEpoch)
-                .thenComparing(ReadingPracticeCandidate::lapses, Comparator.reverseOrder())
-                .thenComparingInt(candidate -> statePriority(candidate.state()))
-                .thenComparing(ReadingPracticeCandidate::vocabularyCreatedAt)
-                .thenComparing(ReadingPracticeCandidate::flashCardId);
     }
 
     private void addCandidates(List<ReadingPracticeCandidate> selected,
                                List<ReadingPracticeCandidate> candidates,
-                               int targetCount) {
-        if (targetCount <= 0 || candidates == null || candidates.isEmpty()) {
+                               int requested,
+                               int capacity) {
+        if (requested <= 0 || candidates == null || candidates.isEmpty()) {
             return;
         }
-
+        int added = 0;
         for (var candidate : candidates) {
-            if (selected.size() >= MAX_WORDS) {
-                break;
+            if (selected.size() >= capacity || added >= requested) {
+                return;
             }
-            if (targetCount <= 0) {
-                break;
-            }
-            if (selected.contains(candidate)) {
-                continue;
-            }
-            if (isVeryWeak(candidate) && selectedVeryWeakCount(selected) >= MAX_VERY_WEAK_CARDS) {
+            if (selected.contains(candidate) || exceedsWeakCap(selected, candidate)) {
                 continue;
             }
             selected.add(candidate);
-            targetCount--;
+            added++;
         }
     }
 
-    private int selectedVeryWeakCount(List<ReadingPracticeCandidate> selected) {
-        return (int) selected.stream().filter(this::isVeryWeak).count();
+    private boolean exceedsWeakCap(List<ReadingPracticeCandidate> selected, ReadingPracticeCandidate candidate) {
+        return isVeryWeak(candidate)
+                && selected.stream().filter(this::isVeryWeak).count() >= MAX_VERY_WEAK_CARDS;
     }
 
     private boolean isVeryWeak(ReadingPracticeCandidate candidate) {
@@ -126,81 +112,70 @@ public class ReadingPracticePolicy {
                 && candidate.retrievability() <= VERY_WEAK_RETRIEVABILITY_THRESHOLD);
     }
 
-    private int dueBucket(ReadingPracticeCandidate candidate, Instant now) {
-        if (candidate.due() == null) {
-            return 2;
-        }
-        return candidate.due().isAfter(now) ? 1 : 0;
+    private Comparator<ReadingPracticeCandidate> crossStateComparator(
+            Instant now,
+            Map<String, Integer> usageCounts
+    ) {
+        return Comparator
+                .comparingInt((ReadingPracticeCandidate candidate) -> candidate.state() == State.NEW ? 1 : 0)
+                .thenComparing((left, right) -> {
+                    if (left.state() == State.NEW && right.state() == State.NEW) {
+                        return newCardComparator(usageCounts).compare(left, right);
+                    }
+                    return revisionComparator(now, usageCounts).compare(left, right);
+                });
     }
 
-    private java.time.Duration overdueDurationOrZero(ReadingPracticeCandidate candidate, Instant now) {
-        if (candidate.due() == null || candidate.due().isAfter(now)) {
-            return java.time.Duration.ZERO;
-        }
-        return java.time.Duration.between(candidate.due(), now);
+    private Comparator<ReadingPracticeCandidate> revisionComparator(
+            Instant now,
+            Map<String, Integer> usageCounts
+    ) {
+        return Comparator
+                .comparingInt((ReadingPracticeCandidate candidate) -> isOverdue(candidate, now) ? 0 : 1)
+                .thenComparing(ReadingPracticeCandidate::due, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparingDouble(this::retrievabilityOrMax)
+                .thenComparing(ReadingPracticeCandidate::lapses, Comparator.reverseOrder())
+                .thenComparing(ReadingPracticeCandidate::lastReview, Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparingInt(candidate -> usageCounts.getOrDefault(candidate.vocabularyId(), 0))
+                .thenComparing(ReadingPracticeCandidate::flashCardId, Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
-    private java.time.Duration timeUntilDueOrMax(ReadingPracticeCandidate candidate, Instant now) {
-        if (candidate.due() == null) {
-            return java.time.Duration.ofDays(36500);
-        }
-        return java.time.Duration.between(now, candidate.due()).abs();
+    private Comparator<ReadingPracticeCandidate> newCardComparator(Map<String, Integer> usageCounts) {
+        return Comparator
+                .comparing(ReadingPracticeCandidate::vocabularyCreatedAt, Comparator.nullsFirst(Comparator.naturalOrder()))
+                .thenComparingInt(candidate -> usageCounts.getOrDefault(candidate.vocabularyId(), 0))
+                .thenComparing(ReadingPracticeCandidate::flashCardId, Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
-    private Instant lastReviewOrEpoch(ReadingPracticeCandidate candidate) {
-        return candidate.lastReview() == null ? Instant.EPOCH : candidate.lastReview();
+    private boolean isOverdue(ReadingPracticeCandidate candidate, Instant now) {
+        return candidate.due() != null && !candidate.due().isAfter(now);
     }
 
-    private int statePriority(State state) {
-        if (state == null) {
-            return 4;
-        }
-        return switch (state) {
-            case RE_LEARNING -> 0;
-            case LEARNING -> 1;
-            case REVIEW -> 2;
-            case NEW -> 3;
-        };
+    private double retrievabilityOrMax(ReadingPracticeCandidate candidate) {
+        return Double.isNaN(candidate.retrievability()) ? Double.POSITIVE_INFINITY : candidate.retrievability();
+    }
+
+    private int countState(List<ReadingPracticeCandidate> selected, State state) {
+        return (int) selected.stream().filter(candidate -> candidate.state() == state).count();
     }
 
     private Map<State, Integer> calculateRatioTargets(int count) {
-        var rawTargets = new EnumMap<State, Double>(State.class);
-        rawTargets.put(State.REVIEW, REVIEW_RATIO * count);
-        rawTargets.put(State.RE_LEARNING, RE_LEARNING_RATIO * count);
-        rawTargets.put(State.LEARNING, LEARNING_RATIO * count);
-        rawTargets.put(State.NEW, NEW_RATIO * count);
-
+        var ratios = new EnumMap<State, Double>(State.class);
+        ratios.put(State.REVIEW, REVIEW_RATIO);
+        ratios.put(State.RE_LEARNING, RE_LEARNING_RATIO);
+        ratios.put(State.LEARNING, LEARNING_RATIO);
+        ratios.put(State.NEW, NEW_RATIO);
         var targets = new EnumMap<State, Integer>(State.class);
         int assigned = 0;
-        for (var entry : rawTargets.entrySet()) {
-            int base = (int) Math.floor(entry.getValue());
-            targets.put(entry.getKey(), base);
-            assigned += base;
+        for (var state : STATE_ORDER) {
+            int target = (int) Math.floor(ratios.get(state) * count);
+            targets.put(state, target);
+            assigned += target;
         }
-
-        int remaining = count - assigned;
-        if (remaining <= 0) {
-            return targets;
+        for (int index = 0; assigned < count; index++, assigned++) {
+            var state = STATE_ORDER.get(index % STATE_ORDER.size());
+            targets.put(state, targets.get(state) + 1);
         }
-
-        var byRemainder = rawTargets.entrySet().stream()
-                .sorted(Comparator
-                        .comparingDouble((Map.Entry<State, Double> entry) -> entry.getValue() - Math.floor(entry.getValue()))
-                        .reversed()
-                        .thenComparing(entry -> statePriority(entry.getKey())))
-                .collect(Collectors.toList());
-
-        int index = 0;
-        while (remaining > 0 && index < byRemainder.size()) {
-            var state = byRemainder.get(index).getKey();
-            targets.put(state, targets.getOrDefault(state, 0) + 1);
-            remaining--;
-            index++;
-            if (index >= byRemainder.size()) {
-                index = 0;
-            }
-        }
-
         return targets;
     }
 }

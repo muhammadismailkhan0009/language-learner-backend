@@ -9,6 +9,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingVocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.reading_practice.ReadingPracticeApiMapper;
+import com.myriadcode.languagelearner.language_learning_system.application.services.exercise_vocabulary.RecentExerciseVocabularyUsageService;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord;
@@ -21,9 +22,9 @@ import com.myriadcode.languagelearner.language_learning_system.domain.reading_pr
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.services.ReadingPracticeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.services.ReadingPracticePolicy;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -45,6 +46,7 @@ public class ReadingPracticeService {
     private final FetchPrivateVocabularyApi fetchPrivateVocabularyApi;
     private final ReadingPracticeLlmApi readingPracticeLlmApi;
     private final ReadingGenerationContextService readingGenerationContextService;
+    private final RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService;
 
     private final ReadingPracticePolicy readingPracticePolicy = new ReadingPracticePolicy();
 
@@ -53,11 +55,23 @@ public class ReadingPracticeService {
                                   FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
                                   ReadingPracticeLlmApi readingPracticeLlmApi,
                                   ReadingGenerationContextService readingGenerationContextService) {
+        this(readingPracticeRepo, vocabularyFlashcardReviewsApi, fetchPrivateVocabularyApi,
+                readingPracticeLlmApi, readingGenerationContextService, null);
+    }
+
+    @Autowired
+    public ReadingPracticeService(ReadingPracticeRepo readingPracticeRepo,
+                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
+                                  ReadingPracticeLlmApi readingPracticeLlmApi,
+                                  ReadingGenerationContextService readingGenerationContextService,
+                                  RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService) {
         this.readingPracticeRepo = readingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
         this.readingPracticeLlmApi = readingPracticeLlmApi;
         this.readingGenerationContextService = readingGenerationContextService;
+        this.recentExerciseVocabularyUsageService = recentExerciseVocabularyUsageService;
     }
 
     public void createSession(String userId) {
@@ -72,8 +86,10 @@ public class ReadingPracticeService {
             throw new IllegalArgumentException("No vocabulary candidates found for reading practice");
         }
 
-        var rotationHour = Instant.now().truncatedTo(ChronoUnit.HOURS);
-        var selected = readingPracticePolicy.selectCandidates(userId, candidates, rotationHour);
+        var recentUsageCounts = recentExerciseVocabularyUsageService == null
+                ? Map.<String, Integer>of()
+                : recentExerciseVocabularyUsageService.countRecentSessionUsage(userId);
+        var selected = readingPracticePolicy.selectCandidates(candidates, Instant.now(), recentUsageCounts);
         if (selected.isEmpty()) {
             throw new IllegalArgumentException("Unable to select vocabulary for reading practice");
         }

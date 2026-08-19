@@ -24,6 +24,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.exercise_vocabulary.RecentExerciseVocabularyUsageService;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,6 +58,7 @@ public class WritingPracticeService {
     private final WritingFeedbackPipelineService writingFeedbackPipelineService;
     private final WritingGenerationContextService writingGenerationContextService;
     private final UserDifficultyLevelApi userDifficultyLevelApi;
+    private final RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
@@ -82,6 +83,7 @@ public class WritingPracticeService {
                 grammarFeedbackOrchestrationService,
                 null,
                 null,
+                null,
                 null
         );
     }
@@ -96,7 +98,8 @@ public class WritingPracticeService {
                                   GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
                                   WritingFeedbackPipelineService writingFeedbackPipelineService,
                                   WritingGenerationContextService writingGenerationContextService,
-                                  UserDifficultyLevelApi userDifficultyLevelApi) {
+                                  UserDifficultyLevelApi userDifficultyLevelApi,
+                                  RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService) {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
@@ -107,6 +110,23 @@ public class WritingPracticeService {
         this.writingFeedbackPipelineService = writingFeedbackPipelineService;
         this.writingGenerationContextService = writingGenerationContextService;
         this.userDifficultyLevelApi = userDifficultyLevelApi;
+        this.recentExerciseVocabularyUsageService = recentExerciseVocabularyUsageService;
+    }
+
+    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
+                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
+                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
+                                  WritingPracticeLlmApi writingPracticeLlmApi,
+                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
+                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
+                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
+                                  WritingFeedbackPipelineService writingFeedbackPipelineService,
+                                  WritingGenerationContextService writingGenerationContextService,
+                                  UserDifficultyLevelApi userDifficultyLevelApi) {
+        this(writingPracticeRepo, vocabularyFlashcardReviewsApi, fetchPrivateVocabularyApi,
+                writingPracticeLlmApi, practiceVocabularyReferenceRepo, writingSubmissionFeedbackLlmApi,
+                grammarFeedbackOrchestrationService, writingFeedbackPipelineService,
+                writingGenerationContextService, userDifficultyLevelApi, null);
     }
 
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
@@ -127,6 +147,7 @@ public class WritingPracticeService {
                 grammarFeedbackOrchestrationService,
                 null,
                 writingGenerationContextService,
+                null,
                 null
         );
     }
@@ -166,8 +187,10 @@ public class WritingPracticeService {
             throw new IllegalArgumentException("No vocabulary candidates found for writing practice");
         }
 
-        var rotationHour = Instant.now().truncatedTo(ChronoUnit.HOURS);
-        var selected = writingPracticePolicy.selectCandidates(normalizedUserId, candidates, rotationHour);
+        var recentUsageCounts = recentExerciseVocabularyUsageService == null
+                ? Map.<String, Integer>of()
+                : recentExerciseVocabularyUsageService.countRecentSessionUsage(normalizedUserId);
+        var selected = writingPracticePolicy.selectCandidates(candidates, Instant.now(), recentUsageCounts);
         if (selected.isEmpty()) {
             throw new IllegalArgumentException("Unable to select vocabulary for writing practice");
         }

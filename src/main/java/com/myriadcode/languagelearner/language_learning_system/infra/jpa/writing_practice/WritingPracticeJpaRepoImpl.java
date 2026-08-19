@@ -98,6 +98,20 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<java.util.Set<String>> findRecentVocabularyUsageSessionSetsByUserId(String userId, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        return writingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
+                .map(session -> session.getVocabularyUsages().stream()
+                        .map(com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeVocabularyUsageEntity::getVocabularyId)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet()))
+                .toList();
+    }
+
+    @Override
     @Transactional
     public WritingPracticeSession updateSubmission(String sessionId,
                                                    String userId,

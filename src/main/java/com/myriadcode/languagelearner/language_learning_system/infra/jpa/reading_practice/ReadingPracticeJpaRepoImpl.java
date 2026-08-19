@@ -95,6 +95,20 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<java.util.Set<String>> findRecentVocabularyUsageSessionSetsByUserId(String userId, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        return readingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
+                .map(session -> session.getVocabularyUsages().stream()
+                        .map(com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeVocabularyUsageEntity::getVocabularyId)
+                        .filter(java.util.Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toUnmodifiableSet()))
+                .toList();
+    }
+
+    @Override
     @Transactional
     public void deleteByIdAndUserId(String sessionId, String userId) {
         readingPracticeSessionJpaRepo.deleteByIdAndUserId(sessionId, userId);

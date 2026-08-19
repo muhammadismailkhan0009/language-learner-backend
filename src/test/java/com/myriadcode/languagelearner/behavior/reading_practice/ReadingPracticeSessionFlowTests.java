@@ -19,6 +19,9 @@ import com.myriadcode.languagelearner.language_learning_system.domain.grammar_ru
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.repo.GrammarRuleRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.grammar_rules.repos.GrammarRuleEntityJpaRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.repos.ReadingPracticeSessionJpaRepo;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeSessionEntity;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeVocabularyUsageEntity;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
 import com.myriadcode.languagelearner.user_management.application.services.UserProfileService;
 import com.myriadcode.languagelearner.user_management.infra.jpa.entities.UserInfoEntity;
 import com.myriadcode.languagelearner.user_management.infra.jpa.repos.UserInfoJpaRepo;
@@ -53,6 +56,9 @@ class ReadingPracticeSessionFlowTests {
 
     @Autowired
     private ReadingPracticeSessionJpaRepo readingPracticeSessionJpaRepo;
+
+    @Autowired
+    private ReadingPracticeRepo readingPracticeRepo;
 
     @Autowired
     private GrammarRuleRepo grammarRuleRepo;
@@ -320,6 +326,43 @@ class ReadingPracticeSessionFlowTests {
         assertThat(response.vocabFlashcards())
                 .noneMatch(card -> card.id().equals(flashcardId));
         assertThat(response.vocabFlashcards().size()).isEqualTo(9);
+    }
+
+    @Test
+    @DisplayName("recent vocabulary usage: returns distinct IDs from latest ten reading sessions")
+    void recentVocabularyUsageReturnsLatestTenSessionSets() {
+        var base = Instant.parse("2026-08-01T00:00:00Z");
+        for (int index = 0; index < 12; index++) {
+            var session = new ReadingPracticeSessionEntity();
+            session.setId("history-reading-" + index);
+            session.setUserId("history-user");
+            session.setTopic("Topic " + index);
+            session.setReadingText("Text " + index);
+            session.setCreatedAt(base.plusSeconds(index));
+            session.addVocabularyUsage(readingUsage("reading-usage-" + index, "vocab-" + index, base.plusSeconds(index)));
+            if (index == 11) {
+                session.addVocabularyUsage(readingUsage("reading-usage-duplicate", "vocab-11", base.plusSeconds(index)));
+            }
+            readingPracticeSessionJpaRepo.save(session);
+        }
+
+        var sessions = readingPracticeRepo.findRecentVocabularyUsageSessionSetsByUserId("history-user", 10);
+
+        assertThat(sessions).hasSize(10);
+        assertThat(sessions.getFirst()).containsExactly("vocab-11");
+        assertThat(sessions).flatExtracting(set -> set)
+                .containsExactlyInAnyOrderElementsOf(java.util.stream.IntStream.rangeClosed(2, 11)
+                        .mapToObj(index -> "vocab-" + index)
+                        .toList());
+    }
+
+    private ReadingPracticeVocabularyUsageEntity readingUsage(String id, String vocabularyId, Instant createdAt) {
+        var usage = new ReadingPracticeVocabularyUsageEntity();
+        usage.setId(id);
+        usage.setFlashcardId("card-" + id);
+        usage.setVocabularyId(vocabularyId);
+        usage.setCreatedAt(createdAt);
+        return usage;
     }
 
     static class ReadingPracticeTestDoubles {

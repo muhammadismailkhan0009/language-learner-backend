@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.writing_pr
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface WritingPracticeRepo {
 
@@ -16,6 +17,10 @@ public interface WritingPracticeRepo {
     List<WritingPracticeSession> findAllByUserId(String userId);
 
     List<String> findRecentTopicsByUserId(String userId, int limit);
+
+    default List<Set<String>> findRecentVocabularyUsageSessionSetsByUserId(String userId, int limit) {
+        return List.of();
+    }
 
     WritingPracticeSession updateSubmission(String sessionId,
                                             String userId,

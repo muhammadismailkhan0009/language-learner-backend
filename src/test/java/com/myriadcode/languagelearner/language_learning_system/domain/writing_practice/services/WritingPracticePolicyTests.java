@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -37,7 +38,7 @@ class WritingPracticePolicyTests {
                     rotationHour.minusSeconds(600L * i), Double.NaN, 0, null));
         }
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
         assertThat(selected).hasSize(20);
         assertThat(selected.stream().filter(c -> c.state() == State.NEW)).isEmpty();
@@ -47,8 +48,8 @@ class WritingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Writing selection still prioritizes the strongest review card in tiny sets")
-    void prefersHigherRetrievabilityCardsInsideBucket() {
+    @DisplayName("Writing selection prioritizes lower retrievability after equal due priority")
+    void prefersLowerRetrievabilityCardsInsideBucket() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = List.of(
                 candidate("stable", State.REVIEW, "2026-01-01T00:00:00Z",
@@ -57,15 +58,15 @@ class WritingPracticePolicyTests {
                         rotationHour.minusSeconds(600), 0.61, 0, rotationHour.minusSeconds(600))
         );
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
         assertThat(selected).extracting(WritingPracticeCandidate::flashCardId)
-                .containsExactly("stable");
+                .containsExactly("fragile", "stable");
     }
 
     @Test
-    @DisplayName("Writing selection does not force-fill missing ratio buckets")
-    void doesNotForceFillWhenRatioBucketsAreMissing() {
+    @DisplayName("Writing selection backfills missing ratio buckets")
+    void backfillsWhenRatioBucketsAreMissing() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<WritingPracticeCandidate>();
 
@@ -74,9 +75,9 @@ class WritingPracticePolicyTests {
                     rotationHour.minusSeconds(3600L * i), 0.98, 0, rotationHour.minusSeconds(1800L * i)));
         }
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
-        assertThat(selected).hasSize(20);
+        assertThat(selected).hasSize(30);
         assertThat(selected).allMatch(candidate -> candidate.state() == State.REVIEW);
     }
 
@@ -95,9 +96,9 @@ class WritingPracticePolicyTests {
                     rotationHour.minusSeconds(300L * i), 0.45, 2, rotationHour.minusSeconds(300L * i)));
         }
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
-        assertThat(selected).hasSize(20);
+        assertThat(selected).hasSize(22);
         assertThat(selected.stream().filter(candidate -> candidate.retrievability() <= 0.50))
                 .hasSizeLessThanOrEqualTo(2);
     }

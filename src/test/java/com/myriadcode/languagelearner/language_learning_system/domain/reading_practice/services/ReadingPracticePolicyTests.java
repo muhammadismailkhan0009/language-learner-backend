@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -23,10 +24,10 @@ class ReadingPracticePolicyTests {
                 candidate("upcoming", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(600), 0.84, 1, rotationHour.minusSeconds(7200))
         );
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
         assertThat(selected).extracting(ReadingPracticeCandidate::flashCardId)
-                .containsExactly("due-weak", "upcoming");
+                .containsExactly("due-weak", "upcoming", "due-strong");
     }
 
     @Test
@@ -39,11 +40,11 @@ class ReadingPracticePolicyTests {
                 candidate("middle", State.LEARNING, "2026-01-01T00:02:00Z", rotationHour.plusSeconds(1800), 0.86, 1, rotationHour.minusSeconds(10800))
         );
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
         assertThat(selected).extracting(ReadingPracticeCandidate::flashCardId)
                 .startsWith("soon")
-                .containsExactlyInAnyOrder("soon", "middle");
+                .containsExactlyInAnyOrder("soon", "middle", "later");
     }
 
     @Test
@@ -97,7 +98,7 @@ class ReadingPracticePolicyTests {
             ));
         }
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
         assertThat(selected).hasSize(30);
         assertThat(selected.stream().filter(candidate -> candidate.state() == State.REVIEW)).hasSize(12);
@@ -107,8 +108,8 @@ class ReadingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Reading selection does not force-fill missing ratio buckets")
-    void doesNotForceFillMissingRatioBuckets() {
+    @DisplayName("Reading selection backfills missing ratio buckets")
+    void backfillsMissingRatioBuckets() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
 
@@ -124,9 +125,9 @@ class ReadingPracticePolicyTests {
             ));
         }
 
-        var selected = policy.selectCandidates("user-1", candidates, rotationHour);
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
-        assertThat(selected).hasSize(12);
+        assertThat(selected).hasSize(30);
         assertThat(selected).allMatch(candidate -> candidate.state() == State.REVIEW);
     }
 

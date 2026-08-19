@@ -20,6 +20,9 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeSessionEntity;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeVocabularyUsageEntity;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +53,9 @@ class WritingPracticeSessionFlowTests {
 
     @Autowired
     private WritingPracticeSessionJpaRepo writingPracticeSessionJpaRepo;
+
+    @Autowired
+    private WritingPracticeRepo writingPracticeRepo;
 
     @Autowired
     private StubWritingPracticeLlmApi stubWritingPracticeLlmApi;
@@ -96,8 +102,8 @@ class WritingPracticeSessionFlowTests {
         assertThat(session.getSubmittedAnswer()).isNull();
         assertThat(session.getSubmittedAt()).isNull();
         assertThat(session.getSentencePairs()).hasSize(2);
-        assertThat(session.getVocabularyUsages()).hasSize(12);
-        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(12);
+        assertThat(session.getVocabularyUsages()).hasSize(18);
+        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(18);
         assertThat(stubWritingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A1);
         assertThat(stubWritingPracticeLlmApi.lastGrammarRuleTitles).isEmpty();
     }
@@ -157,13 +163,13 @@ class WritingPracticeSessionFlowTests {
 
         var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
-        assertThat(persisted.getVocabularyUsages()).hasSize(12);
+        assertThat(persisted.getVocabularyUsages()).hasSize(18);
         var selectedCardIds = persisted.getVocabularyUsages().stream().map(usage -> usage.getFlashcardId()).toList();
 
         assertThat(selectedCardIds).doesNotContain("r-front", "n-front");
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.REVIEW)).hasSize(6);
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(3);
-        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(3);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.RE_LEARNING)).hasSize(8);
+        assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.LEARNING)).hasSize(4);
         assertThat(selectedCardIds.stream().filter(id -> stateByCardId.get(id) == State.NEW)).isEmpty();
     }
 
@@ -177,7 +183,7 @@ class WritingPracticeSessionFlowTests {
         var persistedId = writingPracticeSessionJpaRepo.findAll().getFirst().getId();
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(persistedId, "user-1").orElseThrow();
 
-        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(12);
+        assertThat(stubWritingPracticeLlmApi.lastSeeds).hasSize(18);
         assertThat(persisted.getVocabularyUsages())
                 .extracting(usage -> usage.getVocabularyId())
                 .containsExactlyInAnyOrder("v-review-1", "v-learning-1");
@@ -218,7 +224,7 @@ class WritingPracticeSessionFlowTests {
 
         assertThat(listed).hasSize(2);
         assertThat(listed.getFirst().createdAt()).isAfter(listed.get(1).createdAt());
-        assertThat(listed).allMatch(summary -> summary.vocabCount() == 12);
+        assertThat(listed).allMatch(summary -> summary.vocabCount() == 18);
     }
 
     @Test
@@ -258,12 +264,12 @@ class WritingPracticeSessionFlowTests {
 
         var persisted = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
         assertThat(persisted.getVocabularyUsages()).noneMatch(saved -> saved.getFlashcardId().equals(flashcardId));
-        assertThat(persisted.getVocabularyUsages().size()).isEqualTo(11);
+        assertThat(persisted.getVocabularyUsages().size()).isEqualTo(17);
         assertThat(stubFetchPrivateVocabularyApi.getVocabularyRecord(vocabularyId, "user-1")).isNotNull();
 
         var response = writingPracticeService.getSession("user-1", sessionId);
         assertThat(response.vocabFlashcards()).noneMatch(card -> card.id().equals(flashcardId));
-        assertThat(response.vocabFlashcards().size()).isEqualTo(11);
+        assertThat(response.vocabFlashcards().size()).isEqualTo(17);
     }
 
     @Test
@@ -316,6 +322,44 @@ class WritingPracticeSessionFlowTests {
 
         var listed = writingPracticeService.listSessions("user-1");
         assertThat(listed).noneMatch(WritingPracticeSessionSummaryResponse::submitted);
+    }
+
+    @Test
+    @DisplayName("recent vocabulary usage: returns distinct IDs from latest ten writing sessions")
+    void recentVocabularyUsageReturnsLatestTenSessionSets() {
+        var base = Instant.parse("2026-08-01T00:00:00Z");
+        for (int index = 0; index < 12; index++) {
+            var session = new WritingPracticeSessionEntity();
+            session.setId("history-writing-" + index);
+            session.setUserId("history-user");
+            session.setTopic("Topic " + index);
+            session.setEnglishParagraph("English " + index);
+            session.setGermanParagraph("German " + index);
+            session.setCreatedAt(base.plusSeconds(index));
+            session.addVocabularyUsage(writingUsage("writing-usage-" + index, "vocab-" + index, base.plusSeconds(index)));
+            if (index == 11) {
+                session.addVocabularyUsage(writingUsage("writing-usage-duplicate", "vocab-11", base.plusSeconds(index)));
+            }
+            writingPracticeSessionJpaRepo.save(session);
+        }
+
+        var sessions = writingPracticeRepo.findRecentVocabularyUsageSessionSetsByUserId("history-user", 10);
+
+        assertThat(sessions).hasSize(10);
+        assertThat(sessions.getFirst()).containsExactly("vocab-11");
+        assertThat(sessions).flatExtracting(set -> set)
+                .containsExactlyInAnyOrderElementsOf(java.util.stream.IntStream.rangeClosed(2, 11)
+                        .mapToObj(index -> "vocab-" + index)
+                        .toList());
+    }
+
+    private WritingPracticeVocabularyUsageEntity writingUsage(String id, String vocabularyId, Instant createdAt) {
+        var usage = new WritingPracticeVocabularyUsageEntity();
+        usage.setId(id);
+        usage.setFlashcardId("card-" + id);
+        usage.setVocabularyId(vocabularyId);
+        usage.setCreatedAt(createdAt);
+        return usage;
     }
 
     public static class WritingPracticeTestDoubles {

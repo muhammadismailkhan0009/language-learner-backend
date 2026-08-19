@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.reading_pr
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface ReadingPracticeRepo {
 
@@ -14,6 +15,10 @@ public interface ReadingPracticeRepo {
     List<ReadingPracticeSession> findAllByUserId(String userId);
 
     List<String> findRecentTopicsByUserId(String userId, int limit);
+
+    default List<Set<String>> findRecentVocabularyUsageSessionSetsByUserId(String userId, int limit) {
+        return List.of();
+    }
 
     void deleteByIdAndUserId(String sessionId, String userId);
 
