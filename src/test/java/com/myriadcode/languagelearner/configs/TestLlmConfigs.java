@@ -24,7 +24,6 @@ import com.myriadcode.languagelearner.language_content.application.ports.Writing
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSubmissionFeedback;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
-import com.myriadcode.languagelearner.language_content.application.ports.WritingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;
 import com.myriadcode.languagelearner.language_content.domain.model.Vocabulary;
@@ -90,12 +89,11 @@ public class TestLlmConfigs {
 
             @Override
             public WritingBilingualContent generateWritingBilingualContent(String topic, List<WritingPracticeVocabularySeed> vocabulary, LanguageLevel difficultyLevel, List<String> grammarRuleTitles) {
-                return new WritingBilingualContent("I write about my daily routine.", "Ich schreibe ueber meinen Alltag.");
-            }
-
-            @Override
-            public WritingUsedVocabularySelection identifyUsedWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary, String englishParagraph, String germanParagraph) {
-                return new WritingUsedVocabularySelection(vocabulary.stream().map(WritingPracticeVocabularySeed::surface).toList());
+                return new WritingBilingualContent(
+                        "I write about my daily routine.",
+                        "Ich schreibe ueber meinen Alltag.",
+                        vocabulary.stream().map(WritingPracticeVocabularySeed::surface).toList()
+                );
             }
 
             @Override

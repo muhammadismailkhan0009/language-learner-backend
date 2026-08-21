@@ -21,7 +21,12 @@ class WritingGenerationPromptTests {
 
         assertThat(prompt).contains("CEFR Level: A2");
         assertThat(prompt).contains("- Present Tense", "- Modal Verbs");
-        assertThat(prompt).contains("You do not need to use every eligible grammar rule");
-        assertThat(prompt).contains("Do not force grammar rules");
+        assertThat(prompt).contains("You do NOT need to use every eligible grammar rule");
+        assertThat(prompt).contains("Never distort either paragraph merely to demonstrate a grammar rule");
+        assertThat(prompt).contains("`usedVocabulary`");
+        assertThat(prompt).contains("return its original supplied German surface exactly");
+        assertThat(prompt).contains("inflected, declined, plural, conjugated");
+        assertThat(prompt).contains("kaufen - to buy");
+        assertThat(prompt).doesNotContain("stable identifier");
     }
 }

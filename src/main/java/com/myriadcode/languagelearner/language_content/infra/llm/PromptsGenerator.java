@@ -619,6 +619,8 @@ public final class PromptsGenerator {
 
       1. One English paragraph for the learner to translate into German.
       2. One correct German reference paragraph.
+      3. `usedVocabulary`: the canonical surfaces of supplied learner vocabulary
+         actually used in the German paragraph.
 
       The English and German paragraphs must express exactly the same meaning.
 
@@ -671,6 +673,16 @@ public final class PromptsGenerator {
       - Prefer vocabulary that naturally works together in the same semantic situation.
       - Combine several compatible learner vocabulary items in one sentence when natural.
       - Vocabulary may appear in any grammatically correct inflected form.
+
+      Used Vocabulary Reporting:
+      - Report only entries from the supplied learner vocabulary.
+      - For every used item, return its original supplied German surface exactly.
+      - If the German paragraph uses an inflected, declined, plural, conjugated,
+        or separated form, still report the original supplied canonical surface.
+      - Do not report the form appearing in the paragraph when it differs from
+        the supplied canonical surface.
+      - Do not report translations, synonyms, or invented surfaces.
+      - Return an empty `usedVocabulary` list when no supplied item is used.
 
       Vocabulary Repetition:
       - Reuse a selected vocabulary item only when it naturally recurs in the situation.
@@ -795,50 +807,6 @@ public final class PromptsGenerator {
           vocabList,
           grammarTitles);
 }
-  public static String writingUsedVocabularySelection(
-      List<WritingPracticeVocabularySeed> vocabulary,
-      String englishParagraph,
-      String germanParagraph) {
-
-    String vocabList = formatWritingVocabulary(vocabulary);
-
-    return """
-        You are analyzing which learner vocabulary items actually appear in a German paragraph.
-
-        You are given:
-        1. A learner vocabulary list (German surface form + translation)
-        2. An English paragraph
-        3. A German paragraph expressing the same meaning
-
-        Goal:
-        Return ONLY the vocabulary surface forms from the provided list that actually appear
-        in the German paragraph.
-
-        Matching Rules:
-        - Match ONLY against the provided German vocabulary list.
-        - A vocabulary item counts as used if the German paragraph contains
-        that word or any of its natural inflected forms (e.g., verb conjugations,
-        plural nouns, declined adjectives).
-        - Do NOT match based on meaning or synonyms.
-        - The word (or its inflected form) must actually appear in the German paragraph.
-        - Prefer evidence from the German paragraph.
-        - Use the English paragraph only to disambiguate meaning if necessary.
-
-        Output Rules:
-        - The returned values must exactly match the `surface` entries from the list.
-        - Do NOT invent new values.
-        - Do NOT return translations.
-
-        Learner Vocabulary (German - translation):
-        %s
-
-        English paragraph:
-        %s
-
-        German paragraph:
-        %s
-        """.formatted(vocabList, englishParagraph, germanParagraph);
-  }
 
   public static String writingSentencePairSplit(String englishParagraph, String germanParagraph) {
     return """

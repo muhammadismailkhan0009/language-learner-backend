@@ -176,9 +176,8 @@ class WritingPracticeServiceOrchestratorTests {
         when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of("Old topic")), eq(LanguageLevel.A2))).thenReturn("");
         when(writingPracticeLlmApi.generateBilingualContent(
                 eq("General writing practice"), any(), eq(LanguageLevel.A2), eq(List.of("Present Tense", "Modal Verbs"))))
-                .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
-        when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
-                .thenReturn(List.of("surface-v-1"));
+                .thenReturn(new WritingPracticeBilingualContent(
+                        "English paragraph.", "Deutscher Absatz.", List.of("surface-v-1")));
         when(writingPracticeLlmApi.splitIntoSentencePairs("English paragraph.", "Deutscher Absatz."))
                 .thenReturn(List.of(new WritingPracticeSentencePairSeed("English paragraph.", "Deutscher Absatz.")));
 
@@ -187,7 +186,6 @@ class WritingPracticeServiceOrchestratorTests {
         verify(writingPracticeLlmApi).selectTopicForWriting(any(), eq(List.of("Old topic")), eq(LanguageLevel.A2));
         verify(writingPracticeLlmApi).generateBilingualContent(
                 eq("General writing practice"), any(), eq(LanguageLevel.A2), eq(List.of("Present Tense", "Modal Verbs")));
-        verify(writingPracticeLlmApi).identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz."));
         verify(writingPracticeRepo).save(any(WritingPracticeSession.class));
     }
 
@@ -204,7 +202,7 @@ class WritingPracticeServiceOrchestratorTests {
         when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
         when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq(LanguageLevel.B1))).thenReturn("topic");
         when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
-                .thenReturn(new WritingPracticeBilingualContent("", ""));
+                .thenReturn(new WritingPracticeBilingualContent("", "", List.of()));
 
         assertThatThrownBy(() -> service.createSession("user-1"))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -447,9 +445,7 @@ class WritingPracticeServiceOrchestratorTests {
         when(writingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
         when(writingPracticeLlmApi.selectTopicForWriting(any(), eq(List.of()), eq(LanguageLevel.B1))).thenReturn("topic");
         when(writingPracticeLlmApi.generateBilingualContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
-                .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz."));
-        when(writingPracticeLlmApi.identifyUsedVocabulary(any(), eq("English paragraph."), eq("Deutscher Absatz.")))
-                .thenReturn(null);
+                .thenReturn(new WritingPracticeBilingualContent("English paragraph.", "Deutscher Absatz.", null));
         when(writingPracticeLlmApi.splitIntoSentencePairs("English paragraph.", "Deutscher Absatz."))
                 .thenReturn(List.of(new WritingPracticeSentencePairSeed("English paragraph.", "Deutscher Absatz.")));
 

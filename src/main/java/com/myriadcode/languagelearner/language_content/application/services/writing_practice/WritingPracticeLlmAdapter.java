@@ -36,30 +36,21 @@ public class WritingPracticeLlmAdapter implements WritingPracticeLlmApi {
                                                                     LanguageLevel difficultyLevel,
                                                                     List<String> grammarRuleTitles) {
         if (vocabulary == null || vocabulary.isEmpty()) {
-            return new WritingPracticeBilingualContent("", "");
+            return new WritingPracticeBilingualContent("", "", List.of());
         }
         var result = llmPort.generateWritingBilingualContent(topic, vocabulary, difficultyLevel, grammarRuleTitles);
         if (result == null) {
-            return new WritingPracticeBilingualContent("", "");
+            return new WritingPracticeBilingualContent("", "", List.of());
         }
-        return new WritingPracticeBilingualContent(result.englishParagraph(), result.germanParagraph());
-    }
-
-    @Override
-    public List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
-                                               String englishParagraph,
-                                               String germanParagraph) {
-        if (vocabulary == null || vocabulary.isEmpty()) {
-            return List.of();
-        }
-        var result = llmPort.identifyUsedWritingVocabulary(vocabulary, englishParagraph, germanParagraph);
-        if (result == null || result.usedSurfaces() == null) {
-            return List.of();
-        }
-        return result.usedSurfaces().stream()
+        var usedVocabulary = result.usedVocabulary() == null ? List.<String>of() : result.usedVocabulary().stream()
                 .filter(surface -> surface != null && !surface.isBlank())
                 .map(String::trim)
                 .toList();
+        return new WritingPracticeBilingualContent(
+                result.englishParagraph(),
+                result.germanParagraph(),
+                usedVocabulary
+        );
     }
 
     @Override

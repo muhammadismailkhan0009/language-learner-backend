@@ -425,18 +425,11 @@ class WritingPracticeSessionFlowTests {
             this.lastGrammarRuleTitles = grammarRuleTitles;
             return new WritingPracticeBilingualContent(
                     "I write about my daily routine.",
-                    "Ich schreibe ueber meinen Alltag."
+                    "Ich schreibe ueber meinen Alltag.",
+                    usedSurfacesOverride != null
+                            ? usedSurfacesOverride
+                            : vocabulary.stream().map(WritingPracticeVocabularySeed::surface).toList()
             );
-        }
-
-        @Override
-        public List<String> identifyUsedVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
-                                                   String englishParagraph,
-                                                   String germanParagraph) {
-            if (usedSurfacesOverride != null) {
-                return usedSurfacesOverride;
-            }
-            return vocabulary.stream().map(WritingPracticeVocabularySeed::surface).toList();
         }
 
         @Override

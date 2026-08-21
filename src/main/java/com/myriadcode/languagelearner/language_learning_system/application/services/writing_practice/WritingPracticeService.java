@@ -227,12 +227,6 @@ public class WritingPracticeService {
             if (englishParagraph.isBlank() || germanParagraph.isBlank()) {
                 throw new IllegalArgumentException("Unable to generate writing content");
             }
-            usedVocabularySurfaces = contentAssembler.findUsedVocabularySurfaces(
-                    writingPracticeLlmApi,
-                    selectedVocab,
-                    englishParagraph,
-                    germanParagraph
-            );
             sentencePairs = contentAssembler.buildSentencePairs(
                     writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
                     englishParagraph,
@@ -241,6 +235,10 @@ public class WritingPracticeService {
             if (sentencePairs.isEmpty()) {
                 throw new IllegalArgumentException("Unable to generate writing sentence pairs");
             }
+            usedVocabularySurfaces = contentAssembler.findUsedVocabularySurfaces(
+                    selectedVocab,
+                    bilingualContent.usedVocabulary()
+            );
         }
 
         var usages = candidateAssembler.buildUsages(selected, vocabRecords, usedVocabularySurfaces);

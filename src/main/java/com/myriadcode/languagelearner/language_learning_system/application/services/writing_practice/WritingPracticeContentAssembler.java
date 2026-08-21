@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.language_learning_system.application.serv
 
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingSentencePair;
 
 import java.util.LinkedHashSet;
@@ -15,20 +14,28 @@ import java.util.stream.Collectors;
 final class WritingPracticeContentAssembler {
 
     Set<String> findUsedVocabularySurfaces(
-            WritingPracticeLlmApi writingPracticeLlmApi,
             List<WritingPracticeVocabularySeed> selectedVocab,
-            String englishParagraph,
-            String germanParagraph
+            List<String> reportedUsedVocabulary
     ) {
-        var usedVocabulary = writingPracticeLlmApi.identifyUsedVocabulary(selectedVocab, englishParagraph, germanParagraph);
-        if (usedVocabulary == null || usedVocabulary.isEmpty()) {
+        if (reportedUsedVocabulary == null || reportedUsedVocabulary.isEmpty()) {
             return Set.of();
         }
-        return usedVocabulary.stream()
+        var suppliedSurfaces = selectedVocab.stream()
+                .map(WritingPracticeVocabularySeed::surface)
+                .map(this::normalizeSurface)
+                .collect(Collectors.toSet());
+        var normalizedUsedSurfaces = reportedUsedVocabulary.stream()
                 .filter(Objects::nonNull)
                 .map(this::normalizeSurface)
                 .filter(surface -> !surface.isBlank())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+        var unknownSurfaces = normalizedUsedSurfaces.stream()
+                .filter(surface -> !suppliedSurfaces.contains(surface))
+                .toList();
+        if (!unknownSurfaces.isEmpty()) {
+            throw new IllegalArgumentException("LLM returned unknown writing vocabulary surfaces: " + unknownSurfaces);
+        }
+        return normalizedUsedSurfaces;
     }
 
     List<WritingSentencePair> buildSentencePairs(List<WritingPracticeSentencePairSeed> pairs,

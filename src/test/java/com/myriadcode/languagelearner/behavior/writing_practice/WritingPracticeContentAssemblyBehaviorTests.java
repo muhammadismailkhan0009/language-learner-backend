@@ -1,6 +1,5 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice;
 
-import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import org.junit.jupiter.api.Test;
@@ -9,8 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WritingPracticeContentAssemblyBehaviorTests {
 
@@ -18,31 +16,28 @@ class WritingPracticeContentAssemblyBehaviorTests {
 
     @Test
     void findUsedVocabularySurfacesReturnsEmptySetOnNullResponse() {
-        var llmApi = mock(WritingPracticeLlmApi.class);
-        when(llmApi.identifyUsedVocabulary(List.of(), "en", "de")).thenReturn(null);
-
-        var surfaces = assembler.findUsedVocabularySurfaces(llmApi, List.of(), "en", "de");
+        var surfaces = assembler.findUsedVocabularySurfaces(List.of(), null);
 
         assertThat(surfaces).isEmpty();
     }
 
     @Test
     void findUsedVocabularySurfacesNormalizesAndDeduplicatesValues() {
-        var llmApi = mock(WritingPracticeLlmApi.class);
-        when(llmApi.identifyUsedVocabulary(
-                List.of(new WritingPracticeVocabularySeed("Haus", "house")),
-                "en",
-                "de"
-        )).thenReturn(Arrays.asList(" Haus ", "haus", null, " "));
-
         var surfaces = assembler.findUsedVocabularySurfaces(
-                llmApi,
                 List.of(new WritingPracticeVocabularySeed("Haus", "house")),
-                "en",
-                "de"
+                Arrays.asList(" Haus ", "haus", null, " ")
         );
 
         assertThat(surfaces).containsExactly("haus");
+    }
+
+    @Test
+    void findUsedVocabularySurfacesRejectsUnknownCanonicalSurface() {
+        assertThatThrownBy(() -> assembler.findUsedVocabularySurfaces(
+                List.of(new WritingPracticeVocabularySeed("Haus", "house")),
+                List.of("Gebäude")
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("gebäude");
     }
 
     @Test

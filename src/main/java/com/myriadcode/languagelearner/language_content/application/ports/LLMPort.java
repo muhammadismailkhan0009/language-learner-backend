@@ -60,10 +60,6 @@ public interface LLMPort {
                                                             LanguageLevel difficultyLevel,
                                                             List<String> grammarRuleTitles);
 
-    WritingUsedVocabularySelection identifyUsedWritingVocabulary(List<WritingPracticeVocabularySeed> vocabulary,
-                                                                 String englishParagraph,
-                                                                 String germanParagraph);
-
     WritingSentencePairSplit splitWritingContentIntoSentencePairs(String englishParagraph,
                                                                   String germanParagraph);
 
