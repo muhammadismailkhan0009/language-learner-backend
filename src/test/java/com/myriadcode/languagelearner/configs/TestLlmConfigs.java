@@ -3,7 +3,8 @@ package com.myriadcode.languagelearner.configs;
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogItem;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGenerationContext;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
@@ -73,8 +74,8 @@ public class TestLlmConfigs {
             }
 
             @Override
-            public ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic, List<ReadingPracticeVocabularySeed> vocabulary, String difficultyLevel) {
-                return new ReadingParagraphClozeGeneration(List.of());
+            public ClozeParagraphGeneration generateClozeParagraph(ClozeParagraphGenerationContext context) {
+                return new ClozeParagraphGeneration(List.of());
             }
 
             @Override

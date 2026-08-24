@@ -12,7 +12,8 @@ import com.myriadcode.languagelearner.language_content.application.ports.Grammar
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftDetailsPort;
 import com.myriadcode.languagelearner.language_content.application.ports.GrammarRuleDraftProposalPort;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGenerationContext;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
@@ -129,12 +130,10 @@ public class LLMGenerator implements LLMPort {
     }
 
     @Override
-    public ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
-                                                                         List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                         String difficultyLevel) {
-        var prompt = PromptsGenerator.readingParagraphCloze(topic, vocabulary, difficultyLevel);
+    public ClozeParagraphGeneration generateClozeParagraph(ClozeParagraphGenerationContext context) {
+        var prompt = PromptsGenerator.clozeParagraph(context);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        return runLLM(messages, new ParameterizedTypeReference<ReadingParagraphClozeGeneration>() {
+        return runLLM(messages, new ParameterizedTypeReference<ClozeParagraphGeneration>() {
         });
     }
 

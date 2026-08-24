@@ -4,7 +4,6 @@ import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
@@ -419,24 +418,6 @@ class ReadingPracticeSessionFlowTests {
                             List.of("reading sentence 1", "reading sentence 2")
                     )
             ));
-        }
-
-        @Override
-        public ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
-                                                                             List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                             String difficultyLevel) {
-            return new ReadingParagraphClozeGeneration(
-                    List.of(new ReadingParagraphClozeGeneration.Paragraph(
-                            "Daily routine",
-                            "Ich ___ heute.",
-                            List.of(new ReadingParagraphClozeGeneration.Item(
-                                    vocabulary.isEmpty() ? "" : vocabulary.getFirst().surface(),
-                                    vocabulary.isEmpty() ? "" : vocabulary.getFirst().translation(),
-                                    List.of("gehe"),
-                                    "___"
-                            ))
-                    ))
-            );
         }
 
         @Override

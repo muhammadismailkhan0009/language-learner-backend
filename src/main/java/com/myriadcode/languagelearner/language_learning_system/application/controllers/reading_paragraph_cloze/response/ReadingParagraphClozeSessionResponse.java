@@ -5,22 +5,18 @@ import java.util.List;
 
 public record ReadingParagraphClozeSessionResponse(
         String sessionId,
-        String topic,
-        String clozeParagraph,
-        String status,
-        int ratedCount,
-        int totalCount,
-        List<Card> cards,
-        Instant createdAt
+        String learnerLevel,
+        Instant createdAt,
+        List<Paragraph> paragraphs
 ) {
-    public record Card(
-            String cardId,
-            String flashcardId,
-            String vocabularyId,
-            String surface,
-            String translation,
-            String blankToken,
-            List<String> answerWords
-    ) {
-    }
+    public record Paragraph(String paragraphId, int paragraphIndex, String scenarioLabel,
+                            String clozeParagraph, List<Blank> blanks) {}
+    public record Blank(String blankId, int blankIndex, String blankToken, String exactAnswer,
+                        String answerExplanation, String practiceKind, VocabularyDetails vocabularyDetails,
+                        List<GrammarRuleDetails> grammarRuleDetails) {}
+    public record VocabularyDetails(String id, String surface, String translation, String entryKind,
+                                    String notes, List<ExampleSentence> exampleSentences) {}
+    public record ExampleSentence(String sentence, String translation) {}
+    public record GrammarRuleDetails(String id, String identifier, String name, String level,
+                                     List<String> explanationParagraphs, List<ExampleSentence> explanationExamples) {}
 }

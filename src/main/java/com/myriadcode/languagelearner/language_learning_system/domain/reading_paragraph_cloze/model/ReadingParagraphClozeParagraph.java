@@ -1,6 +1,5 @@
 package com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model;
 
-import java.time.Instant;
 import java.util.List;
 
 public record ReadingParagraphClozeParagraph(
@@ -8,10 +7,11 @@ public record ReadingParagraphClozeParagraph(
         int paragraphIndex,
         String scenarioLabel,
         String clozeParagraph,
-        Instant createdAt,
-        List<ReadingParagraphClozeCard> cards
+        List<ReadingParagraphClozeBlank> blanks
 ) {
+    public ReadingParagraphClozeParagraph {
+        blanks = blanks == null ? List.of() : List.copyOf(blanks);
+    }
     public record ReadingParagraphClozeParagraphId(String id) {
     }
 }
-

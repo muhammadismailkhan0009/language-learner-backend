@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.request.CreateReadingParagraphClozeSessionRequest;
-import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.request.RateReadingParagraphClozeCardRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.response.ReadingParagraphClozeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_paragraph_cloze.ReadingParagraphClozeService;
 import org.springframework.http.ResponseEntity;
@@ -27,20 +26,24 @@ public class ReadingParagraphClozeController {
         return ResponseEntity.status(201).body(new ApiResponse<>(response));
     }
 
-    @GetMapping("active")
-    public ResponseEntity<ApiResponse<ReadingParagraphClozeSessionResponse>> getActiveSession(
+    @GetMapping
+    public ResponseEntity<ApiResponse<java.util.List<ReadingParagraphClozeSessionResponse>>> listSessions(
             @RequestParam String userId
     ) {
-        var response = service.getActiveSession(userId);
-        return ResponseEntity.ok(new ApiResponse<>(response));
+        return ResponseEntity.ok(new ApiResponse<>(service.listSessions(userId)));
     }
 
-    @PostMapping("{sessionId}/ratings")
-    public ResponseEntity<ApiResponse<ReadingParagraphClozeSessionResponse>> rateCard(
+    @GetMapping("{sessionId}")
+    public ResponseEntity<ApiResponse<ReadingParagraphClozeSessionResponse>> getSession(
             @PathVariable String sessionId,
-            @RequestBody RateReadingParagraphClozeCardRequest request
+            @RequestParam String userId
     ) {
-        var response = service.rateCard(sessionId, request.userId(), request.flashcardId(), request.rating());
-        return ResponseEntity.ok(new ApiResponse<>(response));
+        return ResponseEntity.ok(new ApiResponse<>(service.getSession(userId, sessionId)));
+    }
+
+    @DeleteMapping("{sessionId}")
+    public ResponseEntity<Void> deleteSession(@PathVariable String sessionId, @RequestParam String userId) {
+        service.deleteSession(userId, sessionId);
+        return ResponseEntity.noContent().build();
     }
 }

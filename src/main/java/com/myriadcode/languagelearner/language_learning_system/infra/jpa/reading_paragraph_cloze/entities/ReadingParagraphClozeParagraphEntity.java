@@ -3,6 +3,8 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.readin
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "reading_paragraph_cloze_paragraph")
@@ -24,8 +26,9 @@ public class ReadingParagraphClozeParagraphEntity {
     @Column(name = "cloze_paragraph", nullable = false, columnDefinition = "text")
     private String clozeParagraph;
 
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    @OneToMany(mappedBy = "paragraph", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("blankIndex ASC")
+    private Set<ReadingParagraphClozeBlankEntity> blanks = new LinkedHashSet<>();
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -37,6 +40,10 @@ public class ReadingParagraphClozeParagraphEntity {
     public void setScenarioLabel(String scenarioLabel) { this.scenarioLabel = scenarioLabel; }
     public String getClozeParagraph() { return clozeParagraph; }
     public void setClozeParagraph(String clozeParagraph) { this.clozeParagraph = clozeParagraph; }
-    public Instant getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public Set<ReadingParagraphClozeBlankEntity> getBlanks() { return blanks; }
+    public void setBlanks(Set<ReadingParagraphClozeBlankEntity> blanks) {
+        this.blanks.clear();
+        if (blanks != null) blanks.forEach(this::addBlank);
+    }
+    public void addBlank(ReadingParagraphClozeBlankEntity blank) { blank.setParagraph(this); this.blanks.add(blank); }
 }

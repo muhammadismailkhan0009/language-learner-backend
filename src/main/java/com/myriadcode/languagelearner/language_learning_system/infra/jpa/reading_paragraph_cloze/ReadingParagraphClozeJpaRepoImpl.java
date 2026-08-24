@@ -1,127 +1,89 @@
 package com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze;
 
-import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeSession;
-import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeCard;
+import com.myriadcode.languagelearner.common.enums.LanguageLevel;
+import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.*;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.repo.ReadingParagraphClozeRepo;
-import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.mappers.ReadingParagraphClozeJpaMapper;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.*;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.repos.ReadingParagraphClozeSessionJpaRepo;
-import jakarta.persistence.EntityManager;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.Optional;
+import java.util.*;
 
 @Repository
 public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRepo {
+    private final ReadingParagraphClozeSessionJpaRepo jpaRepo;
 
-    private static final ReadingParagraphClozeJpaMapper MAPPER = ReadingParagraphClozeJpaMapper.INSTANCE;
+    public ReadingParagraphClozeJpaRepoImpl(ReadingParagraphClozeSessionJpaRepo jpaRepo) { this.jpaRepo = jpaRepo; }
 
-    private final ReadingParagraphClozeSessionJpaRepo sessionJpaRepo;
-    private final EntityManager entityManager;
-
-    public ReadingParagraphClozeJpaRepoImpl(ReadingParagraphClozeSessionJpaRepo sessionJpaRepo, EntityManager entityManager) {
-        this.sessionJpaRepo = sessionJpaRepo;
-        this.entityManager = entityManager;
-    }
-
-    @Override
-    @Transactional
+    @Override @Transactional
     public ReadingParagraphClozeSession save(ReadingParagraphClozeSession session) {
-        var entity = MAPPER.toEntity(session);
-        if (entity.getCreatedAt() == null) {
-            entity.setCreatedAt(Instant.now());
-        }
-        if (sessionJpaRepo.existsById(entity.getId())) {
-            entity.markExisting();
-        }
-
-        entity.setParagraphs(new LinkedHashSet<>(session.paragraphs().stream()
-                .map(MAPPER::toParagraphEntity)
-                .peek(paragraph -> {
-                    if (paragraph.getCreatedAt() == null) {
-                        paragraph.setCreatedAt(Instant.now());
-                    }
-                })
-                .toList()));
-        var paragraphsById = new HashMap<String, com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.ReadingParagraphClozeParagraphEntity>();
-        entity.getParagraphs().forEach(paragraph -> paragraphsById.put(paragraph.getId(), paragraph));
-
-        entity.setCards(new LinkedHashSet<>(session.cards().stream()
-                .map(domainCard -> {
-                    var card = MAPPER.toCardEntity(domainCard);
-                    if (card.getCreatedAt() == null) {
-                        card.setCreatedAt(Instant.now());
-                    }
-                    if (domainCard.paragraphId() != null) {
-                        card.setParagraph(paragraphsById.get(domainCard.paragraphId()));
-                    }
-                    return card;
-                })
-                .toList()));
-
-        var saved = sessionJpaRepo.saveAndFlush(entity);
-        sessionJpaRepo.deleteOrphanParagraphs(saved.getId());
-        sessionJpaRepo.flush();
-        entityManager.clear();
-        var reloaded = sessionJpaRepo.findById(saved.getId()).orElse(saved);
-        return toDomain(reloaded);
+        return toDomain(jpaRepo.saveAndFlush(toEntity(session)));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<ReadingParagraphClozeSession> findLatestByUserId(String userId) {
-        return sessionJpaRepo.findFirstByUserIdOrderByCreatedAtDesc(userId).map(this::toDomain);
+    @Override @Transactional(readOnly = true)
+    public List<ReadingParagraphClozeSession> findAllByUserId(String userId) {
+        return jpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId).stream().map(this::toDomain).toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
+    @Override @Transactional(readOnly = true)
     public Optional<ReadingParagraphClozeSession> findByIdAndUserId(String sessionId, String userId) {
-        return sessionJpaRepo.findByIdAndUserId(sessionId, userId).map(this::toDomain);
+        return jpaRepo.findByIdAndUserId(sessionId, userId).map(this::toDomain);
     }
 
-    private ReadingParagraphClozeSession toDomain(com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_paragraph_cloze.entities.ReadingParagraphClozeSessionEntity entity) {
-        var base = MAPPER.toDomain(entity);
-        var allCards = entity.getCards().stream()
-                .map(cardEntity -> {
-                    var paragraphId = cardEntity.getParagraph() != null
-                            ? cardEntity.getParagraph().getId()
-                            : cardEntity.getParagraphId();
-                    return new ReadingParagraphClozeCard(
-                            new ReadingParagraphClozeCard.ReadingParagraphClozeCardId(cardEntity.getId()),
-                            paragraphId,
-                            cardEntity.getFlashcardId(),
-                            cardEntity.getVocabularyId(),
-                            cardEntity.getCreatedAt()
-                    );
-                })
-                .toList();
-        var paragraphs = entity.getParagraphs().stream()
-                .map(paragraphEntity -> {
-                    var paragraphBase = MAPPER.toParagraphDomain(paragraphEntity);
-                    var cards = allCards.stream()
-                            .filter(card -> paragraphBase.id().id().equals(card.paragraphId()))
-                            .toList();
-                    return new com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.model.ReadingParagraphClozeParagraph(
-                            paragraphBase.id(),
-                            paragraphBase.paragraphIndex(),
-                            paragraphBase.scenarioLabel(),
-                            paragraphBase.clozeParagraph(),
-                            paragraphBase.createdAt(),
-                            cards
-                    );
-                })
-                .toList();
+    @Override @Transactional
+    public boolean deleteByIdAndUserId(String sessionId, String userId) {
+        var entity = jpaRepo.findByIdAndUserId(sessionId, userId).orElse(null);
+        if (entity == null) return false;
+        jpaRepo.delete(entity);
+        jpaRepo.flush();
+        return true;
+    }
+
+    private ReadingParagraphClozeSessionEntity toEntity(ReadingParagraphClozeSession session) {
+        var entity = new ReadingParagraphClozeSessionEntity();
+        entity.setId(session.id().id()); entity.setUserId(session.userId().id());
+        entity.setLearnerLevel(session.learnerLevel().name()); entity.setCreatedAt(session.createdAt());
+        entity.setParagraphs(new LinkedHashSet<>(session.paragraphs().stream().map(this::toParagraphEntity).toList()));
+        return entity;
+    }
+
+    private ReadingParagraphClozeParagraphEntity toParagraphEntity(ReadingParagraphClozeParagraph paragraph) {
+        var entity = new ReadingParagraphClozeParagraphEntity();
+        entity.setId(paragraph.id().id()); entity.setParagraphIndex(paragraph.paragraphIndex());
+        entity.setScenarioLabel(paragraph.scenarioLabel()); entity.setClozeParagraph(paragraph.clozeParagraph());
+        entity.setBlanks(new LinkedHashSet<>(paragraph.blanks().stream().map(this::toBlankEntity).toList()));
+        return entity;
+    }
+
+    private ReadingParagraphClozeBlankEntity toBlankEntity(ReadingParagraphClozeBlank blank) {
+        var entity = new ReadingParagraphClozeBlankEntity();
+        entity.setId(blank.id().id()); entity.setBlankIndex(blank.blankIndex()); entity.setBlankToken(blank.blankToken());
+        entity.setExactAnswer(blank.exactAnswer()); entity.setAnswerExplanation(blank.answerExplanation());
+        entity.setPracticeKind(blank.practiceKind().name()); entity.setVocabularyId(blank.vocabularyId());
+        entity.setGrammarRuleIds(new LinkedHashSet<>(blank.grammarRuleIds()));
+        return entity;
+    }
+
+    private ReadingParagraphClozeSession toDomain(ReadingParagraphClozeSessionEntity entity) {
         return new ReadingParagraphClozeSession(
-                base.id(),
-                base.userId(),
-                base.topic(),
-                base.clozeParagraph(),
-                base.createdAt(),
-                paragraphs,
-                allCards
-        );
+                new ReadingParagraphClozeSession.ReadingParagraphClozeSessionId(entity.getId()),
+                new UserId(entity.getUserId()), LanguageLevel.from(entity.getLearnerLevel()), entity.getCreatedAt(),
+                entity.getParagraphs().stream().map(this::toParagraphDomain).toList());
+    }
+
+    private ReadingParagraphClozeParagraph toParagraphDomain(ReadingParagraphClozeParagraphEntity entity) {
+        return new ReadingParagraphClozeParagraph(
+                new ReadingParagraphClozeParagraph.ReadingParagraphClozeParagraphId(entity.getId()),
+                entity.getParagraphIndex(), entity.getScenarioLabel(), entity.getClozeParagraph(),
+                entity.getBlanks().stream().map(this::toBlankDomain).toList());
+    }
+
+    private ReadingParagraphClozeBlank toBlankDomain(ReadingParagraphClozeBlankEntity entity) {
+        return new ReadingParagraphClozeBlank(
+                new ReadingParagraphClozeBlank.ReadingParagraphClozeBlankId(entity.getId()), entity.getBlankIndex(),
+                entity.getBlankToken(), entity.getExactAnswer(), entity.getAnswerExplanation(),
+                ReadingParagraphClozeBlank.PracticeKind.valueOf(entity.getPracticeKind()), entity.getVocabularyId(),
+                List.copyOf(entity.getGrammarRuleIds()));
     }
 }

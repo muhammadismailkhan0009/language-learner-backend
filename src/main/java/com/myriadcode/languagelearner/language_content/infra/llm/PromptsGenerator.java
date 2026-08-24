@@ -402,93 +402,188 @@ public final class PromptsGenerator {
           vocabList,
           grammarTitles);
 }
-  public static String readingParagraphCloze(
-      String topic,
-      List<ReadingPracticeVocabularySeed> vocabulary,
-      String difficultyLevel) {
-    String vocabList = formatVocabulary(vocabulary);
+public static String clozeParagraph(
+  com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGenerationContext context) {
 
-    return """
-        You are an expert German teacher creating multi-paragraph cloze reading practice.
+return """
+    Create short, coherent German cloze-practice paragraphs for a learner at CEFR level %s.
 
-        CEFR Level: %s
+    PURPOSE
 
-        Goal:
-        Generate MULTIPLE natural German paragraphs in one response.
-        You decide a scenario/topic for each paragraph.
-        Use the full learner vocabulary list globally across paragraphs.
+    These are focused production exercises.
 
-        HARD OUTPUT FIELD RULES (must follow exactly):
-        - scenarioLabel:
-          - short label only (2-8 words)
-          - NOT a sentence
-          - no punctuation at end
-          - example: "Train station directions"
-        - clozeParagraph:
-          - full paragraph text (5-7 sentences)
-          - this is where all paragraph sentences must go
-          - MUST NOT be empty
-        - items:
-          - only cloze-target mappings for this paragraph
+    The learner must generate the exact German form required by each blank from context.
 
-        CRITICAL:
-        - Never place paragraph text inside scenarioLabel.
-        - Never leave clozeParagraph empty.
-        - scenarioLabel and clozeParagraph must represent different levels:
-          label vs full text.
+    Practice may target:
 
-        Output contract:
-        - Return `paragraphs`: list of paragraph objects.
-        - Each paragraph object contains:
-          - `scenarioLabel`: short scenario name (2-8 words)
-          - `clozeParagraph`: German paragraph text with blanks
-          - `items`: list of blanked learner vocabulary mappings for this paragraph
-        - Each item contains:
-          - `vocabSource`: exact learner vocabulary `surface` used as source
-          - `hint`: English meaning hint
-          - `answerWords`: exact missing words in context (can be inflected forms)
-          - `blankToken`: blank marker with same word count as `answerWords`
+    1. VOCABULARY_FORM
+       Productive control of supplied vocabulary:
+       - verb conjugation
+       - separable-verb forms
+       - participles
+       - noun number
+       - article/case forms
+       - adjective forms
+       - other natural inflected forms
 
-        Mandatory rules:
-        - Sentence count per paragraph must be 5-7 sentences.
-        - Maximum 4 cloze items per paragraph.
-        - You may use other learner vocabulary in paragraph text without blanking it.
-        - `vocabSource` must exactly match a provided surface value.
-        - `answerWords` may be inflected context forms.
-        - `blankToken` must match answerWords word count.
-        - Keep paragraphs coherent and scenario-focused.
-        - Paragraphs should use different scenarios.
-        - Use as many provided vocabulary items as natural across all paragraphs.
-        - Distribute cloze targets across paragraphs (not all in one paragraph).
+    2. GRAMMAR
+       Application of one or more explicitly supplied grammar rules in context.
 
-        Quality:
-        - Real-life scenario language.
-        - Clear contextual clues for inference.
-        - Avoid overcrowding blanks.
+    3. VOCABULARY_AND_GRAMMAR
+       A supplied vocabulary item whose correct use also deliberately requires one or more
+       supplied grammar rules.
 
-        VALID JSON EXAMPLE (shape guidance):
-        {
-          "paragraphs": [
-            {
-              "scenarioLabel": "At the pharmacy",
-              "clozeParagraph": "Ich gehe heute zur ___ . ... (5-7 full sentences total)",
-              "items": [
-                {
-                  "vocabSource": "Apotheke",
-                  "hint": "pharmacy",
-                  "answerWords": ["Apotheke"],
-                  "blankToken": "___"
-                }
-              ]
-            }
-          ]
-        }
+    The supplied vocabulary belongs to the learner's productive/writing vocabulary.
+    Prefer it for target blanks.
 
-        Learner Vocabulary (German - translation):
-        %s
-        """.formatted(difficultyLevel, vocabList);
-  }
+    Supporting German vocabulary may be added when necessary for a natural, coherent paragraph,
+    provided it is appropriate for the learner's CEFR level.
+    Supporting vocabulary must not become a target blank unless it is present in the supplied
+    vocabulary sources.
 
+    GENERAL PRIORITIES
+
+    1. Clear, coherent mini-situation.
+    2. Natural and idiomatic German.
+    3. Exactly one intended correct answer for every blank.
+    4. Appropriate CEFR difficulty.
+    5. Useful practice of supplied vocabulary and grammar.
+    6. Natural vocabulary coverage.
+
+    Do not force all supplied vocabulary or grammar rules.
+    Choose only a natural subset.
+
+    Keep each paragraph small:
+    - normally 3-5 sentences
+    - normally 2-4 blanks
+    - never more than 4 blanks
+
+    Each paragraph should form one coherent mini-situation, not a collection of unrelated
+    example sentences.
+
+    VOCABULARY PRACTICE
+
+    Vocabulary-based blanks may use either of these cue styles:
+
+    A. FORM-ONLY CUE
+
+    Give the supplied German base entry as the cue.
+
+    Example:
+    Anna {{blank-1}} den Zug. (sehen)
+
+    exactAnswer:
+    sieht
+
+    This tests whether the learner can derive the correct contextual form from the known
+    German base entry.
+
+    B. RETRIEVAL-AND-FORM CUE
+
+    Give the supplied English meaning as the cue.
+
+    Example:
+    Anna {{blank-1}} den Zug. (to see)
+
+    exactAnswer:
+    sieht
+
+    This tests:
+    English meaning -> German lexical item -> correct contextual form.
+
+    Use both cue styles across vocabulary practice when natural.
+
+    Do not use multiple choice.
+
+    For vocabulary targets:
+    - vocabularyId must refer to the supplied vocabulary entry being practiced
+    - exactAnswer must be the actual German surface form required in the sentence
+    - exactAnswer does not need to equal the supplied base form
+
+    Example:
+    supplied entry: sehen
+    sentence: Anna {{blank-1}} den Zug.
+    exactAnswer: sieht
+
+    GRAMMAR PRACTICE
+
+    Grammar-based blanks must deliberately exercise supplied grammar rules.
+
+    Prefer focused practice. Do not mix many unrelated grammar concepts into one short paragraph.
+
+    Example target: masculine accusative
+
+    Anna sieht {{blank-1}}. (der Zug)
+
+    exactAnswer:
+    den Zug
+
+    The cue must provide enough lexical information that the learner is primarily solving
+    the intended grammar problem.
+
+    grammarRuleIds should contain only supplied rules that are genuinely required for the blank.
+
+    Do not attach a grammar rule merely because it happens to occur somewhere in the sentence.
+
+    PRACTICE KIND
+
+    VOCABULARY_FORM:
+    - primary target is productive retrieval/form of a supplied vocabulary item
+    - requires vocabularyId
+    - no grammarRuleIds
+
+    GRAMMAR:
+    - primary target is application of supplied grammar rule(s)
+    - vocabularyId is null
+    - requires grammarRuleIds
+
+    VOCABULARY_AND_GRAMMAR:
+    - both vocabulary production/form and supplied grammar rule(s) are deliberate targets
+    - requires vocabularyId
+    - requires grammarRuleIds
+
+    Do not classify ordinary conjugation or inflection as VOCABULARY_AND_GRAMMAR merely because
+    grammar is technically involved.
+
+    BLANK DESIGN
+
+    Every blank must:
+    - have a globally unique blankToken such as {{blank-1}}
+    - have that token occur exactly once
+    - have exactly one intended correct answer
+    - have enough context and/or cue information to make the answer unambiguous
+    - target meaningful German, not punctuation or trivial filler
+    - preserve normal German capitalization, umlauts, articles, particles, and spacing
+    - have a concise explanation of why the exact form is correct
+
+    exactAnswer may contain multiple words, for example:
+    - sieht
+    - den Zug
+    - steht auf
+    - hat gesehen
+
+    Avoid blanks where several common German answers would all be valid.
+    Rewrite the sentence or cue if necessary so that one expected answer is clearly required.
+
+    NATURALNESS
+
+    Do not create awkward sentences merely to consume vocabulary.
+    Do not repeat the same idea just to create more blanks.
+    Do not make every sentence contain a blank.
+
+    The non-blanked text should remain natural German and provide enough context for the
+    paragraph to be understandable.
+
+    Vocabulary sources:
+    %s
+
+    Grammar sources:
+    %s
+    """.formatted(
+    context.learnerLevel(),
+    context.vocabulary(),
+    context.grammarRules());
+}
   public static String readingUsedVocabularySelection(
       List<ReadingPracticeVocabularySeed> vocabulary,
       String readingText) {

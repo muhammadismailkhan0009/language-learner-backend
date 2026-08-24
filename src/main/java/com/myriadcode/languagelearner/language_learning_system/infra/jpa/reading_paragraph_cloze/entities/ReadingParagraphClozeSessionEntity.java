@@ -19,22 +19,14 @@ public class ReadingParagraphClozeSessionEntity implements Persistable<String> {
     @Column(name = "user_id", nullable = false)
     private String userId;
 
-    @Column(name = "topic", nullable = false)
-    private String topic;
-
-    @Column(name = "cloze_paragraph", nullable = false, columnDefinition = "text")
-    private String clozeParagraph;
+    @Column(name = "learner_level", nullable = false)
+    private String learnerLevel;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
     @Transient
     private boolean isNew = true;
-
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("createdAt ASC")
-    @Fetch(FetchMode.SUBSELECT)
-    private Set<ReadingParagraphClozeCardEntity> cards = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("paragraphIndex ASC")
@@ -62,23 +54,10 @@ public class ReadingParagraphClozeSessionEntity implements Persistable<String> {
     public void markExisting() { this.isNew = false; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
-    public String getTopic() { return topic; }
-    public void setTopic(String topic) { this.topic = topic; }
-    public String getClozeParagraph() { return clozeParagraph; }
-    public void setClozeParagraph(String clozeParagraph) { this.clozeParagraph = clozeParagraph; }
+    public String getLearnerLevel() { return learnerLevel; }
+    public void setLearnerLevel(String learnerLevel) { this.learnerLevel = learnerLevel; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Set<ReadingParagraphClozeCardEntity> getCards() { return cards; }
-    public void setCards(Set<ReadingParagraphClozeCardEntity> cards) {
-        this.cards.clear();
-        if (cards == null) return;
-        cards.forEach(this::addCard);
-    }
-    public void addCard(ReadingParagraphClozeCardEntity card) {
-        card.setSession(this);
-        this.cards.add(card);
-    }
-
     public Set<ReadingParagraphClozeParagraphEntity> getParagraphs() { return paragraphs; }
     public void setParagraphs(Set<ReadingParagraphClozeParagraphEntity> paragraphs) {
         this.paragraphs.clear();

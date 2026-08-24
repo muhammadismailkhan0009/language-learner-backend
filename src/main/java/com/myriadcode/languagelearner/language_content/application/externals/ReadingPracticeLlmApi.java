@@ -15,10 +15,6 @@ public interface ReadingPracticeLlmApi {
                                                          LanguageLevel difficultyLevel,
                                                          List<String> grammarRuleTitles);
 
-    ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
-                                                                  List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                  String difficultyLevel);
-
     List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                         String readingText);
 }

@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.language_content.application.services.rea
 
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
@@ -48,20 +47,6 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
                 ))
                 .toList();
         return new ReadingPracticeReadingContent(paragraphs);
-    }
-
-    @Override
-    public ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
-                                                                         List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                         String difficultyLevel) {
-        if (vocabulary == null || vocabulary.isEmpty()) {
-            return new ReadingParagraphClozeGeneration(List.of());
-        }
-        var content = llmPort.generateReadingParagraphCloze(topic, vocabulary, difficultyLevel);
-        if (content == null || content.paragraphs() == null) {
-            return new ReadingParagraphClozeGeneration(List.of());
-        }
-        return content;
     }
 
     @Override

@@ -8,7 +8,8 @@ import com.myriadcode.languagelearner.language_content.domain.model.language_set
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingContent;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingParagraphClozeGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGeneration;
+import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGenerationContext;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
@@ -44,9 +45,7 @@ public interface LLMPort {
                                           List<ReadingPracticeVocabularySeed> vocabulary,
                                           LanguageLevel difficultyLevel,
                                           List<String> grammarRuleTitles);
-    ReadingParagraphClozeGeneration generateReadingParagraphCloze(String topic,
-                                                                  List<ReadingPracticeVocabularySeed> vocabulary,
-                                                                  String difficultyLevel);
+    ClozeParagraphGeneration generateClozeParagraph(ClozeParagraphGenerationContext context);
 
     ReadingUsedVocabularySelection identifyUsedReadingVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                                                  String readingText);
