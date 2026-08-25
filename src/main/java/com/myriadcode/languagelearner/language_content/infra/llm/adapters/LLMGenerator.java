@@ -27,7 +27,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Writing
 import com.myriadcode.languagelearner.language_content.application.externals.WritingStructuredFeedbackResult;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingVocabularyEvaluationResult;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingTopicSelection;
-import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeBatch;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSubmissionFeedback;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;

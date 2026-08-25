@@ -20,7 +20,7 @@ import com.myriadcode.languagelearner.language_content.application.ports.Reading
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingTopicSelection;
 import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
 import com.myriadcode.languagelearner.language_content.application.ports.StudyAnswerEvaluation;
-import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeBatch;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingBilingualContent;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSentencePairSplit;
 import com.myriadcode.languagelearner.language_content.application.ports.WritingSubmissionFeedback;

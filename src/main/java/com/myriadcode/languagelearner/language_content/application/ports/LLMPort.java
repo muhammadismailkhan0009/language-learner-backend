@@ -1,5 +1,7 @@
 package com.myriadcode.languagelearner.language_content.application.ports;
 
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeBatch;
+
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.domain.model.Chunk;
 import com.myriadcode.languagelearner.language_content.domain.model.Sentence;

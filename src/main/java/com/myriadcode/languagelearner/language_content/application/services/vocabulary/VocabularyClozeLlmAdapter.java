@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeSentenceResult;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
+import com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -37,5 +38,10 @@ public class VocabularyClozeLlmAdapter implements VocabularyClozeLlmApi {
                         item.filleSentenceTranslation()
                 ))
                 .toList();
+    }
+
+    @Override
+    public String buildClozePrompt(String topic, List<VocabularyClozeGenerationSeed> vocabulary) {
+        return PromptsGenerator.vocabularyClozeSentences(topic, vocabulary);
     }
 }

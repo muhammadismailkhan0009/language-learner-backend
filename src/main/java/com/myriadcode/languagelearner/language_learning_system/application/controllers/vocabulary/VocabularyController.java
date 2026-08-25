@@ -5,7 +5,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
-import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -26,12 +26,12 @@ import java.util.List;
 public class VocabularyController {
 
     private final VocabularyOrchestrationService vocabularyOrchestrationService;
-    private final VocabularyClozeGenerationService vocabularyClozeGenerationService;
+    private final VocabularyClozeGenerationRequestService vocabularyClozeGenerationRequestService;
 
     public VocabularyController(VocabularyOrchestrationService vocabularyOrchestrationService,
-                                VocabularyClozeGenerationService vocabularyClozeGenerationService) {
+                                VocabularyClozeGenerationRequestService vocabularyClozeGenerationRequestService) {
         this.vocabularyOrchestrationService = vocabularyOrchestrationService;
-        this.vocabularyClozeGenerationService = vocabularyClozeGenerationService;
+        this.vocabularyClozeGenerationRequestService = vocabularyClozeGenerationRequestService;
     }
 
     @PostMapping("v1")
@@ -83,7 +83,7 @@ public class VocabularyController {
     public ResponseEntity<ApiResponse<GenerateVocabularyClozeSentencesResponse>> generateClozeSentences(
             @RequestParam String userId
     ) {
-        var response = vocabularyClozeGenerationService.generate(userId);
+        var response = vocabularyClozeGenerationRequestService.request(userId);
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 

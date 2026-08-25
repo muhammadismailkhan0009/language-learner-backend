@@ -6,7 +6,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchVocabularyFlashcardReviewsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.publishers.VocabularyFlashCardPublisher;
-import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.VocabularyExampleSentence;
@@ -40,7 +40,7 @@ public class VocabularyControllerTests {
     public void addVocabularyStoresAndReturnsResponse() throws Exception {
         var repo = new FakeVocabularyRepo();
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         var payload = """
@@ -79,7 +79,7 @@ public class VocabularyControllerTests {
         repo.save(seed);
 
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         var existingExampleId = seed.exampleSentences().get(0).id().id();
@@ -127,7 +127,7 @@ public class VocabularyControllerTests {
         repo.save(sampleVocabulary("vocab-1", "user-a"));
         repo.save(sampleVocabulary("vocab-2", "user-b"));
         VocabularyOrchestrationService service = new VocabularyOrchestrationService(repo);
-        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/vocabularies/v1")
@@ -144,8 +144,8 @@ public class VocabularyControllerTests {
     public void generateClozeSentencesDelegatesToService() throws Exception {
         var repo = new FakeVocabularyRepo();
         var vocabularyService = new VocabularyOrchestrationService(repo);
-        var clozeService = org.mockito.Mockito.mock(VocabularyClozeGenerationService.class);
-        when(clozeService.generate("user-a")).thenReturn(new GenerateVocabularyClozeSentencesResponse(3));
+        var clozeService = org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class);
+        when(clozeService.request("user-a")).thenReturn(new GenerateVocabularyClozeSentencesResponse(3));
 
         var controller = new VocabularyController(vocabularyService, clozeService);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
@@ -178,7 +178,7 @@ public class VocabularyControllerTests {
                 fetchReviewsApi,
                 Clock.fixed(Instant.parse("2026-04-01T00:00:00Z"), ZoneOffset.UTC)
         );
-        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/vocabularies/songs-selection/v1")
@@ -215,7 +215,7 @@ public class VocabularyControllerTests {
                 fetchReviewsApi,
                 Clock.fixed(Instant.parse("2026-04-01T00:00:00Z"), ZoneOffset.UTC)
         );
-        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationService.class));
+        var controller = new VocabularyController(service, org.mockito.Mockito.mock(VocabularyClozeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/vocabularies/songs-selection/v1")

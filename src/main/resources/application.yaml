@@ -11,6 +11,19 @@ springdoc:
 
 spring:
   ai:
+    mcp:
+      server:
+        protocol: STREAMABLE
+        name: language-learner
+        version: 1.0.0
+        type: SYNC
+        instructions: Fetch pending vocabulary cloze work before storing generated results.
+        capabilities:
+          resource: false
+          prompt: false
+          completion: false
+        streamable-http:
+          mcp-endpoint: /mcp
     deepseek:
       base-url: https://api.deepseek.com
       api-key: ${api-keys:}
@@ -29,6 +42,12 @@ spring:
 llm:
   model-demo: deepseek-v4-pro
   model-fast: deepseek-v4-flash
+
+content-generation:
+  vocabulary-cloze-provider: MCP
+
+mcp:
+  public-url: ${MCP_PUBLIC_URL:http://localhost:8080/mcp}
 
 api-keys: >-
   ${DEEPSEEK_API_KEY:}

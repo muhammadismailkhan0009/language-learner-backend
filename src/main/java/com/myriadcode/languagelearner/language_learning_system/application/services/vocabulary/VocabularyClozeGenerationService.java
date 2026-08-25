@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeSentenceResult;
 import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeBatch;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchRecentReadingTopicsApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchRecentWritingTopicsApi;
@@ -58,6 +59,57 @@ public class VocabularyClozeGenerationService {
     }
 
     public GenerateVocabularyClozeSentencesResponse generate(String userId) {
+        var prepared = prepare(userId);
+        if (prepared.seeds().isEmpty()) {
+            return new GenerateVocabularyClozeSentencesResponse(0);
+        }
+
+        List<VocabularyClozeSentenceResult> generated;
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            generated = vocabularyClozeLlmApi.generateClozeSentences(prepared.topic(), prepared.seeds());
+        }
+        if (generated.isEmpty()) {
+            throw new IllegalArgumentException("No cloze sentences generated");
+        }
+
+        return persist(userId, prepared, generated);
+    }
+
+    public String preparePrompt(String userId) {
+        var prepared = prepare(userId);
+        if (prepared.seeds().isEmpty()) {
+            throw new IllegalArgumentException("No vocabulary available for cloze generation");
+        }
+        return vocabularyClozeLlmApi.buildClozePrompt(prepared.topic(), prepared.seeds());
+    }
+
+    public GenerateVocabularyClozeSentencesResponse store(
+            String userId,
+            List<VocabularyClozeSentenceResult> generated
+    ) {
+        if (generated == null || generated.isEmpty()) {
+            throw new IllegalArgumentException("No cloze sentences generated");
+        }
+        return persist(userId, prepare(userId), generated);
+    }
+
+    public GenerateVocabularyClozeSentencesResponse store(String userId, VocabularyClozeBatch generated) {
+        if (generated == null || generated.clozeSentences() == null) {
+            throw new IllegalArgumentException("No cloze sentences generated");
+        }
+        return store(userId, generated.clozeSentences().stream()
+                .map(item -> new VocabularyClozeSentenceResult(
+                        item.vocabSource(),
+                        item.clozeText(),
+                        item.hint(),
+                        item.filledSentence(),
+                        item.answerWords() == null ? List.of() : item.answerWords(),
+                        item.filleSentenceTranslation()
+                ))
+                .toList());
+    }
+
+    private PreparedGeneration prepare(String userId) {
         var flashcards = flashcardReviewsApi.getVocabularyFlashcardsByUser(userId);
         if (flashcards.isEmpty()) {
             throw new IllegalArgumentException("No vocabulary flashcards found for user");
@@ -79,7 +131,7 @@ public class VocabularyClozeGenerationService {
                 .collect(Collectors.toMap(vocabulary -> vocabulary.id().id(), vocabulary -> vocabulary));
         var candidates = buildCandidates(reversedCards, vocabById);
         if (candidates.isEmpty()) {
-            return new GenerateVocabularyClozeSentencesResponse(0);
+            return new PreparedGeneration(GENERAL_TOPIC, List.of(), vocabById);
         }
 
         var selected = selectionPolicy.selectCandidates(
@@ -88,7 +140,7 @@ public class VocabularyClozeGenerationService {
                 Instant.now().truncatedTo(ChronoUnit.HOURS)
         );
         if (selected.isEmpty()) {
-            return new GenerateVocabularyClozeSentencesResponse(0);
+            return new PreparedGeneration(GENERAL_TOPIC, List.of(), vocabById);
         }
 
         var seeds = selected.stream()
@@ -101,26 +153,25 @@ public class VocabularyClozeGenerationService {
                 ))
                 .toList();
         if (seeds.isEmpty()) {
-            return new GenerateVocabularyClozeSentencesResponse(0);
+            return new PreparedGeneration(GENERAL_TOPIC, List.of(), vocabById);
         }
 
-        var topic = determineTopic(userId);
-        List<VocabularyClozeSentenceResult> generated;
-        try (var ignored = LlmUserContextHolder.scoped(userId)) {
-            generated = vocabularyClozeLlmApi.generateClozeSentences(topic, seeds);
-        }
-        if (generated.isEmpty()) {
-            throw new IllegalArgumentException("No cloze sentences generated");
-        }
+        return new PreparedGeneration(determineTopic(userId), seeds, vocabById);
+    }
 
+    private GenerateVocabularyClozeSentencesResponse persist(
+            String userId,
+            PreparedGeneration prepared,
+            List<VocabularyClozeSentenceResult> generated
+    ) {
         // FIXME: This matches generated LLM results back to vocabulary by exact surface text.
         // If we ever introduce normalization here, we must align vocabulary persistence/uniqueness rules too;
         // otherwise cloze generation would use a different identity rule than the rest of the system.
         // Revisit the same identity assumption in reading and writing LLM flows as well.
-        var selectedBySurface = seeds.stream()
+        var selectedBySurface = prepared.seeds().stream()
                 .collect(Collectors.toMap(
                         VocabularyClozeGenerationSeed::surface,
-                        seed -> vocabById.get(seed.vocabularyId()),
+                        seed -> prepared.vocabById().get(seed.vocabularyId()),
                         (first, ignored) -> first,
                         LinkedHashMap::new
                 ));
@@ -268,6 +319,13 @@ public class VocabularyClozeGenerationService {
             String vocabularyId,
             Vocabulary latestVocabulary,
             VocabularyClozeSentence sentence
+    ) {
+    }
+
+    private record PreparedGeneration(
+            String topic,
+            List<VocabularyClozeGenerationSeed> seeds,
+            Map<String, Vocabulary> vocabById
     ) {
     }
 }

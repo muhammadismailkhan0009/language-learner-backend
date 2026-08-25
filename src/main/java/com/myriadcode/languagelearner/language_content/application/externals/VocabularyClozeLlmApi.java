@@ -6,4 +6,6 @@ public interface VocabularyClozeLlmApi {
 
     List<VocabularyClozeSentenceResult> generateClozeSentences(String topic,
                                                                List<VocabularyClozeGenerationSeed> vocabulary);
+
+    String buildClozePrompt(String topic, List<VocabularyClozeGenerationSeed> vocabulary);
 }

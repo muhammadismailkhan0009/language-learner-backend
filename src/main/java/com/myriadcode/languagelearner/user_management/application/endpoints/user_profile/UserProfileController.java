@@ -36,4 +36,5 @@ public class UserProfileController {
     ) {
         return ResponseEntity.ok(new ApiResponse<>(userProfileService.updateDifficultyLevel(userId, request.difficultyLevel())));
     }
+
 }

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeGenerationSeed;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
-import com.myriadcode.languagelearner.language_content.application.ports.VocabularyClozeBatch;
+import com.myriadcode.languagelearner.language_content.application.externals.VocabularyClozeBatch;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;

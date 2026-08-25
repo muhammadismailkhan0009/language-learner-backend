@@ -1,4 +1,4 @@
-package com.myriadcode.languagelearner.language_content.application.ports;
+package com.myriadcode.languagelearner.language_content.application.externals;
 
 import java.util.List;
 
