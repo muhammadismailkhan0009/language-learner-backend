@@ -10,7 +10,12 @@ import java.util.Optional;
 
 public interface ReadingPracticeSessionJpaRepo extends JpaRepository<ReadingPracticeSessionEntity, String> {
 
-    @EntityGraph(attributePaths = {"vocabularyUsages", "paragraphs", "paragraphs.sentences"})
+    @EntityGraph(attributePaths = {
+            "scenarios",
+            "scenarios.vocabularyUsages",
+            "scenarios.paragraphs",
+            "scenarios.paragraphs.sentences"
+    })
     Optional<ReadingPracticeSessionEntity> findByIdAndUserId(String id, String userId);
 
     List<ReadingPracticeSessionEntity> findAllByUserIdOrderByCreatedAtDesc(String userId);

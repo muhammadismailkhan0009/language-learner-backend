@@ -124,6 +124,22 @@ class ReadingPracticeSessionFlowTests {
     }
 
     @Test
+    @DisplayName("getSession: reloads every scenario with paragraphs, sentences, and vocabulary")
+    void getSessionReloadsCompleteScenarioHierarchy() {
+        readingPracticeService.createSession("user-1");
+
+        var sessionId = readingPracticeSessionJpaRepo.findAll().getFirst().getId();
+        var reloaded = readingPracticeRepo.findByIdAndUserId(sessionId, "user-1").orElseThrow();
+
+        assertThat(reloaded.scenarios()).hasSize(3);
+        assertThat(reloaded.scenarios()).allSatisfy(scenario -> {
+            assertThat(scenario.paragraphs()).hasSize(1);
+            assertThat(scenario.paragraphs().getFirst().sentences()).hasSize(2);
+            assertThat(scenario.vocabularyUsages()).isNotEmpty();
+        });
+    }
+
+    @Test
     @DisplayName("createSession: passes recent topics to reading topic selection stage")
     void createSessionPassesRecentTopics() {
         readingPracticeService.createSession("user-1");
