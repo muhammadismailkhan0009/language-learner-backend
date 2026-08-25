@@ -2,10 +2,12 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.readin
 
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeParagraph;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSentence;
+import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeScenario;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingPracticeSession;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.model.ReadingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_practice.repo.ReadingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeSessionEntity;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeScenarioEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.mappers.ReadingPracticeJpaMapper;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.repos.ReadingPracticeSessionJpaRepo;
 import org.springframework.data.domain.PageRequest;
@@ -35,37 +37,7 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
             entity.setCreatedAt(Instant.now());
         }
 
-        var usageEntities = session.vocabularyUsages() == null ? List.<ReadingVocabularyUsage>of() : session.vocabularyUsages();
-        entity.setVocabularyUsages(new java.util.LinkedHashSet<>(usageEntities.stream()
-                .map(READING_PRACTICE_JPA_MAPPER::toUsageEntity)
-                .peek(usage -> {
-                    if (usage.getCreatedAt() == null) {
-                        usage.setCreatedAt(Instant.now());
-                    }
-                })
-                .toList()));
-
-        var paragraphEntities = session.paragraphs() == null ? List.<ReadingPracticeParagraph>of() : session.paragraphs();
-        entity.setParagraphs(paragraphEntities.stream()
-                .map(paragraph -> {
-                    var paragraphEntity = READING_PRACTICE_JPA_MAPPER.toParagraphEntity(paragraph);
-                    if (paragraphEntity.getCreatedAt() == null) {
-                        paragraphEntity.setCreatedAt(Instant.now());
-                    }
-                    var sentenceEntities = paragraph.sentences() == null
-                            ? List.<ReadingPracticeSentence>of()
-                            : paragraph.sentences();
-                    paragraphEntity.setSentences(sentenceEntities.stream()
-                            .map(READING_PRACTICE_JPA_MAPPER::toSentenceEntity)
-                            .peek(sentence -> {
-                                if (sentence.getCreatedAt() == null) {
-                                    sentence.setCreatedAt(Instant.now());
-                                }
-                            })
-                            .toList());
-                    return paragraphEntity;
-                })
-                .toList());
+        entity.setScenarios(session.scenarios().stream().map(this::toScenarioEntity).toList());
 
         var saved = readingPracticeSessionJpaRepo.save(entity);
         return toDomain(saved);
@@ -101,7 +73,8 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
             return List.of();
         }
         return readingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
-                .map(session -> session.getVocabularyUsages().stream()
+                .map(session -> session.getScenarios().stream()
+                        .flatMap(scenario -> scenario.getVocabularyUsages().stream())
                         .map(com.myriadcode.languagelearner.language_learning_system.infra.jpa.reading_practice.entities.ReadingPracticeVocabularyUsageEntity::getVocabularyId)
                         .filter(java.util.Objects::nonNull)
                         .collect(java.util.stream.Collectors.toUnmodifiableSet()))
@@ -119,11 +92,10 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
     public void detachFlashcard(String userId, String sessionId, String flashcardId) {
         readingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
                 .ifPresent(session -> {
-                    var usages = session.getVocabularyUsages();
-                    if (usages == null || usages.isEmpty()) {
-                        return;
-                    }
-                    var removed = usages.removeIf(usage -> flashcardId.equals(usage.getFlashcardId()));
+                    var removed = session.getScenarios().stream()
+                            .map(ReadingPracticeScenarioEntity::getVocabularyUsages)
+                            .map(usages -> usages.removeIf(usage -> flashcardId.equals(usage.getFlashcardId())))
+                            .reduce(false, Boolean::logicalOr);
                     if (removed) {
                         readingPracticeSessionJpaRepo.save(session);
                     }
@@ -132,9 +104,15 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
 
     private ReadingPracticeSession toDomain(ReadingPracticeSessionEntity entity) {
         var base = READING_PRACTICE_JPA_MAPPER.toDomain(entity);
-        var usages = entity.getVocabularyUsages().stream()
-                .map(READING_PRACTICE_JPA_MAPPER::toUsageDomain)
-                .toList();
+        var scenarios = java.util.stream.IntStream.range(0, entity.getScenarios().size())
+                .mapToObj(index -> toScenarioDomain(entity.getScenarios().get(index), index)).toList();
+        var first = scenarios.isEmpty() ? null : scenarios.getFirst();
+        return new ReadingPracticeSession(base.id(), base.userId(), base.topic(), base.readingText(),
+                first == null ? List.of() : first.paragraphs(), base.createdAt(),
+                first == null ? List.of() : first.vocabularyUsages(), scenarios);
+    }
+
+    private ReadingPracticeScenario toScenarioDomain(ReadingPracticeScenarioEntity entity, int position) {
         var paragraphs = entity.getParagraphs() == null ? List.<ReadingPracticeParagraph>of()
                 : java.util.stream.IntStream.range(0, entity.getParagraphs().size())
                 .mapToObj(index -> {
@@ -160,22 +138,13 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
                     );
                 })
                 .toList();
-        return new ReadingPracticeSession(
-                base.id(),
-                base.userId(),
-                base.topic(),
-                base.readingText(),
-                paragraphs,
-                base.createdAt(),
-                usages
-        );
+        var usages = entity.getVocabularyUsages().stream().map(READING_PRACTICE_JPA_MAPPER::toUsageDomain).toList();
+        return new ReadingPracticeScenario(new ReadingPracticeScenario.ReadingPracticeScenarioId(entity.getId()),
+                entity.getLabel(), entity.getReadingText(), position, paragraphs, usages);
     }
 
     private ReadingPracticeSession toDomainSummary(ReadingPracticeSessionEntity entity) {
         var base = READING_PRACTICE_JPA_MAPPER.toDomain(entity);
-        var usages = entity.getVocabularyUsages().stream()
-                .map(READING_PRACTICE_JPA_MAPPER::toUsageDomain)
-                .toList();
         return new ReadingPracticeSession(
                 base.id(),
                 base.userId(),
@@ -183,7 +152,24 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
                 base.readingText(),
                 List.of(),
                 base.createdAt(),
-                usages
+                List.of(),
+                List.of()
         );
+    }
+
+    private ReadingPracticeScenarioEntity toScenarioEntity(ReadingPracticeScenario scenario) {
+        var entity = new ReadingPracticeScenarioEntity();
+        entity.setId(scenario.id().id()); entity.setLabel(scenario.label());
+        entity.setReadingText(scenario.readingText()); entity.setCreatedAt(Instant.now());
+        entity.setParagraphs(scenario.paragraphs().stream().map(paragraph -> {
+            var p = READING_PRACTICE_JPA_MAPPER.toParagraphEntity(paragraph); p.setCreatedAt(Instant.now());
+            p.setSentences(paragraph.sentences().stream().map(sentence -> {
+                var s = READING_PRACTICE_JPA_MAPPER.toSentenceEntity(sentence); s.setCreatedAt(Instant.now()); return s;
+            }).toList()); return p;
+        }).toList());
+        entity.setVocabularyUsages(new java.util.LinkedHashSet<>(scenario.vocabularyUsages().stream().map(usage -> {
+            var u = READING_PRACTICE_JPA_MAPPER.toUsageEntity(usage); u.setCreatedAt(Instant.now()); return u;
+        }).toList()));
+        return entity;
     }
 }

@@ -405,19 +405,23 @@ class ReadingPracticeSessionFlowTests {
         }
 
         @Override
-        public ReadingPracticeReadingContent generateReadingContent(String topic,
-                                                                    List<ReadingPracticeVocabularySeed> vocabulary,
+        public ReadingPracticeReadingContent generateReadingContent(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                    List<String> previousScenarioLabels,
                                                                     LanguageLevel difficultyLevel,
-                                                                    List<String> grammarRuleTitles) {
-            this.lastTopic = topic;
+                                                                    List<String> grammarRuleTitles,
+                                                                    int scenarioCount) {
+            this.lastTopic = "topic-1";
+            this.lastSeeds = vocabulary;
+            this.lastPreviousTopics = previousScenarioLabels;
             this.lastDifficultyLevel = difficultyLevel;
             this.lastGrammarRuleTitles = grammarRuleTitles;
-            return new ReadingPracticeReadingContent(List.of(
-                    new ReadingPracticeReadingContent.Paragraph(
-                            "reading text",
-                            List.of("reading sentence 1", "reading sentence 2")
-                    )
-            ));
+            return new ReadingPracticeReadingContent(java.util.stream.IntStream.range(0, scenarioCount)
+                    .mapToObj(index -> new ReadingPracticeReadingContent.Scenario(
+                            index == 0 ? "topic-1" : "topic-" + (index + 1),
+                            List.of(new ReadingPracticeReadingContent.Paragraph("reading text",
+                                    List.of("reading sentence 1", "reading sentence 2"))),
+                            vocabulary.stream().map(seed -> new ReadingPracticeReadingContent.UsedVocabulary(
+                                    seed.id(), seed.surface())).toList())).toList());
         }
 
         @Override

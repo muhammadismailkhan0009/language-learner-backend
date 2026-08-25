@@ -32,9 +32,9 @@ class ReadingPracticeLlmAdapterTest {
     void shouldNotCallLlmWhenGeneratingContentWithEmptyVocabulary() {
         var adapter = new ReadingPracticeLlmAdapter(llmPort);
 
-        var content = adapter.generateReadingContent("topic", List.of(), LanguageLevel.B1, List.of());
+        var content = adapter.generateReadingContent(List.of(), List.of(), LanguageLevel.B1, List.of(), 3);
 
-        assertThat(content.paragraphs()).isEmpty();
+        assertThat(content.scenarios()).isEmpty();
         verifyNoInteractions(llmPort);
     }
 

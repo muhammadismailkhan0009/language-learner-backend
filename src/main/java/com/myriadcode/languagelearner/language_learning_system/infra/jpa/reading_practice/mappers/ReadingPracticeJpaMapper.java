@@ -19,18 +19,19 @@ public interface ReadingPracticeJpaMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
-    @Mapping(target = "paragraphs", ignore = true)
+    @Mapping(target = "scenarios", ignore = true)
     ReadingPracticeSessionEntity toEntity(ReadingPracticeSession session);
 
     @Mapping(target = "id.id", source = "id")
     @Mapping(target = "userId.id", source = "userId")
     @Mapping(target = "vocabularyUsages", ignore = true)
     @Mapping(target = "paragraphs", ignore = true)
+    @Mapping(target = "scenarios", ignore = true)
     ReadingPracticeSession toDomain(ReadingPracticeSessionEntity entity);
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "flashcardId", source = "flashCardId")
-    @Mapping(target = "session", ignore = true)
+    @Mapping(target = "scenario", ignore = true)
     ReadingPracticeVocabularyUsageEntity toUsageEntity(ReadingVocabularyUsage usage);
 
     @Mapping(target = "id.id", source = "id")

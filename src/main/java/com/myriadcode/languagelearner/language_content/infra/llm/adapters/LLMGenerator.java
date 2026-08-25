@@ -106,27 +106,16 @@ public class LLMGenerator implements LLMPort {
     }
 
     @Override
-    public ReadingContent generateReadingContent(String topic,
-                                                 List<ReadingPracticeVocabularySeed> vocabulary,
+    public ReadingContent generateReadingContent(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                 List<String> previousScenarioLabels,
                                                  LanguageLevel difficultyLevel,
-                                                 List<String> grammarRuleTitles) {
-        var paragraphsPrompt = PromptsGenerator.readingContentParagraphs(
-                topic, vocabulary, difficultyLevel, grammarRuleTitles);
-        var paragraphsMessages = generatePrompt(new SystemPrompt(""), new UserPrompt(paragraphsPrompt));
-        var paragraphs = runLLM(paragraphsMessages, new ParameterizedTypeReference<ReadingParagraphs>() {
+                                                 List<String> grammarRuleTitles,
+                                                 int scenarioCount) {
+        var prompt = PromptsGenerator.readingContentParagraphs(vocabulary, previousScenarioLabels,
+                difficultyLevel, grammarRuleTitles, scenarioCount);
+        var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
+        return runLLM(messages, new ParameterizedTypeReference<ReadingContent>() {
         });
-
-        if (paragraphs == null || paragraphs.paragraphs() == null || paragraphs.paragraphs().isEmpty()) {
-            return new ReadingContent(List.of());
-        }
-
-        var splitPrompt = PromptsGenerator.readingContentParagraphSentenceSplit(paragraphs.paragraphs());
-        var splitMessages = generatePrompt(new SystemPrompt(""), new UserPrompt(splitPrompt));
-        var sentenceSplit = runFastLLM(splitMessages, new ParameterizedTypeReference<ReadingParagraphSentenceSplit>() {
-        });
-
-        var paragraphList = buildReadingContent(paragraphs, sentenceSplit);
-        return new ReadingContent(paragraphList);
     }
 
     @Override

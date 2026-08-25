@@ -26,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.lenient;
@@ -92,7 +93,7 @@ class ReadingPracticeServiceOrchestratorTests {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("No vocabulary candidates found for reading practice");
 
-        verify(readingPracticeLlmApi, never()).generateReadingContent(any(), any(), any(), any());
+        verify(readingPracticeLlmApi, never()).generateReadingContent(any(), any(), any(), any(), anyInt());
         verify(readingPracticeRepo, never()).save(any());
     }
 
@@ -108,21 +109,16 @@ class ReadingPracticeServiceOrchestratorTests {
                 .thenReturn(List.of(vocab("v-1")));
         when(readingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of("Old topic"));
         when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1))).thenReturn("");
-        when(readingPracticeLlmApi.generateReadingContent(eq("General practice"), any(), eq(LanguageLevel.B1), eq(List.of())))
-                .thenReturn(new ReadingPracticeReadingContent(List.of(
-                        new ReadingPracticeReadingContent.Paragraph(
-                                "fallback reading",
-                                List.of("fallback reading")
-                        )
-                )));
+        when(readingPracticeLlmApi.generateReadingContent(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1), eq(List.of()), eq(3)))
+                .thenAnswer(invocation -> content(invocation.getArgument(0), "fallback reading"));
         when(readingPracticeLlmApi.identifyUsedVocabulary(any(), eq("fallback reading")))
                 .thenReturn(List.of("surface-v-1"));
 
         service.createSession("user-1");
 
-        verify(readingPracticeLlmApi).selectTopicForTextGeneration(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1));
-        verify(readingPracticeLlmApi).generateReadingContent(eq("General practice"), any(), eq(LanguageLevel.B1), eq(List.of()));
-        verify(readingPracticeLlmApi).identifyUsedVocabulary(any(), eq("fallback reading"));
+        verify(readingPracticeLlmApi, never()).selectTopicForTextGeneration(any(), any(), any());
+        verify(readingPracticeLlmApi).generateReadingContent(any(), eq(List.of("Old topic")), eq(LanguageLevel.B1), eq(List.of()), eq(3));
+        verify(readingPracticeLlmApi, never()).identifyUsedVocabulary(any(), any());
         verify(readingPracticeRepo).save(any(ReadingPracticeSession.class));
     }
 
@@ -139,12 +135,12 @@ class ReadingPracticeServiceOrchestratorTests {
         when(readingPracticeRepo.findRecentTopicsByUserId("user-1", 10)).thenReturn(List.of());
         when(readingPracticeLlmApi.selectTopicForTextGeneration(any(), eq(List.of()), eq(LanguageLevel.B1)))
                 .thenReturn("topic");
-        when(readingPracticeLlmApi.generateReadingContent(eq("topic"), any(), eq(LanguageLevel.B1), eq(List.of())))
+        when(readingPracticeLlmApi.generateReadingContent(any(), eq(List.of()), eq(LanguageLevel.B1), eq(List.of()), eq(3)))
                 .thenReturn(new ReadingPracticeReadingContent(List.of()));
 
         assertThatThrownBy(() -> service.createSession("user-1"))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Unable to generate reading content");
+                .hasMessageContaining("Invalid generated reading content");
 
         verify(readingPracticeRepo, never()).save(any());
     }
@@ -220,6 +216,14 @@ class ReadingPracticeServiceOrchestratorTests {
         service.detachFlashcard("user-1", "session-1", "flashcard-1");
 
         verify(readingPracticeRepo).detachFlashcard("user-1", "session-1", "flashcard-1");
+    }
+
+    private ReadingPracticeReadingContent content(List<ReadingPracticeVocabularySeed> vocabulary, String text) {
+        return new ReadingPracticeReadingContent(java.util.stream.IntStream.range(0, 3)
+                .mapToObj(index -> new ReadingPracticeReadingContent.Scenario("Scenario " + index,
+                        List.of(new ReadingPracticeReadingContent.Paragraph(text, List.of(text))),
+                        vocabulary.stream().map(seed -> new ReadingPracticeReadingContent.UsedVocabulary(
+                                seed.id(), seed.surface())).toList())).toList());
     }
 
     private PrivateVocabularyRecord vocab(String id) {

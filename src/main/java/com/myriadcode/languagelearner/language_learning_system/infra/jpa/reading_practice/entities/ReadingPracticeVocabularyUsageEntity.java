@@ -16,8 +16,8 @@ public class ReadingPracticeVocabularyUsageEntity {
     private String id;
 
     @ManyToOne
-    @JoinColumn(name = "session_id", nullable = false)
-    private ReadingPracticeSessionEntity session;
+    @JoinColumn(name = "scenario_id", nullable = false)
+    private ReadingPracticeScenarioEntity scenario;
 
     @Column(name = "flashcard_id", nullable = false)
     private String flashcardId;
@@ -36,12 +36,12 @@ public class ReadingPracticeVocabularyUsageEntity {
         this.id = id;
     }
 
-    public ReadingPracticeSessionEntity getSession() {
-        return session;
+    public ReadingPracticeScenarioEntity getScenario() {
+        return scenario;
     }
 
-    public void setSession(ReadingPracticeSessionEntity session) {
-        this.session = session;
+    public void setScenario(ReadingPracticeScenarioEntity scenario) {
+        this.scenario = scenario;
     }
 
     public String getFlashcardId() {

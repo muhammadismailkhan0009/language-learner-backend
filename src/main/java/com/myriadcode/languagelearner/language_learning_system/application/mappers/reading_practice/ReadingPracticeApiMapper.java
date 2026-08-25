@@ -17,6 +17,7 @@ public interface ReadingPracticeApiMapper {
 
     @Mapping(target = "sessionId", source = "id.id")
     @Mapping(target = "readingParagraphs", source = "paragraphs")
+    @Mapping(target = "scenarios", ignore = true)
     ReadingPracticeSessionResponse toResponse(ReadingPracticeSession session);
 
     @Mapping(target = "sessionId", source = "id.id")

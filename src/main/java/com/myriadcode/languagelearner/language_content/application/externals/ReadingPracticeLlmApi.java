@@ -10,10 +10,11 @@ public interface ReadingPracticeLlmApi {
                                         List<String> previousTopics,
                                         LanguageLevel difficultyLevel);
 
-    ReadingPracticeReadingContent generateReadingContent(String topic,
-                                                         List<ReadingPracticeVocabularySeed> vocabulary,
+    ReadingPracticeReadingContent generateReadingContent(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                         List<String> previousScenarioLabels,
                                                          LanguageLevel difficultyLevel,
-                                                         List<String> grammarRuleTitles);
+                                                         List<String> grammarRuleTitles,
+                                                         int scenarioCount);
 
     List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                         String readingText);

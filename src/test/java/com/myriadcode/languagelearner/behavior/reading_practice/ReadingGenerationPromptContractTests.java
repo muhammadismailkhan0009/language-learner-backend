@@ -16,29 +16,31 @@ class ReadingGenerationPromptContractTests {
     @DisplayName("Reading prompt supplies level and grammar titles as optional natural choices")
     void suppliesLevelAndGrammarGuidance() {
         var prompt = PromptsGenerator.readingContentParagraphs(
-                "Daily walk",
                 List.of(new ReadingPracticeVocabularySeed("gehen", "go")),
+                List.of("Old walk"),
                 LanguageLevel.A2,
-                List.of("Present tense", "Modal verbs")
+                List.of("Present tense", "Modal verbs"),
+                3
         );
 
         assertThat(prompt)
-                .contains("CEFR Level: A2")
+                .contains("CEFR level A2")
                 .contains("- Present tense", "- Modal verbs")
-                .contains("Choose only the grammar rules that suit")
-                .contains("You do not need to use every eligible grammar rule");
+                .contains("Prefer grammar rules from the supplied list when they fit naturally")
+                .contains("Do not force every supplied grammar rule");
     }
 
     @Test
     @DisplayName("Reading prompt remains level-aware without eligible grammar titles")
     void supportsEmptyGrammarCatalog() {
         var prompt = PromptsGenerator.readingContentParagraphs(
-                "Daily walk",
                 List.of(new ReadingPracticeVocabularySeed("gehen", "go")),
+                List.of(),
                 LanguageLevel.A1,
-                List.of()
+                List.of(),
+                3
         );
 
-        assertThat(prompt).contains("CEFR Level: A1", "Eligible Grammar-Rule Titles:", "(none provided)");
+        assertThat(prompt).contains("CEFR level A1", "Eligible Grammar-Rule Titles:", "(none provided)");
     }
 }

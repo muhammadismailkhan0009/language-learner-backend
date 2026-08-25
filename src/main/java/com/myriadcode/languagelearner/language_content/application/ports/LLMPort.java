@@ -41,10 +41,11 @@ public interface LLMPort {
                                                               List<String> previousTopics,
                                                               LanguageLevel difficultyLevel);
 
-    ReadingContent generateReadingContent(String topic,
-                                          List<ReadingPracticeVocabularySeed> vocabulary,
+    ReadingContent generateReadingContent(List<ReadingPracticeVocabularySeed> vocabulary,
+                                          List<String> previousScenarioLabels,
                                           LanguageLevel difficultyLevel,
-                                          List<String> grammarRuleTitles);
+                                          List<String> grammarRuleTitles,
+                                          int scenarioCount);
     ClozeParagraphGeneration generateClozeParagraph(ClozeParagraphGenerationContext context);
 
     ReadingUsedVocabularySelection identifyUsedReadingVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,

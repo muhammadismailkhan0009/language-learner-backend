@@ -275,12 +275,19 @@ public final class PromptsGenerator {
   }
 
   public static String readingContentParagraphs(
-    String topic,
     List<ReadingPracticeVocabularySeed> vocabulary,
+    List<String> previousScenarioLabels,
     LanguageLevel difficultyLevel,
-    List<String> grammarRuleTitles) {
+    List<String> grammarRuleTitles,
+    int scenarioCount) {
 
-  String vocabList = formatVocabulary(vocabulary);
+  String vocabList = vocabulary == null || vocabulary.isEmpty()
+      ? "(none provided)"
+      : vocabulary.stream()
+          .map(item -> "- id=%s | German=%s | translation=%s"
+              .formatted(item.id(), item.surface(), item.translation()))
+          .collect(java.util.stream.Collectors.joining("\n"));
+
   String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
       ? "(none provided)"
       : grammarRuleTitles.stream()
@@ -288,119 +295,239 @@ public final class PromptsGenerator {
           .map(title -> "- " + title.trim())
           .collect(java.util.stream.Collectors.joining("\n"));
 
+  String recentLabels = previousScenarioLabels == null || previousScenarioLabels.isEmpty()
+      ? "(none)"
+      : previousScenarioLabels.stream()
+          .map(label -> "- " + label)
+          .collect(java.util.stream.Collectors.joining("\n"));
+
   return """
       Act as an expert German language teacher.
-      Generate natural German reading and listening practice material.
 
-      CEFR Level: %s
-      Topic: "%s"
+      Generate natural German reading and listening practice for a learner at CEFR level %s.
 
-      Primary Goal:
-      Create natural, coherent, idiomatic German at the requested CEFR level.
-      The text should help the learner repeatedly encounter useful known vocabulary
-      in meaningful context without sounding artificial or repetitive.
+      Required Scenarios: %d
 
-      Priority:
-      Follow this priority order:
+      PURPOSE
+
+      Each generated scenario will be presented and studied independently.
+
+      Therefore every scenario must stand on its own as a complete, understandable piece of
+      reading/listening material with enough context to make sense without seeing any other
+      generated scenario.
+
+      The primary goals are:
+      - natural German
+      - listening and reading comprehension
+      - repeated exposure to useful learner vocabulary
+      - coherent contextual use of vocabulary
+      - natural exposure to suitable grammar
+
+      SCENARIO DESIGN
+
+      Generate exactly the requested number of scenarios.
+
+      Each scenario must:
+      - have a short, meaningful scenario label
+      - represent one coherent situation, event, experience, problem, conversation,
+        decision, or connected sequence of thoughts
+      - establish its own context
+      - not depend on another generated scenario
+      - contain enough development to be useful as a standalone listening exercise
+      - normally have a beginning, development, and natural ending or stopping point
+
+      Prefer diversity across scenarios.
+
+      When the supplied vocabulary naturally belongs to different semantic contexts,
+      distribute it across different scenarios rather than forcing unrelated words into
+      one story.
+
+      Avoid recent scenario labels and very similar situations when reasonable.
+
+      PRIORITIES
+
+      Follow this order:
+
       1. Natural and idiomatic German.
       2. Clear and coherent progression of meaning.
-      3. Appropriate difficulty for the requested CEFR level.
-      4. Useful reuse of learner vocabulary.
-      5. Natural exposure to suitable grammar structures.
+      3. Appropriate CEFR difficulty.
+      4. Useful and reasonably diverse reuse of learner vocabulary.
+      5. Natural exposure to suitable grammar.
 
-      Coherence and Progression:
-      - Build the text around a real situation, event, experience, conversation,
-        or connected sequence of thoughts.
-      - Sentences must connect logically.
-      - Each sentence should normally add new information or move the situation forward.
-      - Do not repeat the same idea merely using slightly different wording.
-      - When appropriate, give the text a clear beginning, development, and ending.
-      - The result must read like a small genuine text, not like vocabulary drills
-        joined together.
+      Naturalness and coherence are more important than maximizing vocabulary coverage.
 
-      Vocabulary Usage:
-      - Select only the provided learner vocabulary that fits the topic naturally.
-      - Do NOT try to include most or all provided vocabulary.
-      - Natural German is more important than vocabulary coverage.
-      - Reuse useful target vocabulary when it naturally belongs in multiple sentences.
-      - A selected vocabulary item may normally appear around 1-3 times.
-      - More repetition is allowed only when it is genuinely natural in the situation.
-      - Never repeat an idea solely to create another occurrence of a target word.
-      - Never use awkward expressions, unusual nominalizations, or unnatural sentence
-        constructions merely to include supplied vocabulary.
-      - Use natural inflected forms of vocabulary where appropriate.
-      - Multiple learner vocabulary items may occur in the same sentence when natural.
+      VOCABULARY USAGE
 
-      Additional Vocabulary:
-      - The supplied learner vocabulary should guide the content, but it must not
-        restrict all words in the text.
-      - Freely use common everyday vocabulary appropriate to the requested CEFR level
-        when needed for natural and coherent German.
-      - Avoid unnecessary rare, literary, technical, or highly specialized words.
-      - Do not deliberately introduce large amounts of new thematic vocabulary.
+      The supplied vocabulary is an opportunity pool, not a checklist.
 
-      Grammar Usage:
-      - Use natural German grammar appropriate to the requested CEFR level.
-      - Eligible grammar-rule titles are provided below.
-      - Choose only grammar rules that fit the topic and text naturally.
-      - You do not need to use every eligible grammar rule.
-      - Prefer approximately 1-3 relevant grammar structures in a text when suitable.
-      - An important grammar structure may naturally recur several times for reinforcement.
-      - Do not force a grammar structure into every sentence.
-      - Do not avoid useful repetition of grammar merely for the sake of structural variety.
-      - Ordinary CEFR-appropriate grammar may also be used even when it is not explicitly
-        listed among the eligible grammar-rule titles.
-      - Questions, modal verbs, negation, subordinate clauses, connectors, separable verbs,
-        perfect tense, and other appropriate structures may occur naturally according
-        to the learner level.
+      - Select only vocabulary that fits a scenario naturally.
+      - Do not try to use all supplied vocabulary.
+      - Across all scenarios, prefer useful diversity rather than repeatedly selecting only
+        the same small group of words.
+      - Spread semantically unrelated vocabulary across different scenarios when appropriate.
+      - A selected vocabulary item may normally appear around 1-3 times when repetition is
+        natural and useful.
+      - Never repeat an idea solely to create another occurrence of a supplied word.
+      - Use natural inflected, conjugated, declined, plural, separated, or otherwise
+        context-appropriate forms.
+      - Multiple supplied vocabulary items may appear in the same sentence when natural.
+      - Never create awkward German merely to consume vocabulary.
 
-      Sentence Difficulty:
-      Adapt sentence complexity to the requested CEFR level.
+      USED VOCABULARY METADATA
 
-      - A1:
-        Usually about 5-10 words per sentence.
-        Prefer simple main clauses and very common structures.
+      For each scenario, report the supplied vocabulary entries that are actually represented
+      in that scenario.
 
-      - A2:
-        Usually about 6-14 words per sentence.
-        Allow common connectors, modal verbs, perfect tense, subordinate clauses,
-        and moderately varied word order.
+      Important:
+      - vocabularyId must be copied from the corresponding supplied vocabulary entry
+      - surface must be copied EXACTLY from the original supplied German surface
+      - return the original canonical supplied surface, not the inflected form appearing
+        in the generated text
+      - include an entry only when that vocabulary item is genuinely used in the scenario
+      - never invent, normalize, translate, or reconstruct vocabulary surfaces
+      - never return vocabulary that was not supplied
 
-      - B1:
-        Usually about 8-18 words per sentence.
-        Allow connected clauses, subordinate clauses, varied word order,
-        explanations, reasons, conditions, and more developed thoughts.
+      Example:
 
-      These are guidelines rather than strict limits.
-      Occasional shorter or longer sentences are allowed when natural.
+      Supplied:
+      id=123 | German=sich erinnern | translation=to remember
 
-      Paragraph Guidelines:
-      - Minimum paragraphs: 1
-      - Maximum paragraphs: 2
-      - Usually 4-7 sentences per paragraph.
-      - Usually 5-12 sentences total.
-      - Keep paragraphs focused and internally coherent.
-      - Start a second paragraph only when there is a meaningful change in time,
-        subtopic, perspective, or stage of the situation.
+      Generated text:
+      "Anna erinnert sich an ihren ersten Tag."
 
-      Style:
-      - Use clear, contemporary, everyday German.
-      - Prefer language that a German speaker could naturally say or write.
-      - Avoid textbook-like semantic repetition.
-      - Avoid producing a sequence of nearly identical sentence structures.
-      - Do not include explanations, translations, headings, bullet points, or numbering.
-      - Output only the German practice text requested by the response schema.
+      Report:
+      vocabularyId=123
+      surface=sich erinnern
 
-      Learner Vocabulary (German - translation):
+      not:
+      surface=erinnert sich
+
+      ADDITIONAL VOCABULARY
+
+      The supplied learner vocabulary should guide the material but must not restrict all
+      language in the scenario.
+
+      Freely use common supporting vocabulary appropriate to the requested CEFR level whenever
+      necessary for natural, coherent German.
+
+      Avoid:
+      - unnecessary rare vocabulary
+      - literary or highly poetic language
+      - technical or specialized vocabulary unless the scenario clearly requires it
+      - introducing large clusters of unnecessary new thematic words
+
+      GRAMMAR USAGE
+
+      Use natural German grammar appropriate to the learner level.
+
+      Eligible grammar-rule titles are supplied below.
+
+      - Prefer grammar rules from the supplied list when they fit naturally.
+      - Do not force every supplied grammar rule.
+      - Approximately 1-3 useful grammar structures per scenario is usually sufficient.
+      - Important structures may recur naturally.
+      - Ordinary CEFR-appropriate grammar may also appear even when not explicitly supplied.
+      - Do not artificially simplify German so much that the result becomes unnatural.
+      - Do not introduce unnecessary syntactic complexity merely for variety.
+
+      SENTENCE DIFFICULTY
+
+      Adapt complexity to the requested CEFR level.
+
+      A1:
+      - usually about 5-10 words per sentence
+      - mostly simple main clauses
+      - very common connectors and constructions
+      - occasional slightly longer sentences when naturally understandable
+
+      A2:
+      - usually about 6-14 words per sentence
+      - common connectors
+      - modal verbs
+      - perfect tense
+      - common subordinate clauses
+      - moderately varied word order
+
+      B1:
+      - usually about 8-18 words per sentence
+      - connected clauses
+      - subordinate clauses
+      - explanations, reasons, conditions, and developed thoughts
+      - naturally varied word order
+
+      These are guidelines, not strict word limits.
+
+      PARAGRAPHS
+
+      Each scenario should normally contain:
+      - 1-2 paragraphs
+      - approximately 4-7 sentences per paragraph
+      - approximately 5-12 sentences total
+
+      Each paragraph must be internally coherent.
+
+      Start a second paragraph only when there is a meaningful change in:
+      - time
+      - stage of the event
+      - subtopic
+      - perspective
+      - conversational phase
+
+      Because scenarios are studied independently, do not make a scenario so short that it
+      feels like a few disconnected example sentences.
+
+      SENTENCE SEGMENTATION
+
+      For every paragraph:
+      - text must contain the complete natural German paragraph
+      - sentences must contain the same paragraph split into individual sentences
+      - preserve the exact wording, spelling, capitalization, punctuation, and order
+      - do not paraphrase or simplify sentences when placing them in the sentence list
+      - every sentence from the paragraph must appear exactly once and in order
+      - the sentence list and paragraph text must represent identical content
+
+      COHERENCE
+
+      Sentences must connect logically.
+
+      Each sentence should normally:
+      - add information
+      - advance the event
+      - explain something
+      - introduce a consequence
+      - react to something already established
+      - or naturally complete the situation
+
+      Avoid textbook-style sequences such as several sentences that repeat essentially the
+      same fact with slightly different vocabulary.
+
+      STYLE
+
+      Use clear, contemporary, everyday German.
+
+      Prefer language that a German speaker could naturally say, hear, or write.
+
+      Avoid:
+      - unnatural vocabulary stuffing
+      - semantic repetition
+      - long chains of nearly identical sentence structures
+      - unnecessary abstraction
+      - disconnected example sentences disguised as a story
+
+      Learner Vocabulary:
       %s
 
       Eligible Grammar-Rule Titles:
       %s
+
+      Recent Scenario Labels to Avoid:
+      %s
       """.formatted(
           difficultyLevel,
-          topic,
+          scenarioCount,
           vocabList,
-          grammarTitles);
+          grammarTitles,
+          recentLabels);
 }
 
 public static String clozeParagraph(

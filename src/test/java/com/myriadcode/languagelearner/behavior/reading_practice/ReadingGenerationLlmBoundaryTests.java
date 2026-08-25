@@ -24,16 +24,16 @@ class ReadingGenerationLlmBoundaryTests {
         var llmPort = mock(LLMPort.class);
         var vocabulary = List.of(new ReadingPracticeVocabularySeed("gehen", "go"));
         var grammarTitles = List.of("Present tense", "Modal verbs");
-        when(llmPort.generateReadingContent("Daily walk", vocabulary, LanguageLevel.A2, grammarTitles))
-                .thenReturn(new ReadingContent(List.of(
-                        new ReadingContent.Paragraph("Ich gehe heute.", List.of("Ich gehe heute."))
-                )));
+        when(llmPort.generateReadingContent(vocabulary, List.of("Old"), LanguageLevel.A2, grammarTitles, 3))
+                .thenReturn(new ReadingContent(List.of(new ReadingContent.Scenario("Daily walk", List.of(
+                        new ReadingContent.Paragraph("Ich gehe heute.", List.of("Ich gehe heute."))),
+                        List.of(new ReadingContent.UsedVocabulary(null, "gehen"))))));
 
         var result = new ReadingPracticeLlmAdapter(llmPort)
-                .generateReadingContent("Daily walk", vocabulary, LanguageLevel.A2, grammarTitles);
+                .generateReadingContent(vocabulary, List.of("Old"), LanguageLevel.A2, grammarTitles, 3);
 
-        assertThat(result.paragraphs()).hasSize(1);
-        verify(llmPort).generateReadingContent("Daily walk", vocabulary, LanguageLevel.A2, grammarTitles);
+        assertThat(result.scenarios()).hasSize(1);
+        verify(llmPort).generateReadingContent(vocabulary, List.of("Old"), LanguageLevel.A2, grammarTitles, 3);
     }
 
     @Test
@@ -42,9 +42,9 @@ class ReadingGenerationLlmBoundaryTests {
         var llmPort = mock(LLMPort.class);
 
         var result = new ReadingPracticeLlmAdapter(llmPort)
-                .generateReadingContent("Daily walk", List.of(), LanguageLevel.A2, List.of("Modal verbs"));
+                .generateReadingContent(List.of(), List.of(), LanguageLevel.A2, List.of("Modal verbs"), 3);
 
-        assertThat(result.paragraphs()).isEmpty();
+        assertThat(result.scenarios()).isEmpty();
         verifyNoInteractions(llmPort);
     }
 }

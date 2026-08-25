@@ -7,15 +7,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderColumn;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.Fetch;
-import org.hibernate.annotations.FetchMode;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -40,13 +36,8 @@ public class ReadingPracticeSessionEntity {
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "session_id", nullable = false)
-    @OrderColumn(name = "paragraph_index")
-    private List<ReadingPracticeParagraphEntity> paragraphs = new ArrayList<>();
-
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("createdAt ASC")
-    @Fetch(FetchMode.SUBSELECT)
-    private Set<ReadingPracticeVocabularyUsageEntity> vocabularyUsages = new LinkedHashSet<>();
+    @OrderColumn(name = "scenario_index")
+    private List<ReadingPracticeScenarioEntity> scenarios = new ArrayList<>();
 
     @PrePersist
     public void onCreate() {
@@ -95,40 +86,35 @@ public class ReadingPracticeSessionEntity {
         this.createdAt = createdAt;
     }
 
+    public List<ReadingPracticeScenarioEntity> getScenarios() {
+        return scenarios;
+    }
+
+    public void setScenarios(List<ReadingPracticeScenarioEntity> values) {
+        scenarios.clear(); if (values != null) scenarios.addAll(values);
+    }
+
     public List<ReadingPracticeParagraphEntity> getParagraphs() {
-        return paragraphs;
-    }
-
-    public void setParagraphs(List<ReadingPracticeParagraphEntity> paragraphs) {
-        this.paragraphs.clear();
-        if (paragraphs == null) {
-            return;
-        }
-        for (ReadingPracticeParagraphEntity paragraph : paragraphs) {
-            addParagraph(paragraph);
-        }
-    }
-
-    public void addParagraph(ReadingPracticeParagraphEntity paragraph) {
-        this.paragraphs.add(paragraph);
+        return scenarios.isEmpty() ? List.of() : scenarios.getFirst().getParagraphs();
     }
 
     public Set<ReadingPracticeVocabularyUsageEntity> getVocabularyUsages() {
-        return vocabularyUsages;
-    }
-
-    public void setVocabularyUsages(Set<ReadingPracticeVocabularyUsageEntity> vocabularyUsages) {
-        this.vocabularyUsages.clear();
-        if (vocabularyUsages == null) {
-            return;
-        }
-        for (ReadingPracticeVocabularyUsageEntity usage : vocabularyUsages) {
-            addVocabularyUsage(usage);
-        }
+        return scenarios.stream().flatMap(scenario -> scenario.getVocabularyUsages().stream())
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
     }
 
     public void addVocabularyUsage(ReadingPracticeVocabularyUsageEntity usage) {
-        usage.setSession(this);
-        this.vocabularyUsages.add(usage);
+        ensureCompatibilityScenario().addVocabularyUsage(usage);
+    }
+
+    private ReadingPracticeScenarioEntity ensureCompatibilityScenario() {
+        if (!scenarios.isEmpty()) return scenarios.getFirst();
+        var scenario = new ReadingPracticeScenarioEntity();
+        scenario.setId((id == null ? "session" : id) + "-scenario");
+        scenario.setLabel(topic == null ? "Reading practice" : topic);
+        scenario.setReadingText(readingText == null ? "" : readingText);
+        scenario.setCreatedAt(createdAt == null ? Instant.now() : createdAt);
+        scenarios.add(scenario);
+        return scenario;
     }
 }

@@ -9,6 +9,13 @@ public record ReadingPracticeSessionResponse(
         String readingText,
         List<ReadingPracticeParagraphResponse> readingParagraphs,
         List<ReadingVocabularyFlashCardView> vocabFlashcards,
-        Instant createdAt
+        Instant createdAt,
+        List<ReadingPracticeScenarioResponse> scenarios
 ) {
+    public ReadingPracticeSessionResponse(String sessionId, String topic, String readingText,
+                                          List<ReadingPracticeParagraphResponse> readingParagraphs,
+                                          List<ReadingVocabularyFlashCardView> vocabFlashcards,
+                                          Instant createdAt) {
+        this(sessionId, topic, readingText, readingParagraphs, vocabFlashcards, createdAt, List.of());
+    }
 }

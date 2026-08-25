@@ -29,24 +29,26 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
     }
 
     @Override
-    public ReadingPracticeReadingContent generateReadingContent(String topic,
-                                                                List<ReadingPracticeVocabularySeed> vocabulary,
+    public ReadingPracticeReadingContent generateReadingContent(List<ReadingPracticeVocabularySeed> vocabulary,
+                                                                List<String> previousScenarioLabels,
                                                                 LanguageLevel difficultyLevel,
-                                                                List<String> grammarRuleTitles) {
+                                                                List<String> grammarRuleTitles,
+                                                                int scenarioCount) {
         if (vocabulary == null || vocabulary.isEmpty()) {
             return new ReadingPracticeReadingContent(List.of());
         }
-        var content = llmPort.generateReadingContent(topic, vocabulary, difficultyLevel, grammarRuleTitles);
-        if (content == null || content.paragraphs() == null) {
+        var content = llmPort.generateReadingContent(vocabulary, previousScenarioLabels, difficultyLevel,
+                grammarRuleTitles, scenarioCount);
+        if (content == null || content.scenarios() == null) {
             return new ReadingPracticeReadingContent(List.of());
         }
-        var paragraphs = content.paragraphs().stream()
-                .map(paragraph -> new ReadingPracticeReadingContent.Paragraph(
-                        paragraph.text(),
-                        paragraph.sentences()
-                ))
-                .toList();
-        return new ReadingPracticeReadingContent(paragraphs);
+        return new ReadingPracticeReadingContent(content.scenarios().stream().map(scenario ->
+                new ReadingPracticeReadingContent.Scenario(scenario.scenarioLabel(),
+                        scenario.paragraphs().stream().map(paragraph ->
+                                new ReadingPracticeReadingContent.Paragraph(paragraph.text(), paragraph.sentences())).toList(),
+                        scenario.usedVocabulary().stream().map(used ->
+                                new ReadingPracticeReadingContent.UsedVocabulary(
+                                        used.vocabularyId(), used.surface())).toList())).toList());
     }
 
     @Override
