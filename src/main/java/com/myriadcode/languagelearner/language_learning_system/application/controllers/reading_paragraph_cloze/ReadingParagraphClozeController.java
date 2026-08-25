@@ -3,6 +3,8 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.request.CreateReadingParagraphClozeSessionRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.response.ReadingParagraphClozeSessionResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_paragraph_cloze.response.ReadingParagraphClozeGenerationRequestResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.services.reading_paragraph_cloze.ReadingParagraphClozeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_paragraph_cloze.ReadingParagraphClozeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,17 +15,20 @@ import org.springframework.web.bind.annotation.*;
 public class ReadingParagraphClozeController {
 
     private final ReadingParagraphClozeService service;
+    private final ReadingParagraphClozeGenerationRequestService generationRequestService;
 
-    public ReadingParagraphClozeController(ReadingParagraphClozeService service) {
+    public ReadingParagraphClozeController(ReadingParagraphClozeService service,
+                                           ReadingParagraphClozeGenerationRequestService generationRequestService) {
         this.service = service;
+        this.generationRequestService = generationRequestService;
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<ReadingParagraphClozeSessionResponse>> createSession(
+    public ResponseEntity<ApiResponse<ReadingParagraphClozeGenerationRequestResponse>> createSession(
             @RequestBody CreateReadingParagraphClozeSessionRequest request
     ) {
-        var response = service.createSession(request.userId(), request.limit());
-        return ResponseEntity.status(201).body(new ApiResponse<>(response));
+        var response = generationRequestService.request(request.userId(), request.limit());
+        return ResponseEntity.accepted().body(new ApiResponse<>(response));
     }
 
     @GetMapping

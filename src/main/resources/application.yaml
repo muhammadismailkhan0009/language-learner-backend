@@ -44,7 +44,7 @@ llm:
   model-fast: deepseek-v4-flash
 
 content-generation:
-  vocabulary-cloze-provider: MCP
+  reading-paragraph-cloze-provider: MCP
 
 mcp:
   public-url: ${MCP_PUBLIC_URL:http://localhost:8080/mcp}

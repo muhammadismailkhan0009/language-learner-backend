@@ -40,10 +40,39 @@ public class ReadingParagraphClozeService {
     public ReadingParagraphClozeSessionResponse createSession(String userId, Integer limit) {
         requireUserId(userId);
         var context = contextService.build(userId, limit);
+        return generateAndStore(userId, context);
+    }
+
+    @Transactional(readOnly = true)
+    public ClozeParagraphGenerationContext prepareGeneration(String userId) {
+        requireUserId(userId);
+        return contextService.build(userId, 50);
+    }
+
+    @Transactional
+    public ReadingParagraphClozeSessionResponse storeGeneration(String userId, ClozeParagraphGeneration generated) {
+        requireUserId(userId);
+        return validateAndStore(userId, prepareGeneration(userId), generated);
+    }
+
+    private ReadingParagraphClozeSessionResponse generateAndStore(
+            String userId,
+            ClozeParagraphGenerationContext context
+    ) {
         var vocabularyIds = context.vocabulary().stream().map(ClozeParagraphGenerationContext.VocabularySource::id).collect(Collectors.toSet());
         var grammarIds = context.grammarRules().stream().map(ClozeParagraphGenerationContext.GrammarSource::id).collect(Collectors.toSet());
         var generated = generate(context, userId);
         if (!validator.isValid(generated, vocabularyIds, grammarIds)) generated = generate(context, userId);
+        return validateAndStore(userId, context, generated);
+    }
+
+    private ReadingParagraphClozeSessionResponse validateAndStore(
+            String userId,
+            ClozeParagraphGenerationContext context,
+            ClozeParagraphGeneration generated
+    ) {
+        var vocabularyIds = context.vocabulary().stream().map(ClozeParagraphGenerationContext.VocabularySource::id).collect(Collectors.toSet());
+        var grammarIds = context.grammarRules().stream().map(ClozeParagraphGenerationContext.GrammarSource::id).collect(Collectors.toSet());
         if (!validator.isValid(generated, vocabularyIds, grammarIds))
             throw new IllegalArgumentException("Unable to generate valid reading paragraph cloze content");
         return toResponse(repo.save(toSession(userId, context, generated)), userId);

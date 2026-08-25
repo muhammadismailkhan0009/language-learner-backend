@@ -16,6 +16,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyClozeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyClozeSelectionPolicy;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -31,6 +32,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class VocabularyClozeGenerationService {
 
     private static final int RECENT_READING_TOPIC_LIMIT = 3;
@@ -59,6 +61,7 @@ public class VocabularyClozeGenerationService {
     }
 
     public GenerateVocabularyClozeSentencesResponse generate(String userId) {
+        log.warn("VocabularyClozeGenerationService.generate entered; this invokes the LLM API for userId='{}'", userId);
         var prepared = prepare(userId);
         if (prepared.seeds().isEmpty()) {
             return new GenerateVocabularyClozeSentencesResponse(0);
