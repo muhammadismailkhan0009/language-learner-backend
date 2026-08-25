@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.behavior.reading_paragraph_cloze;
 
+import com.myriadcode.languagelearner.common.enums.ClozePracticeKind;
 import com.myriadcode.languagelearner.language_content.application.externals.ClozeParagraphGeneration;
 import com.myriadcode.languagelearner.language_learning_system.domain.reading_paragraph_cloze.services.ReadingParagraphClozeGenerationValidator;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,6 @@ class ReadingParagraphClozeGenerationValidatorBehaviorTests {
     }
 
     private ClozeParagraphGeneration.Blank blank(String token, String answer, String kind, String vocabularyId, List<String> grammarIds) {
-        return new ClozeParagraphGeneration.Blank(token, answer, "Explanation", kind, vocabularyId, grammarIds);
+        return new ClozeParagraphGeneration.Blank(token, answer, "Explanation", ClozePracticeKind.valueOf(kind), vocabularyId, grammarIds);
     }
 }

@@ -122,10 +122,8 @@ public class LLMGenerator implements LLMPort {
     public ClozeParagraphGeneration generateClozeParagraph(ClozeParagraphGenerationContext context) {
         var prompt = PromptsGenerator.clozeParagraph(context);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        var model = chatClient.resolveFastModel();
-        log.warn("Calling DeepSeek for reading paragraph cloze generation with fast model='{}'", model);
-        return runLLM(messages, new ParameterizedTypeReference<ClozeParagraphGeneration>() {
-        }, model);
+        return runFastLLM(messages, new ParameterizedTypeReference<ClozeParagraphGeneration>() {
+        });
     }
 
     @Override
@@ -272,11 +270,8 @@ public class LLMGenerator implements LLMPort {
                                                                  List<VocabularyClozeGenerationSeed> vocabulary) {
         var prompt = PromptsGenerator.vocabularyClozeSentences(topic, vocabulary);
         var messages = generatePrompt(new SystemPrompt(""), new UserPrompt(prompt));
-        var model = chatClient.resolveFastModel();
-        log.warn("Calling DeepSeek for vocabulary cloze generation with fast model='{}', vocabularyCount={}",
-                model, vocabulary == null ? 0 : vocabulary.size());
-        return runLLM(messages, new ParameterizedTypeReference<VocabularyClozeBatch>() {
-        }, model);
+        return runFastLLM(messages, new ParameterizedTypeReference<VocabularyClozeBatch>() {
+        });
     }
 
     @Override

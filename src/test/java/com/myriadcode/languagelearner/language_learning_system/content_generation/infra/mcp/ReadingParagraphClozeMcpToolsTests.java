@@ -39,12 +39,31 @@ class ReadingParagraphClozeMcpToolsTests {
         when(clozeService.storeGeneration("user-1", generated)).thenReturn(expected);
 
         try (var ignored = McpUserContextHolder.scoped("user-1")) {
-            assertThat(tools.storeReadingParagraphClozeGeneration(generated)).isSameAs(expected);
+            var result = tools.storeReadingParagraphClozeGeneration(generated);
+            assertThat(result.stored()).isTrue();
+            assertThat(result.validationErrors()).isEmpty();
+            assertThat(result.session()).isSameAs(expected);
         }
 
         var order = inOrder(jobService, clozeService);
         order.verify(jobService).require("user-1", READING_PARAGRAPH_CLOZE);
         order.verify(clozeService).storeGeneration("user-1", generated);
         order.verify(jobService).delete("user-1");
+    }
+
+    @Test
+    void validationFailureIsReturnedAndKeepsPendingJob() {
+        var generated = new ClozeParagraphGeneration(List.of());
+        when(clozeService.storeGeneration("user-1", generated))
+                .thenThrow(new IllegalArgumentException("paragraphs must contain at least one paragraph"));
+
+        try (var ignored = McpUserContextHolder.scoped("user-1")) {
+            var result = tools.storeReadingParagraphClozeGeneration(generated);
+            assertThat(result.stored()).isFalse();
+            assertThat(result.validationErrors()).containsExactly("paragraphs must contain at least one paragraph");
+            assertThat(result.session()).isNull();
+        }
+
+        verify(jobService, never()).delete("user-1");
     }
 }

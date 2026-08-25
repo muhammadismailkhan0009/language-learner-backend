@@ -83,7 +83,7 @@ public class ReadingParagraphClozeJpaRepoImpl implements ReadingParagraphClozeRe
         return new ReadingParagraphClozeBlank(
                 new ReadingParagraphClozeBlank.ReadingParagraphClozeBlankId(entity.getId()), entity.getBlankIndex(),
                 entity.getBlankToken(), entity.getExactAnswer(), entity.getAnswerExplanation(),
-                ReadingParagraphClozeBlank.PracticeKind.valueOf(entity.getPracticeKind()), entity.getVocabularyId(),
+                com.myriadcode.languagelearner.common.enums.ClozePracticeKind.valueOf(entity.getPracticeKind()), entity.getVocabularyId(),
                 List.copyOf(entity.getGrammarRuleIds()));
     }
 }

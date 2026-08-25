@@ -73,8 +73,9 @@ public class ReadingParagraphClozeService {
     ) {
         var vocabularyIds = context.vocabulary().stream().map(ClozeParagraphGenerationContext.VocabularySource::id).collect(Collectors.toSet());
         var grammarIds = context.grammarRules().stream().map(ClozeParagraphGenerationContext.GrammarSource::id).collect(Collectors.toSet());
-        if (!validator.isValid(generated, vocabularyIds, grammarIds))
-            throw new IllegalArgumentException("Unable to generate valid reading paragraph cloze content");
+        var validationErrors = validator.validate(generated, vocabularyIds, grammarIds);
+        if (!validationErrors.isEmpty())
+            throw new IllegalArgumentException("Reading paragraph cloze validation failed: " + String.join("; ", validationErrors));
         return toResponse(repo.save(toSession(userId, context, generated)), userId);
     }
 
@@ -114,7 +115,7 @@ public class ReadingParagraphClozeService {
                         new ReadingParagraphClozeBlank.ReadingParagraphClozeBlankId(UUID.randomUUID().toString()),
                         blankIndex++, sourceBlank.blankToken().trim(), sourceBlank.exactAnswer().trim(),
                         sourceBlank.answerExplanation().trim(),
-                        ReadingParagraphClozeBlank.PracticeKind.valueOf(sourceBlank.practiceKind().trim()),
+                        sourceBlank.practiceKind(),
                         sourceBlank.vocabularyId(), sourceBlank.grammarRuleIds()));
             }
             paragraphs.add(new ReadingParagraphClozeParagraph(

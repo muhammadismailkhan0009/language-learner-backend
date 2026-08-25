@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.behavior.reading_paragraph_cloze;
 
+import com.myriadcode.languagelearner.common.enums.ClozePracticeKind;
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.configs.TestDbConfigs;
@@ -47,7 +48,7 @@ class ReadingParagraphClozePersistenceBehaviorTests {
     private ReadingParagraphClozeSession session(String id, String userId, String token, String answer) {
         var blank = new ReadingParagraphClozeBlank(
                 new ReadingParagraphClozeBlank.ReadingParagraphClozeBlankId("blank-" + id), 0, token, answer,
-                "Exact form explanation", ReadingParagraphClozeBlank.PracticeKind.VOCABULARY_AND_GRAMMAR,
+                "Exact form explanation", ClozePracticeKind.VOCABULARY_AND_GRAMMAR,
                 "v1", List.of("g1"));
         var paragraph = new ReadingParagraphClozeParagraph(
                 new ReadingParagraphClozeParagraph.ReadingParagraphClozeParagraphId("paragraph-" + id), 0,

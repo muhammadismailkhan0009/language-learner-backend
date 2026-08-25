@@ -1,5 +1,6 @@
 package com.myriadcode.languagelearner.behavior.reading_paragraph_cloze;
 
+import com.myriadcode.languagelearner.common.enums.ClozePracticeKind;
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_content.application.externals.*;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.FetchPrivateVocabularyApi;
@@ -23,7 +24,7 @@ class ReadingParagraphClozeServiceBehaviorTests {
         ClozeParagraphLlmApi llm = ignored -> new ClozeParagraphGeneration(List.of(
                 new ClozeParagraphGeneration.Paragraph("Trip", "Mia {{b1}} nach Hause.", List.of(
                         new ClozeParagraphGeneration.Blank("{{b1}}", "geht", "Third-person singular.",
-                                "VOCABULARY_FORM", "v1", List.of())))));
+                                ClozePracticeKind.VOCABULARY_FORM, "v1", List.of())))));
         FetchPrivateVocabularyApi vocabularyApi = new FetchPrivateVocabularyApi() {
             public com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord getVocabularyRecord(String id, String userId) { return null; }
             public List<com.myriadcode.languagelearner.language_learning_system.application.externals.PrivateVocabularyRecord> getVocabularyRecords(List<String> ids, String userId) { return List.of(); }
