@@ -124,6 +124,17 @@ class ReadingPracticeSessionFlowTests {
     }
 
     @Test
+    @DisplayName("listSessions: counts vocabulary usages across every generated scenario")
+    void listSessionsCountsVocabularyAcrossScenarios() {
+        readingPracticeService.createSession("user-1");
+
+        var sessions = readingPracticeService.listSessions("user-1");
+
+        assertThat(sessions).singleElement().satisfies(summary ->
+                assertThat(summary.vocabCount()).isEqualTo(30));
+    }
+
+    @Test
     @DisplayName("getSession: reloads every scenario with paragraphs, sentences, and vocabulary")
     void getSessionReloadsCompleteScenarioHierarchy() {
         readingPracticeService.createSession("user-1");

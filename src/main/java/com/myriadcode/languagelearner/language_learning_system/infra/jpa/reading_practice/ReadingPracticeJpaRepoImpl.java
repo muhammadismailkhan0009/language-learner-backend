@@ -145,6 +145,10 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
 
     private ReadingPracticeSession toDomainSummary(ReadingPracticeSessionEntity entity) {
         var base = READING_PRACTICE_JPA_MAPPER.toDomain(entity);
+        var usages = entity.getScenarios().stream()
+                .flatMap(scenario -> scenario.getVocabularyUsages().stream())
+                .map(READING_PRACTICE_JPA_MAPPER::toUsageDomain)
+                .toList();
         return new ReadingPracticeSession(
                 base.id(),
                 base.userId(),
@@ -152,7 +156,7 @@ public class ReadingPracticeJpaRepoImpl implements ReadingPracticeRepo {
                 base.readingText(),
                 List.of(),
                 base.createdAt(),
-                List.of(),
+                usages,
                 List.of()
         );
     }

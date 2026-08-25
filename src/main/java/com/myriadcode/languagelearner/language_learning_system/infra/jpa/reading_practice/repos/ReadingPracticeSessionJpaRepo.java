@@ -18,6 +18,7 @@ public interface ReadingPracticeSessionJpaRepo extends JpaRepository<ReadingPrac
     })
     Optional<ReadingPracticeSessionEntity> findByIdAndUserId(String id, String userId);
 
+    @EntityGraph(attributePaths = {"scenarios", "scenarios.vocabularyUsages"})
     List<ReadingPracticeSessionEntity> findAllByUserIdOrderByCreatedAtDesc(String userId);
 
     List<ReadingPracticeSessionEntity> findAllByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
