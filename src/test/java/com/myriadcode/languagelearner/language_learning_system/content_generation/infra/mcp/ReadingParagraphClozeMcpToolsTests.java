@@ -24,9 +24,10 @@ class ReadingParagraphClozeMcpToolsTests {
     void fetchReturnsExistingLlmInputObject() {
         var context = new ClozeParagraphGenerationContext(LanguageLevel.A2, List.of(), List.of());
         when(clozeService.prepareGeneration("user-1")).thenReturn(context);
+        when(clozeService.buildGenerationPrompt(context)).thenReturn("same prompt");
 
         try (var ignored = McpUserContextHolder.scoped("user-1")) {
-            assertThat(tools.getReadingParagraphClozeGeneration()).isSameAs(context);
+            assertThat(tools.getReadingParagraphClozeGeneration()).isEqualTo("same prompt");
         }
 
         verify(jobService).require("user-1", READING_PARAGRAPH_CLOZE);

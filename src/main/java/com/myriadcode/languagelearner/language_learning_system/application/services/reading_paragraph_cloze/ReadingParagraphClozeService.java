@@ -49,6 +49,11 @@ public class ReadingParagraphClozeService {
         return contextService.build(userId, 50);
     }
 
+    @Transactional(readOnly = true)
+    public String buildGenerationPrompt(ClozeParagraphGenerationContext context) {
+        return llmApi.buildPrompt(context);
+    }
+
     @Transactional
     public ReadingParagraphClozeSessionResponse storeGeneration(String userId, ClozeParagraphGeneration generated) {
         requireUserId(userId);

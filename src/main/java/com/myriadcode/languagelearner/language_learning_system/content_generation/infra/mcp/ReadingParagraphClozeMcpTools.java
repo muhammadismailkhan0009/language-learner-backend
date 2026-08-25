@@ -26,12 +26,13 @@ public class ReadingParagraphClozeMcpTools {
 
     @McpTool(
             name = "get_reading_paragraph_cloze_generation",
-            description = "Fetch the exact input context for a pending reading paragraph cloze generation."
+            description = "Fetch the exact generation prompt for a pending reading paragraph cloze generation."
     )
-    public ClozeParagraphGenerationContext getReadingParagraphClozeGeneration() {
+    public String getReadingParagraphClozeGeneration() {
         var userId = McpUserContextHolder.requireUserId();
         jobService.require(userId, READING_PARAGRAPH_CLOZE);
-        return clozeService.prepareGeneration(userId);
+        var context = clozeService.prepareGeneration(userId);
+        return clozeService.buildGenerationPrompt(context);
     }
 
     @McpTool(

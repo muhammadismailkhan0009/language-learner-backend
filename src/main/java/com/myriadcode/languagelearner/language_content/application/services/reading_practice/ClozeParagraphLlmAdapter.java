@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_content.application.services.rea
 
 import com.myriadcode.languagelearner.language_content.application.externals.*;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
+import com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -18,5 +19,10 @@ public class ClozeParagraphLlmAdapter implements ClozeParagraphLlmApi {
         }
         var generated = llmPort.generateClozeParagraph(context);
         return generated == null ? new ClozeParagraphGeneration(List.of()) : generated;
+    }
+
+    @Override
+    public String buildPrompt(ClozeParagraphGenerationContext context) {
+        return PromptsGenerator.clozeParagraph(context);
     }
 }
