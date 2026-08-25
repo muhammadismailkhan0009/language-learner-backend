@@ -19,6 +19,8 @@ public interface ReadingPracticeJpaMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
+    @Mapping(target = "paragraphs", ignore = true)
+    @Mapping(target = "vocabularyUsages", ignore = true)
     @Mapping(target = "scenarios", ignore = true)
     ReadingPracticeSessionEntity toEntity(ReadingPracticeSession session);
 
