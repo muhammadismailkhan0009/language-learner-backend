@@ -20,7 +20,7 @@ public class VocabularyClozeGenerationRequestService {
     ) {
         this.generationService = generationService;
         this.jobService = jobService;
-        this.provider = VocabularyClozeGenerationProvider.valueOf(provider.trim().toUpperCase());
+        this.provider = VocabularyClozeGenerationProvider.MCP;
     }
 
     public GenerateVocabularyClozeSentencesResponse request(String userId) {
