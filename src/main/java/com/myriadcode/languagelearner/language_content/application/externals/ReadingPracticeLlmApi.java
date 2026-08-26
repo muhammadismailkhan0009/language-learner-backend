@@ -16,6 +16,14 @@ public interface ReadingPracticeLlmApi {
                                                          List<String> grammarRuleTitles,
                                                          int scenarioCount);
 
+    default String buildReadingContentPrompt(List<ReadingPracticeVocabularySeed> vocabulary,
+                                             List<String> previousScenarioLabels,
+                                             LanguageLevel difficultyLevel,
+                                             List<String> grammarRuleTitles,
+                                             int scenarioCount) {
+        throw new UnsupportedOperationException("Reading content prompt generation is not available");
+    }
+
     List<String> identifyUsedVocabulary(List<ReadingPracticeVocabularySeed> vocabulary,
                                         String readingText);
 }

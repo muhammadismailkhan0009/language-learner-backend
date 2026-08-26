@@ -5,6 +5,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Rea
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeReadingContent;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.ports.LLMPort;
+import com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -49,6 +50,16 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
                         scenario.usedVocabulary().stream().map(used ->
                                 new ReadingPracticeReadingContent.UsedVocabulary(
                                         used.vocabularyId(), used.surface())).toList())).toList());
+    }
+
+    @Override
+    public String buildReadingContentPrompt(List<ReadingPracticeVocabularySeed> vocabulary,
+                                            List<String> previousScenarioLabels,
+                                            LanguageLevel difficultyLevel,
+                                            List<String> grammarRuleTitles,
+                                            int scenarioCount) {
+        return PromptsGenerator.readingContentParagraphs(vocabulary, previousScenarioLabels,
+                difficultyLevel, grammarRuleTitles, scenarioCount);
     }
 
     @Override

@@ -6,6 +6,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeParagraphResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingVocabularyFlashCardView;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeGenerationRequestService;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeGenerationRequestResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
@@ -28,25 +30,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ReadingPracticeControllerBehaviorTests {
 
     @Test
-    @DisplayName("Create session API: returns 201 and forwards user id")
-    void createSessionReturnsCreatedAndForwardsUserId() throws Exception {
+    @DisplayName("Create session API: returns 202 and forwards user id")
+    void createSessionReturnsAcceptedAndForwardsUserId() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var generationService = mock(ReadingPracticeGenerationRequestService.class);
+        when(generationService.request("user-1")).thenReturn(
+                new ReadingPracticeGenerationRequestResponse("Run your MCP tool."));
+        var controller = new ReadingPracticeController(service, generationService);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(post("/api/v1/reading-practice/sessions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"userId\":\"user-1\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.response.message").value("Run your MCP tool."));
 
-        verify(service).createSession("user-1");
+        verify(generationService).request("user-1");
     }
 
     @Test
     @DisplayName("List sessions API: returns wrapped summaries for user")
     void listSessionsReturnsWrappedData() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         when(service.listSessions("user-1")).thenReturn(List.of(
@@ -83,7 +89,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Get session API: returns wrapped session details")
     void getSessionReturnsWrappedSessionDetails() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         var flashcard = new ReadingVocabularyFlashCardView(
@@ -129,7 +135,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Delete session API: returns 204 and forwards session and user ids")
     void deleteSessionReturnsNoContentAndForwardsArgs() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}", "session-1")
@@ -143,7 +149,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Detach flashcard API: returns 204 and forwards session/user/flashcard ids")
     void detachFlashcardReturnsNoContentAndForwardsArgs() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}/flashcards/{flashcardId}",
@@ -159,7 +165,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("List sessions API: requires userId query parameter")
     void listSessionsRequiresUserIdQueryParam() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/reading-practice/sessions")
@@ -173,7 +179,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Get session API: requires userId query parameter")
     void getSessionRequiresUserIdQueryParam() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(get("/api/v1/reading-practice/sessions/{sessionId}", "session-1")
@@ -187,7 +193,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Delete session API: requires userId query parameter")
     void deleteSessionRequiresUserIdQueryParam() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}", "session-1"))
@@ -200,7 +206,7 @@ class ReadingPracticeControllerBehaviorTests {
     @DisplayName("Detach flashcard API: requires userId query parameter")
     void detachFlashcardRequiresUserIdQueryParam() throws Exception {
         var service = mock(ReadingPracticeService.class);
-        var controller = new ReadingPracticeController(service);
+        var controller = new ReadingPracticeController(service, mock(ReadingPracticeGenerationRequestService.class));
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(delete("/api/v1/reading-practice/sessions/{sessionId}/flashcards/{flashcardId}",

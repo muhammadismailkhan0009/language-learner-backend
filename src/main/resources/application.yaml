@@ -45,9 +45,10 @@ llm:
 
 content-generation:
   reading-paragraph-cloze-provider: MCP
+  reading-practice-provider: MCP
 
 mcp:
-  public-url: ${MCP_PUBLIC_URL:http://localhost:8080/mcp}
+  public-url: ${MCP_PUBLIC_URL:https://api-language-learner.myriadcode.com/mcp}
 
 api-keys: >-
   ${DEEPSEEK_API_KEY:}

@@ -4,6 +4,8 @@ import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.request.CreateReadingPracticeSessionRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeSessionSummaryResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.reading_practice.response.ReadingPracticeGenerationRequestResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice.ReadingPracticeService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -24,17 +26,20 @@ import java.util.List;
 public class ReadingPracticeController {
 
     private final ReadingPracticeService readingPracticeService;
+    private final ReadingPracticeGenerationRequestService generationRequestService;
 
-    public ReadingPracticeController(ReadingPracticeService readingPracticeService) {
+    public ReadingPracticeController(ReadingPracticeService readingPracticeService,
+                                     ReadingPracticeGenerationRequestService generationRequestService) {
         this.readingPracticeService = readingPracticeService;
+        this.generationRequestService = generationRequestService;
     }
 
     @PostMapping
-    public ResponseEntity<Void> createSession(
+    public ResponseEntity<ApiResponse<ReadingPracticeGenerationRequestResponse>> createSession(
             @RequestBody CreateReadingPracticeSessionRequest request
     ) {
-        readingPracticeService.createSession(request.userId());
-        return ResponseEntity.status(201).build();
+        var response = generationRequestService.request(request.userId());
+        return ResponseEntity.accepted().body(new ApiResponse<>(response));
     }
 
     @GetMapping

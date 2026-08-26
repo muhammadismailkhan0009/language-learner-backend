@@ -79,6 +79,32 @@ public class ReadingPracticeService {
     }
 
     public void createSession(String userId) {
+        var preparation = prepareGeneration(userId);
+        ReadingPracticeReadingContent generated;
+        try (var ignored = LlmUserContextHolder.scoped(userId)) {
+            generated = readingPracticeLlmApi.generateReadingContent(
+                    preparation.sources(), preparation.previousTopics(),
+                    preparation.generationContext().learnerLevel(),
+                    preparation.generationContext().grammarRuleTitles(), 3
+            );
+        }
+        storePreparedGeneration(userId, preparation, generated);
+    }
+
+    public String prepareGenerationPrompt(String userId) {
+        var preparation = prepareGeneration(userId);
+        return readingPracticeLlmApi.buildReadingContentPrompt(
+                preparation.sources(), preparation.previousTopics(),
+                preparation.generationContext().learnerLevel(),
+                preparation.generationContext().grammarRuleTitles(), 3
+        );
+    }
+
+    public void storeGeneration(String userId, ReadingPracticeReadingContent generated) {
+        storePreparedGeneration(userId, prepareGeneration(userId), generated);
+    }
+
+    private ReadingPracticeGenerationPreparation prepareGeneration(String userId) {
         var flashcards = vocabularyFlashcardReviewsApi.getVocabularyFlashcardsByUser(userId);
         if (flashcards.isEmpty()) {
             throw new IllegalArgumentException("No vocabulary flashcards found for user");
@@ -100,29 +126,23 @@ public class ReadingPracticeService {
 
         var previousTopics = readingPracticeRepo.findRecentTopicsByUserId(userId, RECENT_TOPIC_LIMIT);
         var generationContext = readingGenerationContextService.build(userId);
-        createGeneratedSession(userId, selected, vocabRecords, previousTopics, generationContext);
-    }
-
-    private void createGeneratedSession(String userId, List<ReadingPracticeCandidate> selected,
-                                    Map<String, PrivateVocabularyRecord> vocabRecords,
-                                    List<String> previousTopics, ReadingGenerationContext generationContext) {
         var sources = selected.stream().map(candidate -> {
             var record = vocabRecords.get(candidate.vocabularyId());
             return record == null ? null : new ReadingPracticeVocabularySeed(
                     candidate.vocabularyId(), record.surface(), record.translation());
         }).filter(java.util.Objects::nonNull).toList();
-        ReadingPracticeReadingContent generated;
-        try (var ignored = LlmUserContextHolder.scoped(userId)) {
-            generated = readingPracticeLlmApi.generateReadingContent(sources, previousTopics,
-                    generationContext.learnerLevel(), generationContext.grammarRuleTitles(), 3);
-        }
-        var errors = contentValidator.validate(3, sources, generated);
+        return new ReadingPracticeGenerationPreparation(selected, vocabRecords, previousTopics, generationContext, sources);
+    }
+
+    private void storePreparedGeneration(String userId, ReadingPracticeGenerationPreparation preparation,
+                                         ReadingPracticeReadingContent generated) {
+        var errors = contentValidator.validate(3, preparation.sources(), generated);
         if (!errors.isEmpty()) {
-            throw new IllegalArgumentException("Invalid generated reading content: " + String.join("; ", errors));
+            throw new ReadingPracticeValidationException(errors);
         }
-        var candidatesByVocabularyId = selected.stream().collect(Collectors.toMap(
+        var candidatesByVocabularyId = preparation.selected().stream().collect(Collectors.toMap(
                 ReadingPracticeCandidate::vocabularyId, Function.identity(), (first, ignored) -> first));
-        var candidatesBySurface = sources.stream().collect(Collectors.toMap(
+        var candidatesBySurface = preparation.sources().stream().collect(Collectors.toMap(
                 seed -> normalizeSurface(seed.surface()),
                 seed -> candidatesByVocabularyId.get(seed.id()),
                 (first, ignored) -> first));
@@ -135,6 +155,15 @@ public class ReadingPracticeService {
                 new ReadingPracticeSession.ReadingPracticeSessionId(UUID.randomUUID().toString()),
                 new UserId(userId), first.label(), first.readingText(), first.paragraphs(), Instant.now(),
                 first.vocabularyUsages(), scenarios));
+    }
+
+    private record ReadingPracticeGenerationPreparation(
+            List<ReadingPracticeCandidate> selected,
+            Map<String, PrivateVocabularyRecord> vocabularyRecords,
+            List<String> previousTopics,
+            ReadingGenerationContext generationContext,
+            List<ReadingPracticeVocabularySeed> sources
+    ) {
     }
 
     private ReadingPracticeScenario buildScenario(ReadingPracticeReadingContent.Scenario generated, int position,
