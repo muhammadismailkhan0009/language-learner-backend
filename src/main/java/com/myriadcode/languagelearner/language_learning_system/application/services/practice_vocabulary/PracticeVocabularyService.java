@@ -1,72 +1,49 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.practice_vocabulary;
 
-import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.common.ids.UserId;
-import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.ReadingPracticeVocabularySeed;
-import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
+import com.myriadcode.languagelearner.language_content.application.ports.ReadingUsedVocabularySelection;
+import com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.model.PracticeVocabularyReference;
+import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyExtractionRequestRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.*;
 
 @Service
-@Slf4j
 public class PracticeVocabularyService {
 
     private final VocabularyRepo vocabularyRepo;
-    private final ReadingPracticeLlmApi readingPracticeLlmApi;
     private final PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
+    private final PracticeVocabularyExtractionRequestRepo extractionRequestRepo;
 
     public PracticeVocabularyService(VocabularyRepo vocabularyRepo,
-                                     ReadingPracticeLlmApi readingPracticeLlmApi,
-                                     PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo) {
+                                     PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
+                                     PracticeVocabularyExtractionRequestRepo extractionRequestRepo) {
         this.vocabularyRepo = vocabularyRepo;
-        this.readingPracticeLlmApi = readingPracticeLlmApi;
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
+        this.extractionRequestRepo = extractionRequestRepo;
     }
 
-    public void enqueueExtraction(String userId, String text) {
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId is required");
-        }
-        if (text == null || text.isBlank()) {
-            throw new IllegalArgumentException("text is required");
-        }
-
-        Vals.runIo(() -> {
-            try {
-                extractAndStore(userId, text);
-            } catch (RuntimeException ex) {
-                log.error("Practice vocabulary extraction failed for userId={}", userId, ex);
-            }
-        });
+    public String prepareExtractionPrompt(String userId) {
+        var request = extractionRequestRepo.findByUserId(requireUserId(userId))
+                .orElseThrow(() -> new IllegalStateException("No practice vocabulary extraction request found for user"));
+        return PromptsGenerator.readingUsedVocabularySelection(loadVocabularySeeds(userId), request.text());
     }
 
-    public ExtractPracticeVocabularyResult extractAndStore(String userId, String text) {
-        if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("userId is required");
+    public ExtractPracticeVocabularyResult storeExtraction(String userId, ReadingUsedVocabularySelection selection) {
+        var normalizedUserId = requireUserId(userId);
+        extractionRequestRepo.findByUserId(normalizedUserId)
+                .orElseThrow(() -> new IllegalStateException("No practice vocabulary extraction request found for user"));
+        if (selection == null || selection.usedSurfaces() == null) {
+            throw new PracticeVocabularyExtractionValidationException(List.of("usedSurfaces is required"));
         }
-        if (text == null || text.isBlank()) {
-            throw new IllegalArgumentException("text is required");
-        }
-
-        var userVocabulary = vocabularyRepo.findByUserId(userId);
+        var userVocabulary = vocabularyRepo.findByUserId(normalizedUserId);
         if (userVocabulary.isEmpty()) {
             throw new IllegalArgumentException("No vocabulary found for user");
-        }
-
-        var seeds = userVocabulary.stream()
-                .map(vocabulary -> new ReadingPracticeVocabularySeed(vocabulary.surface(), vocabulary.translation()))
-                .toList();
-
-        List<String> usedSurfaces;
-        try (var ignored = LlmUserContextHolder.scoped(userId)) {
-            usedSurfaces = readingPracticeLlmApi.identifyUsedVocabulary(seeds, text);
         }
 
         var vocabularyBySurface = new LinkedHashMap<String, com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary>();
@@ -80,13 +57,15 @@ public class PracticeVocabularyService {
         var matchedWords = new ArrayList<String>();
         var matchedVocabularyIds = new ArrayList<String>();
         var seenVocabularyIds = new HashSet<String>();
-        for (var surface : usedSurfaces) {
+        var unknownSurfaces = new ArrayList<String>();
+        for (var surface : selection.usedSurfaces()) {
             if (surface == null || surface.isBlank()) {
                 continue;
             }
             var normalized = surface.trim();
             var vocabulary = vocabularyBySurface.get(normalized);
             if (vocabulary == null) {
+                unknownSurfaces.add(normalized);
                 continue;
             }
             var vocabularyId = vocabulary.id().id();
@@ -96,12 +75,16 @@ public class PracticeVocabularyService {
             matchedWords.add(vocabulary.surface());
             matchedVocabularyIds.add(vocabularyId);
         }
+        if (!unknownSurfaces.isEmpty()) {
+            throw new PracticeVocabularyExtractionValidationException(
+                    List.of("Unknown vocabulary surfaces: " + unknownSurfaces));
+        }
 
         int added = 0;
         int existing = 0;
         var now = Instant.now();
         for (var vocabularyId : matchedVocabularyIds) {
-            var maybeExisting = practiceVocabularyReferenceRepo.findByUserIdAndVocabularyId(userId, vocabularyId);
+            var maybeExisting = practiceVocabularyReferenceRepo.findByUserIdAndVocabularyId(normalizedUserId, vocabularyId);
             if (maybeExisting.isPresent()) {
                 var current = maybeExisting.get();
                 practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
@@ -117,7 +100,7 @@ public class PracticeVocabularyService {
             }
             practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
                     new PracticeVocabularyReference.PracticeVocabularyReferenceId(UUID.randomUUID().toString()),
-                    new UserId(userId),
+                    new UserId(normalizedUserId),
                     new com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary.VocabularyId(vocabularyId),
                     1,
                     now,
@@ -127,5 +110,20 @@ public class PracticeVocabularyService {
         }
 
         return new ExtractPracticeVocabularyResult(added, existing, matchedWords, matchedVocabularyIds);
+    }
+
+    public void deleteExtractionRequest(String userId) {
+        extractionRequestRepo.deleteByUserId(requireUserId(userId));
+    }
+
+    private List<ReadingPracticeVocabularySeed> loadVocabularySeeds(String userId) {
+        var vocabulary = vocabularyRepo.findByUserId(requireUserId(userId));
+        if (vocabulary.isEmpty()) throw new IllegalArgumentException("No vocabulary found for user");
+        return vocabulary.stream().map(value -> new ReadingPracticeVocabularySeed(value.surface(), value.translation())).toList();
+    }
+
+    private String requireUserId(String userId) {
+        if (userId == null || userId.isBlank()) throw new IllegalArgumentException("userId is required");
+        return userId.trim();
     }
 }

@@ -3,7 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.practice_vocabulary.request.ExtractPracticeVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.practice_vocabulary.response.ExtractPracticeVocabularyResponse;
-import com.myriadcode.languagelearner.language_learning_system.application.services.practice_vocabulary.PracticeVocabularyService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.practice_vocabulary.PracticeVocabularyExtractionRequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,19 +12,19 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("api/v1/practice-vocabulary")
 public class PracticeVocabularyController {
 
-    private final PracticeVocabularyService practiceVocabularyService;
+    private final PracticeVocabularyExtractionRequestService extractionRequestService;
 
-    public PracticeVocabularyController(PracticeVocabularyService practiceVocabularyService) {
-        this.practiceVocabularyService = practiceVocabularyService;
+    public PracticeVocabularyController(PracticeVocabularyExtractionRequestService extractionRequestService) {
+        this.extractionRequestService = extractionRequestService;
     }
 
     @PostMapping("extract")
     public ResponseEntity<ApiResponse<ExtractPracticeVocabularyResponse>> extract(
             @RequestBody ExtractPracticeVocabularyRequest request
     ) {
-        practiceVocabularyService.enqueueExtraction(request.userId(), request.text());
+        var message = extractionRequestService.request(request.userId(), request.text());
         return ResponseEntity.accepted().body(new ApiResponse<>(
-                new ExtractPracticeVocabularyResponse("Extraction request is sent")
+                new ExtractPracticeVocabularyResponse(message)
         ));
     }
 }
