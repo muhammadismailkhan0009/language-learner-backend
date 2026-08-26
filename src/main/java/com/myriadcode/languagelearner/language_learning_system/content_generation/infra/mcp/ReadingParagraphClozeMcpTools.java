@@ -30,7 +30,9 @@ public class ReadingParagraphClozeMcpTools {
     )
     public String getReadingParagraphClozeGeneration() {
         var userId = McpUserContextHolder.requireUserId();
-        jobService.require(userId, READING_PARAGRAPH_CLOZE);
+        if (!jobService.exists(userId, READING_PARAGRAPH_CLOZE)) {
+            return "";
+        }
         var context = clozeService.prepareGeneration(userId);
         return clozeService.buildGenerationPrompt(context);
     }

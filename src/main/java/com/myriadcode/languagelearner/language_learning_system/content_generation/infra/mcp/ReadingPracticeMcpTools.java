@@ -32,7 +32,9 @@ public class ReadingPracticeMcpTools {
     )
     public String getReadingPracticeGeneration() {
         var userId = McpUserContextHolder.requireUserId();
-        jobService.require(userId, READING_PRACTICE);
+        if (!jobService.exists(userId, READING_PRACTICE)) {
+            return "";
+        }
         return readingPracticeService.prepareGenerationPrompt(userId);
     }
 

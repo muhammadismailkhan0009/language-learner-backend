@@ -39,6 +39,13 @@ public class ContentGenerationJobService {
         return job;
     }
 
+    @Transactional(readOnly = true)
+    public boolean exists(String userId, ContentGenerationJobType expectedType) {
+        return jobRepo.findByUserId(userId)
+                .map(job -> job.type() == expectedType)
+                .orElse(false);
+    }
+
     @Transactional
     public void delete(String userId) {
         jobRepo.deleteByUserId(userId);
