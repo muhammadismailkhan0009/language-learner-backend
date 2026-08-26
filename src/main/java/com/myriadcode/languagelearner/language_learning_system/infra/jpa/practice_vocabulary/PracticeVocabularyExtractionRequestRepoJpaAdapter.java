@@ -11,26 +11,32 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Repository
-public class PracticeVocabularyExtractionRequestJpaRepoImpl implements PracticeVocabularyExtractionRequestRepo {
+public class PracticeVocabularyExtractionRequestRepoJpaAdapter implements PracticeVocabularyExtractionRequestRepo {
     private final PracticeVocabularyExtractionRequestJpaRepo jpaRepo;
 
-    public PracticeVocabularyExtractionRequestJpaRepoImpl(PracticeVocabularyExtractionRequestJpaRepo jpaRepo) {
+    public PracticeVocabularyExtractionRequestRepoJpaAdapter(PracticeVocabularyExtractionRequestJpaRepo jpaRepo) {
         this.jpaRepo = jpaRepo;
     }
 
-    @Override @Transactional
+    @Override
+    @Transactional
     public PracticeVocabularyExtractionRequest save(PracticeVocabularyExtractionRequest request) {
         var saved = jpaRepo.save(new PracticeVocabularyExtractionRequestEntity(
                 request.userId().id(), request.text(), request.createdAt()));
-        return new PracticeVocabularyExtractionRequest(new UserId(saved.getUserId()), saved.getText(), saved.getCreatedAt());
+        return new PracticeVocabularyExtractionRequest(
+                new UserId(saved.getUserId()), saved.getText(), saved.getCreatedAt());
     }
 
-    @Override @Transactional(readOnly = true)
+    @Override
+    @Transactional(readOnly = true)
     public Optional<PracticeVocabularyExtractionRequest> findByUserId(String userId) {
         return jpaRepo.findById(userId).map(value -> new PracticeVocabularyExtractionRequest(
                 new UserId(value.getUserId()), value.getText(), value.getCreatedAt()));
     }
 
-    @Override @Transactional
-    public void deleteByUserId(String userId) { jpaRepo.deleteById(userId); }
+    @Override
+    @Transactional
+    public void deleteByUserId(String userId) {
+        jpaRepo.deleteById(userId);
+    }
 }
