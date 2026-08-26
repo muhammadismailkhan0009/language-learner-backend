@@ -6,6 +6,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice.WritingPracticeGenerationRequestService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,15 +26,17 @@ import java.util.List;
 public class WritingPracticeController {
 
     private final WritingPracticeService writingPracticeService;
+    private final WritingPracticeGenerationRequestService generationRequestService;
 
-    public WritingPracticeController(WritingPracticeService writingPracticeService) {
+    public WritingPracticeController(WritingPracticeService writingPracticeService,
+                                     WritingPracticeGenerationRequestService generationRequestService) {
         this.writingPracticeService = writingPracticeService;
+        this.generationRequestService = generationRequestService;
     }
 
     @PostMapping
     public ResponseEntity<ApiResponse<String>> createSession(@RequestBody CreateWritingPracticeSessionRequest request) {
-        writingPracticeService.createSessionReactive(request.userId());
-        return ResponseEntity.accepted().body(new ApiResponse<>("Creation in progress. Will display when done."));
+        return ResponseEntity.accepted().body(new ApiResponse<>(generationRequestService.request(request.userId())));
     }
 
     @GetMapping
@@ -47,18 +50,20 @@ public class WritingPracticeController {
         return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.getSession(userId, sessionId)));
     }
 
-    @PostMapping("{sessionId}/submission")
+    @PostMapping("{sessionId}/scenarios/{scenarioId}/submission")
     public ResponseEntity<Void> submitAnswer(@PathVariable("sessionId") String sessionId,
+                                             @PathVariable("scenarioId") String scenarioId,
                                              @RequestParam(value = "draft", defaultValue = "false") boolean draft,
                                              @RequestBody SubmitWritingPracticeAnswerRequest request) {
-        writingPracticeService.submitAnswer(request.userId(), sessionId, request.submittedAnswer(), draft);
+        writingPracticeService.submitAnswer(request.userId(), sessionId, scenarioId, request.submittedAnswer(), draft);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("{sessionId}/feedback/re-evaluate")
+    @PostMapping("{sessionId}/scenarios/{scenarioId}/feedback/re-evaluate")
     public ResponseEntity<ApiResponse<WritingPracticeSessionResponse>> reEvaluateFeedback(@PathVariable("sessionId") String sessionId,
+                                                                                         @PathVariable("scenarioId") String scenarioId,
                                                                                          @RequestParam("userId") String userId) {
-        return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.reEvaluateFeedback(userId, sessionId)));
+        return ResponseEntity.ok(new ApiResponse<>(writingPracticeService.reEvaluateFeedback(userId, sessionId, scenarioId)));
     }
 
     @DeleteMapping("{sessionId}")
@@ -68,11 +73,12 @@ public class WritingPracticeController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("{sessionId}/flashcards/{flashcardId}")
+    @DeleteMapping("{sessionId}/scenarios/{scenarioId}/flashcards/{flashcardId}")
     public ResponseEntity<Void> detachFlashcard(@PathVariable("sessionId") String sessionId,
+                                                @PathVariable("scenarioId") String scenarioId,
                                                 @PathVariable("flashcardId") String flashcardId,
                                                 @RequestParam("userId") String userId) {
-        writingPracticeService.detachFlashcard(userId, sessionId, flashcardId);
+        writingPracticeService.detachFlashcard(userId, sessionId, scenarioId, flashcardId);
         return ResponseEntity.noContent().build();
     }
 }

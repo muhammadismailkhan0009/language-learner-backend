@@ -20,6 +20,10 @@ public class WritingPracticeVocabularyUsageEntity {
     @JoinColumn(name = "session_id", nullable = false)
     private WritingPracticeSessionEntity session;
 
+    @ManyToOne
+    @JoinColumn(name = "scenario_id", nullable = false)
+    private WritingPracticeScenarioEntity scenario;
+
     @Column(name = "flashcard_id", nullable = false)
     private String flashcardId;
 
@@ -33,6 +37,8 @@ public class WritingPracticeVocabularyUsageEntity {
     public void setId(String id) { this.id = id; }
     public WritingPracticeSessionEntity getSession() { return session; }
     public void setSession(WritingPracticeSessionEntity session) { this.session = session; }
+    public WritingPracticeScenarioEntity getScenario() { return scenario; }
+    public void setScenario(WritingPracticeScenarioEntity scenario) { this.scenario = scenario; }
     public String getFlashcardId() { return flashcardId; }
     public void setFlashcardId(String flashcardId) { this.flashcardId = flashcardId; }
     public String getVocabularyId() { return vocabularyId; }

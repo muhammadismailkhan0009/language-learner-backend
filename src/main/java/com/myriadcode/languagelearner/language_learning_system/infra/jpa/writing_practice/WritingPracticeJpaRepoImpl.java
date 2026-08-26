@@ -5,12 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.myriadcode.languagelearner.common.ids.UserId;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingGrammarIssueAnalytics;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeScenario;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingSentencePair;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingStructuredFeedback;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingGrammarIssueAnalyticsEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeSessionEntity;
+import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeScenarioEntity;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.mappers.WritingPracticeJpaMapper;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingGrammarIssueAnalyticsJpaRepo;
 import com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.repos.WritingPracticeSessionJpaRepo;
@@ -45,31 +47,13 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     @Transactional
     public WritingPracticeSession save(WritingPracticeSession session) {
         var entity = WRITING_PRACTICE_JPA_MAPPER.toEntity(session);
-        entity.setStructuredFeedbackJson(toJson(session.structuredFeedback()));
         if (entity.getCreatedAt() == null) {
             entity.setCreatedAt(Instant.now());
         }
-
-        var sentenceEntities = session.sentencePairs() == null ? List.<WritingSentencePair>of() : session.sentencePairs();
-        entity.setSentencePairs(new LinkedHashSet<>(sentenceEntities.stream()
-                .sorted(Comparator.comparingInt(WritingSentencePair::position))
-                .map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairEntity)
-                .peek(pair -> {
-                    if (pair.getCreatedAt() == null) {
-                        pair.setCreatedAt(Instant.now());
-                    }
-                })
-                .toList()));
-
-        var usageEntities = session.vocabularyUsages() == null ? List.<WritingVocabularyUsage>of() : session.vocabularyUsages();
-        entity.setVocabularyUsages(new LinkedHashSet<>(usageEntities.stream()
-                .map(WRITING_PRACTICE_JPA_MAPPER::toUsageEntity)
-                .peek(usage -> {
-                    if (usage.getCreatedAt() == null) {
-                        usage.setCreatedAt(Instant.now());
-                    }
-                })
-                .toList()));
+        if (session.scenarios().isEmpty()) throw new IllegalArgumentException("Writing session requires scenarios");
+        var first = session.scenarios().getFirst();
+        entity.setTopic(first.topic()); entity.setEnglishParagraph(first.englishParagraph()); entity.setGermanParagraph(first.germanParagraph());
+        entity.setScenarios(session.scenarios().stream().map(scenario -> toScenarioEntity(entity, scenario)).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new)));
 
         return toDomain(writingPracticeSessionJpaRepo.save(entity));
     }
@@ -93,7 +77,10 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     @Transactional(readOnly = true)
     public List<String> findRecentTopicsByUserId(String userId, int limit) {
         return writingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
-                .map(WritingPracticeSessionEntity::getTopic)
+                .flatMap(session -> session.getScenarios().stream())
+                .sorted(Comparator.comparingInt(WritingPracticeScenarioEntity::getPosition))
+                .map(WritingPracticeScenarioEntity::getTopic)
+                .limit(limit)
                 .toList();
     }
 
@@ -104,7 +91,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
             return List.of();
         }
         return writingPracticeSessionJpaRepo.findAllByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit)).stream()
-                .map(session -> session.getVocabularyUsages().stream()
+                .map(session -> session.getScenarios().stream().flatMap(scenario -> scenario.getVocabularyUsages().stream())
                         .map(com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeVocabularyUsageEntity::getVocabularyId)
                         .filter(java.util.Objects::nonNull)
                         .collect(java.util.stream.Collectors.toUnmodifiableSet()))
@@ -114,6 +101,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     @Override
     @Transactional
     public WritingPracticeSession updateSubmission(String sessionId,
+                                                   String scenarioId,
                                                    String userId,
                                                    String submittedAnswer,
                                                    Instant submittedAt,
@@ -122,11 +110,11 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                                                    Instant feedbackGeneratedAt) {
         var entity = writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
-        entity.setSubmittedAnswer(submittedAnswer);
-        entity.setSubmittedAt(submittedAt);
-        entity.setFeedbackText(feedbackText);
-        entity.setStructuredFeedbackJson(toJson(structuredFeedback));
-        entity.setFeedbackGeneratedAt(feedbackGeneratedAt);
+        var scenario = entity.getScenarios().stream().filter(value -> value.getId().equals(scenarioId)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Writing scenario not found"));
+        scenario.setSubmittedAnswer(submittedAnswer); scenario.setSubmittedAt(submittedAt);
+        scenario.setFeedbackText(feedbackText); scenario.setStructuredFeedbackJson(toJson(structuredFeedback));
+        scenario.setFeedbackGeneratedAt(feedbackGeneratedAt);
         return toDomain(writingPracticeSessionJpaRepo.save(entity));
     }
 
@@ -157,16 +145,24 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
 
     @Override
     @Transactional
+    public void deleteGrammarIssueAnalytics(String sessionId, String scenarioId, String userId) {
+        analyticsJpaRepo.deleteBySessionIdAndScenarioIdAndUserId(sessionId, scenarioId, userId);
+    }
+
+    @Override
+    @Transactional
     public void deleteByIdAndUserId(String sessionId, String userId) {
         writingPracticeSessionJpaRepo.deleteByIdAndUserId(sessionId, userId);
     }
 
     @Override
     @Transactional
-    public void detachFlashcard(String userId, String sessionId, String flashcardId) {
+    public void detachFlashcard(String userId, String sessionId, String scenarioId, String flashcardId) {
         writingPracticeSessionJpaRepo.findByIdAndUserId(sessionId, userId)
                 .ifPresent(session -> {
-                    var usages = session.getVocabularyUsages();
+                    var scenario = session.getScenarios().stream().filter(value -> value.getId().equals(scenarioId)).findFirst()
+                            .orElseThrow(() -> new IllegalArgumentException("Writing scenario not found"));
+                    var usages = scenario.getVocabularyUsages();
                     if (usages == null || usages.isEmpty()) {
                         return;
                     }
@@ -179,56 +175,42 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
 
     private WritingPracticeSession toDomain(WritingPracticeSessionEntity entity) {
         var base = WRITING_PRACTICE_JPA_MAPPER.toDomain(entity);
-        var sentencePairs = entity.getSentencePairs().stream()
-                .sorted(Comparator.comparingInt(com.myriadcode.languagelearner.language_learning_system.infra.jpa.writing_practice.entities.WritingPracticeSentencePairEntity::getPosition))
-                .map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairDomain)
-                .toList();
-        var usages = entity.getVocabularyUsages().stream()
-                .map(WRITING_PRACTICE_JPA_MAPPER::toUsageDomain)
-                .toList();
-        return new WritingPracticeSession(
-                base.id(),
-                base.userId(),
-                base.topic(),
-                base.englishParagraph(),
-                base.germanParagraph(),
-                base.createdAt(),
-                base.submittedAnswer(),
-                base.submittedAt(),
-                base.feedbackText(),
-                fromJson(entity.getStructuredFeedbackJson()),
-                base.feedbackGeneratedAt(),
-                sentencePairs,
-                usages
-        );
+        return new WritingPracticeSession(base.id(), base.userId(), base.createdAt(), entity.getScenarios().stream()
+                .sorted(Comparator.comparingInt(WritingPracticeScenarioEntity::getPosition)).map(this::toScenarioDomain).toList());
     }
 
     private WritingPracticeSession toDomainSummary(WritingPracticeSessionEntity entity) {
         var base = WRITING_PRACTICE_JPA_MAPPER.toDomain(entity);
-        var usages = entity.getVocabularyUsages().stream()
-                .map(WRITING_PRACTICE_JPA_MAPPER::toUsageDomain)
-                .toList();
-        return new WritingPracticeSession(
-                base.id(),
-                base.userId(),
-                base.topic(),
-                base.englishParagraph(),
-                base.germanParagraph(),
-                base.createdAt(),
-                base.submittedAnswer(),
-                base.submittedAt(),
-                base.feedbackText(),
-                fromJson(entity.getStructuredFeedbackJson()),
-                base.feedbackGeneratedAt(),
-                List.of(),
-                usages
-        );
+        return new WritingPracticeSession(base.id(), base.userId(), base.createdAt(), entity.getScenarios().stream()
+                .sorted(Comparator.comparingInt(WritingPracticeScenarioEntity::getPosition)).map(this::toScenarioDomain).toList());
+    }
+
+    private WritingPracticeScenarioEntity toScenarioEntity(WritingPracticeSessionEntity session, WritingPracticeScenario scenario) {
+        var entity = new WritingPracticeScenarioEntity();
+        entity.setId(scenario.id().id()); entity.setSession(session); entity.setPosition(scenario.position());
+        entity.setTopic(scenario.topic()); entity.setEnglishParagraph(scenario.englishParagraph()); entity.setGermanParagraph(scenario.germanParagraph());
+        entity.setSubmittedAnswer(scenario.submittedAnswer()); entity.setSubmittedAt(scenario.submittedAt()); entity.setFeedbackText(scenario.feedbackText());
+        entity.setStructuredFeedbackJson(toJson(scenario.structuredFeedback())); entity.setFeedbackGeneratedAt(scenario.feedbackGeneratedAt()); entity.setCreatedAt(Instant.now());
+        scenario.sentencePairs().stream().sorted(Comparator.comparingInt(WritingSentencePair::position)).map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairEntity)
+                .peek(value -> value.setCreatedAt(Instant.now())).forEach(entity::addSentencePair);
+        scenario.vocabularyUsages().stream().map(WRITING_PRACTICE_JPA_MAPPER::toUsageEntity)
+                .peek(value -> value.setCreatedAt(Instant.now())).forEach(entity::addVocabularyUsage);
+        return entity;
+    }
+
+    private WritingPracticeScenario toScenarioDomain(WritingPracticeScenarioEntity entity) {
+        return new WritingPracticeScenario(new WritingPracticeScenario.WritingPracticeScenarioId(entity.getId()), entity.getPosition(),
+                entity.getTopic(), entity.getEnglishParagraph(), entity.getGermanParagraph(), entity.getSubmittedAnswer(), entity.getSubmittedAt(),
+                entity.getFeedbackText(), fromJson(entity.getStructuredFeedbackJson()), entity.getFeedbackGeneratedAt(),
+                entity.getSentencePairs().stream().sorted(Comparator.comparingInt(value -> value.getPosition())).map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairDomain).toList(),
+                entity.getVocabularyUsages().stream().map(WRITING_PRACTICE_JPA_MAPPER::toUsageDomain).toList());
     }
 
     private WritingGrammarIssueAnalyticsEntity toAnalyticsEntity(WritingGrammarIssueAnalytics analytics) {
         var entity = new WritingGrammarIssueAnalyticsEntity();
         entity.setId(analytics.id().id());
         entity.setSessionId(analytics.sessionId().id());
+        entity.setScenarioId(analytics.scenarioId().id());
         entity.setUserId(analytics.userId().id());
         entity.setGrammarRuleIdentifier(analytics.grammarRuleIdentifier());
         entity.setIssueType(analytics.issueType());
@@ -245,6 +227,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
         return new WritingGrammarIssueAnalytics(
                 new WritingGrammarIssueAnalytics.WritingGrammarIssueAnalyticsId(entity.getId()),
                 new WritingPracticeSession.WritingPracticeSessionId(entity.getSessionId()),
+                new WritingPracticeScenario.WritingPracticeScenarioId(entity.getScenarioId()),
                 new UserId(entity.getUserId()),
                 entity.getGrammarRuleIdentifier(),
                 entity.getIssueType(),

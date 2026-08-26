@@ -1,13 +1,10 @@
 package com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice;
 
-import com.myriadcode.languagelearner.concurnas_like_library.Vals;
 import com.myriadcode.languagelearner.common.ids.UserId;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeBilingualContent;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeLlmApi;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingSubmissionFeedbackLlmApi;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingFeedbackVocabularyItem;
-import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeSentencePairSeed;
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
+import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeGeneration;
+import com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator;
 import com.myriadcode.languagelearner.language_content.infra.llm.LlmUserContextHolder;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.writing_practice.response.WritingPracticeSessionSummaryResponse;
@@ -18,17 +15,16 @@ import com.myriadcode.languagelearner.language_learning_system.application.exter
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
 import com.myriadcode.languagelearner.language_learning_system.application.mappers.writing_practice.WritingPracticeApiMapper;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeScenario;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingSentencePair;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingVocabularyUsage;
 import com.myriadcode.languagelearner.language_learning_system.domain.practice_vocabulary.repo.PracticeVocabularyReferenceRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
-import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.exercise_vocabulary.RecentExerciseVocabularyUsageService;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,15 +42,13 @@ public class WritingPracticeService {
 
     private static final String FEEDBACK_DIFFICULTY_LEVEL = "B1";
     private static final int RECENT_TOPIC_LIMIT = 10;
+    private static final int SCENARIO_COUNT = 3;
     private static final WritingPracticeApiMapper WRITING_PRACTICE_API_MAPPER = WritingPracticeApiMapper.INSTANCE;
 
     private final WritingPracticeRepo writingPracticeRepo;
     private final FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi;
     private final FetchPrivateVocabularyApi fetchPrivateVocabularyApi;
-    private final WritingPracticeLlmApi writingPracticeLlmApi;
     private final PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo;
-    private final WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi;
-    private final GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService;
     private final WritingFeedbackPipelineService writingFeedbackPipelineService;
     private final WritingGenerationContextService writingGenerationContextService;
     private final UserDifficultyLevelApi userDifficultyLevelApi;
@@ -63,39 +57,11 @@ public class WritingPracticeService {
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
 
-    @Value("${writing.feedback.structured-enabled:true}")
-    private boolean structuredFeedbackEnabled = true;
-
-    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
-                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
-                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  WritingPracticeLlmApi writingPracticeLlmApi,
-                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService) {
-        this(
-                writingPracticeRepo,
-                vocabularyFlashcardReviewsApi,
-                fetchPrivateVocabularyApi,
-                writingPracticeLlmApi,
-                practiceVocabularyReferenceRepo,
-                writingSubmissionFeedbackLlmApi,
-                grammarFeedbackOrchestrationService,
-                null,
-                null,
-                null,
-                null
-        );
-    }
-
     @Autowired
     public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
                                   FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
                                   FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  WritingPracticeLlmApi writingPracticeLlmApi,
                                   PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
                                   WritingFeedbackPipelineService writingFeedbackPipelineService,
                                   WritingGenerationContextService writingGenerationContextService,
                                   UserDifficultyLevelApi userDifficultyLevelApi,
@@ -103,67 +69,50 @@ public class WritingPracticeService {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
-        this.writingPracticeLlmApi = writingPracticeLlmApi;
         this.practiceVocabularyReferenceRepo = practiceVocabularyReferenceRepo;
-        this.writingSubmissionFeedbackLlmApi = writingSubmissionFeedbackLlmApi;
-        this.grammarFeedbackOrchestrationService = grammarFeedbackOrchestrationService;
         this.writingFeedbackPipelineService = writingFeedbackPipelineService;
         this.writingGenerationContextService = writingGenerationContextService;
         this.userDifficultyLevelApi = userDifficultyLevelApi;
         this.recentExerciseVocabularyUsageService = recentExerciseVocabularyUsageService;
     }
 
-    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
-                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
-                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  WritingPracticeLlmApi writingPracticeLlmApi,
-                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
-                                  WritingFeedbackPipelineService writingFeedbackPipelineService,
-                                  WritingGenerationContextService writingGenerationContextService,
-                                  UserDifficultyLevelApi userDifficultyLevelApi) {
-        this(writingPracticeRepo, vocabularyFlashcardReviewsApi, fetchPrivateVocabularyApi,
-                writingPracticeLlmApi, practiceVocabularyReferenceRepo, writingSubmissionFeedbackLlmApi,
-                grammarFeedbackOrchestrationService, writingFeedbackPipelineService,
-                writingGenerationContextService, userDifficultyLevelApi, null);
+    public String prepareGenerationPrompt(String userId) {
+        var preparation = prepareGeneration(userId);
+        return PromptsGenerator.writingPracticeGeneration(preparation.selectedVocabulary(), preparation.previousTopics(),
+                preparation.generationContext().learnerLevel(), preparation.generationContext().grammarRuleTitles(), SCENARIO_COUNT);
     }
 
-    public WritingPracticeService(WritingPracticeRepo writingPracticeRepo,
-                                  FetchVocabularyFlashcardReviewsApi vocabularyFlashcardReviewsApi,
-                                  FetchPrivateVocabularyApi fetchPrivateVocabularyApi,
-                                  WritingPracticeLlmApi writingPracticeLlmApi,
-                                  PracticeVocabularyReferenceRepo practiceVocabularyReferenceRepo,
-                                  WritingSubmissionFeedbackLlmApi writingSubmissionFeedbackLlmApi,
-                                  GrammarFeedbackOrchestrationService grammarFeedbackOrchestrationService,
-                                  WritingGenerationContextService writingGenerationContextService) {
-        this(
-                writingPracticeRepo,
-                vocabularyFlashcardReviewsApi,
-                fetchPrivateVocabularyApi,
-                writingPracticeLlmApi,
-                practiceVocabularyReferenceRepo,
-                writingSubmissionFeedbackLlmApi,
-                grammarFeedbackOrchestrationService,
-                null,
-                writingGenerationContextService,
-                null,
-                null
-        );
-    }
-
-    public void createSessionReactive(String userId) {
+    public void storeGeneration(String userId, WritingPracticeGeneration generated) {
         var normalizedUserId = requireUserId(userId);
-        Vals.runIo(() -> {
-            try {
-                createSession(normalizedUserId);
-            } catch (Exception exception) {
-                log.error("Writing session background creation failed for userId={}", normalizedUserId, exception);
-            }
-        });
+        var preparation = prepareGeneration(normalizedUserId);
+        var errors = validateGeneration(generated);
+        if (!errors.isEmpty()) throw new WritingPracticeGenerationValidationException(errors);
+
+        List<WritingPracticeScenario> scenarios;
+        try {
+            scenarios = java.util.stream.IntStream.range(0, generated.scenarios().size()).mapToObj(position -> {
+                var source = generated.scenarios().get(position);
+                var english = contentAssembler.sanitizeParagraph(source.englishParagraph());
+                var german = contentAssembler.sanitizeParagraph(source.germanParagraph());
+                var pairs = contentAssembler.buildSentencePairs(source.sentencePairs(), english, german);
+                var usedSurfaces = contentAssembler.findUsedVocabularySurfaces(
+                        preparation.selectedVocabulary(), source.usedVocabulary());
+                var usages = candidateAssembler.buildUsages(
+                        preparation.selected(), preparation.vocabularyRecords(), usedSurfaces);
+                return new WritingPracticeScenario(
+                        new WritingPracticeScenario.WritingPracticeScenarioId(UUID.randomUUID().toString()), position,
+                        source.topic().trim(), english, german, null, null, null, null, null, pairs, usages);
+            }).toList();
+        } catch (IllegalArgumentException exception) {
+            throw new WritingPracticeGenerationValidationException(List.of(exception.getMessage()));
+        }
+
+        writingPracticeRepo.save(new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId(UUID.randomUUID().toString()),
+                new UserId(normalizedUserId), Instant.now(), scenarios));
     }
 
-    public void createSession(String userId) {
+    private WritingPracticeGenerationPreparation prepareGeneration(String userId) {
         var normalizedUserId = requireUserId(userId);
         var flashcards = vocabularyFlashcardReviewsApi.getVocabularyFlashcardsByUser(normalizedUserId);
         if (flashcards.isEmpty()) {
@@ -204,63 +153,44 @@ public class WritingPracticeService {
         var generationContext = writingGenerationContextService == null
                 ? new WritingGenerationContext(com.myriadcode.languagelearner.common.enums.LanguageLevel.B1, List.of())
                 : writingGenerationContextService.build(normalizedUserId);
-        String topic;
-        String englishParagraph;
-        String germanParagraph;
-        Set<String> usedVocabularySurfaces;
-        List<WritingSentencePair> sentencePairs;
-        try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
-            topic = writingPracticeLlmApi.selectTopicForWriting(
-                    selectedVocab, previousTopics, generationContext.learnerLevel());
-            if (topic == null || topic.isBlank()) {
-                topic = "General writing practice";
-            }
-
-            var bilingualContent = writingPracticeLlmApi.generateBilingualContent(
-                    topic,
-                    selectedVocab,
-                    generationContext.learnerLevel(),
-                    generationContext.grammarRuleTitles()
-            );
-            englishParagraph = contentAssembler.sanitizeParagraph(bilingualContent.englishParagraph());
-            germanParagraph = contentAssembler.sanitizeParagraph(bilingualContent.germanParagraph());
-            if (englishParagraph.isBlank() || germanParagraph.isBlank()) {
-                throw new IllegalArgumentException("Unable to generate writing content");
-            }
-            sentencePairs = contentAssembler.buildSentencePairs(
-                    writingPracticeLlmApi.splitIntoSentencePairs(englishParagraph, germanParagraph),
-                    englishParagraph,
-                    germanParagraph
-            );
-            if (sentencePairs.isEmpty()) {
-                throw new IllegalArgumentException("Unable to generate writing sentence pairs");
-            }
-            usedVocabularySurfaces = contentAssembler.findUsedVocabularySurfaces(
-                    selectedVocab,
-                    bilingualContent.usedVocabulary()
-            );
-        }
-
-        var usages = candidateAssembler.buildUsages(selected, vocabRecords, usedVocabularySurfaces);
-
-        var session = new WritingPracticeSession(
-                new WritingPracticeSession.WritingPracticeSessionId(UUID.randomUUID().toString()),
-                new UserId(normalizedUserId),
-                topic,
-                englishParagraph,
-                germanParagraph,
-                Instant.now(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                sentencePairs,
-                usages
-        );
-
-        writingPracticeRepo.save(session);
+        return new WritingPracticeGenerationPreparation(selected, vocabRecords, selectedVocab, previousTopics, generationContext);
     }
+
+    private List<String> validateGeneration(WritingPracticeGeneration generated) {
+        var errors = new java.util.ArrayList<String>();
+        if (generated == null || generated.scenarios() == null) {
+            return List.of("scenarios is required");
+        }
+        if (generated.scenarios().size() != SCENARIO_COUNT) {
+            errors.add("scenarios must contain exactly " + SCENARIO_COUNT + " items");
+        }
+        for (int index = 0; index < generated.scenarios().size(); index++) {
+            var scenario = generated.scenarios().get(index);
+            var path = "scenarios[" + index + "]";
+            if (scenario == null) { errors.add(path + " is required"); continue; }
+            if (scenario.topic() == null || scenario.topic().isBlank()) errors.add(path + ".topic is required");
+            if (scenario.englishParagraph() == null || scenario.englishParagraph().isBlank()) errors.add(path + ".englishParagraph is required");
+            if (scenario.germanParagraph() == null || scenario.germanParagraph().isBlank()) errors.add(path + ".germanParagraph is required");
+            if (scenario.sentencePairs() == null || scenario.sentencePairs().isEmpty()) errors.add(path + ".sentencePairs is required");
+            else for (int pairIndex = 0; pairIndex < scenario.sentencePairs().size(); pairIndex++) {
+                var pair = scenario.sentencePairs().get(pairIndex);
+                if (pair == null || pair.englishSentence() == null || pair.englishSentence().isBlank()
+                        || pair.germanSentence() == null || pair.germanSentence().isBlank()) {
+                    errors.add(path + ".sentencePairs[" + pairIndex + "] requires both sentences");
+                }
+            }
+            if (scenario.usedVocabulary() == null) errors.add(path + ".usedVocabulary is required");
+        }
+        return List.copyOf(errors);
+    }
+
+    private record WritingPracticeGenerationPreparation(
+            List<com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticeCandidate> selected,
+            Map<String, PrivateVocabularyRecord> vocabularyRecords,
+            List<WritingPracticeVocabularySeed> selectedVocabulary,
+            List<String> previousTopics,
+            WritingGenerationContext generationContext
+    ) {}
 
     public WritingPracticeSessionResponse getSession(String userId, String sessionId) {
         var normalizedUserId = requireUserId(userId);
@@ -281,16 +211,12 @@ public class WritingPracticeService {
         writingPracticeRepo.deleteByIdAndUserId(sessionId, normalizedUserId);
     }
 
-    public void detachFlashcard(String userId, String sessionId, String flashcardId) {
+    public void detachFlashcard(String userId, String sessionId, String scenarioId, String flashcardId) {
         var normalizedUserId = requireUserId(userId);
-        writingPracticeRepo.detachFlashcard(normalizedUserId, sessionId, flashcardId);
+        writingPracticeRepo.detachFlashcard(normalizedUserId, sessionId, scenarioId, flashcardId);
     }
 
-    public void submitAnswer(String userId, String sessionId, String submittedAnswer) {
-        submitAnswer(userId, sessionId, submittedAnswer, false);
-    }
-
-    public void submitAnswer(String userId, String sessionId, String submittedAnswer, boolean draft) {
+    public void submitAnswer(String userId, String sessionId, String scenarioId, String submittedAnswer, boolean draft) {
         var normalizedUserId = requireUserId(userId);
         var sanitizedAnswer = sanitizeSubmission(submittedAnswer);
         if (sanitizedAnswer.isBlank()) {
@@ -298,23 +224,25 @@ public class WritingPracticeService {
         }
         var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
+        requireScenario(session, scenarioId);
 
         if (draft) {
-            writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, null, null, null);
+            writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId, sanitizedAnswer, null, null, null);
             return;
         }
         var submittedAt = Instant.now();
-        writingPracticeRepo.updateSubmission(sessionId, normalizedUserId, sanitizedAnswer, submittedAt, null, null);
+        writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId, sanitizedAnswer, submittedAt, null, null);
     }
 
     @Transactional
-    public WritingPracticeSessionResponse reEvaluateFeedback(String userId, String sessionId) {
+    public WritingPracticeSessionResponse reEvaluateFeedback(String userId, String sessionId, String scenarioId) {
         var normalizedUserId = requireUserId(userId);
         var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
-        var submittedAnswer = sanitizeSubmission(session.submittedAnswer());
-        if (submittedAnswer.isBlank() || session.submittedAt() == null) {
-            throw new IllegalArgumentException("Writing session must have a submitted answer before re-evaluation");
+        var scenario = requireScenario(session, scenarioId);
+        var submittedAnswer = sanitizeSubmission(scenario.submittedAnswer());
+        if (submittedAnswer.isBlank() || scenario.submittedAt() == null) {
+            throw new IllegalArgumentException("Writing scenario must have a submitted answer before re-evaluation");
         }
         if (writingFeedbackPipelineService == null) {
             throw new IllegalStateException("Structured writing feedback pipeline is not available");
@@ -323,10 +251,10 @@ public class WritingPracticeService {
         WritingFeedbackPipelineService.WritingFeedbackPipelineResult feedback;
         try (var ignored = LlmUserContextHolder.scoped(normalizedUserId)) {
             feedback = writingFeedbackPipelineService.generateFeedback(
-                    session,
+                    session.id(), session.userId(), scenario,
                     feedbackLearnerLevel(normalizedUserId),
                     submittedAnswer,
-                    buildFeedbackVocabulary(normalizedUserId, session.vocabularyUsages()),
+                    buildFeedbackVocabulary(normalizedUserId, scenario.vocabularyUsages()),
                     true
             );
         }
@@ -334,9 +262,10 @@ public class WritingPracticeService {
         var generatedAt = Instant.now();
         var updated = writingPracticeRepo.updateSubmission(
                 sessionId,
+                scenarioId,
                 normalizedUserId,
                 submittedAnswer,
-                session.submittedAt(),
+                scenario.submittedAt(),
                 feedback.feedbackText(),
                 feedback.structuredFeedback(),
                 generatedAt
@@ -352,22 +281,12 @@ public class WritingPracticeService {
     }
 
     private WritingPracticeSessionResponse toSessionResponse(WritingPracticeSession session, String userId) {
-        var flashcards = buildFlashcards(userId, session.vocabularyUsages());
-        var mapped = WRITING_PRACTICE_API_MAPPER.toResponse(session, flashcards);
-        return new WritingPracticeSessionResponse(
-                mapped.sessionId(),
-                mapped.topic(),
-                mapped.englishParagraph(),
-                mapped.germanParagraph(),
-                mapped.submittedAnswer(),
-                mapped.submittedAt(),
-                mapped.feedbackText(),
-                mapped.structuredFeedback(),
-                mapped.feedbackGeneratedAt(),
-                mapped.sentencePairs(),
-                mapped.vocabFlashcards(),
-                mapped.createdAt()
-        );
+        return WRITING_PRACTICE_API_MAPPER.toResponse(session, usages -> buildFlashcards(userId, usages));
+    }
+
+    private WritingPracticeScenario requireScenario(WritingPracticeSession session, String scenarioId) {
+        return session.scenarios().stream().filter(value -> value.id().id().equals(scenarioId)).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Writing scenario not found"));
     }
 
     private List<WritingVocabularyFlashCardView> buildFlashcards(String userId,

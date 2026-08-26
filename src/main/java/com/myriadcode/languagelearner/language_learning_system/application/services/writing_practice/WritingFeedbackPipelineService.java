@@ -8,6 +8,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Wri
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarFeedbackOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingGrammarIssueAnalytics;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeSession;
+import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingPracticeScenario;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.model.WritingStructuredFeedback;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import lombok.extern.slf4j.Slf4j;
@@ -41,14 +42,18 @@ public class WritingFeedbackPipelineService {
         this.writingPracticeRepo = writingPracticeRepo;
     }
 
-    public WritingFeedbackPipelineResult generateFeedback(WritingPracticeSession session,
+    public WritingFeedbackPipelineResult generateFeedback(WritingPracticeSession.WritingPracticeSessionId sessionId,
+                                                          UserId userId,
+                                                          WritingPracticeScenario scenario,
                                                           String learnerLevel,
                                                           String learnerGermanAnswer,
                                                           List<WritingFeedbackVocabularyItem> selectedVocabulary) {
-        return generateFeedback(session, learnerLevel, learnerGermanAnswer, selectedVocabulary, false);
+        return generateFeedback(sessionId, userId, scenario, learnerLevel, learnerGermanAnswer, selectedVocabulary, false);
     }
 
-    public WritingFeedbackPipelineResult generateFeedback(WritingPracticeSession session,
+    public WritingFeedbackPipelineResult generateFeedback(WritingPracticeSession.WritingPracticeSessionId sessionId,
+                                                          UserId userId,
+                                                          WritingPracticeScenario scenario,
                                                           String learnerLevel,
                                                           String learnerGermanAnswer,
                                                           List<WritingFeedbackVocabularyItem> selectedVocabulary,
@@ -59,17 +64,17 @@ public class WritingFeedbackPipelineService {
 
         var meaning = callWithSingleRetry(
                 "meaning-analysis",
-                () -> llmApi.analyzeMeaning(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer),
+                () -> llmApi.analyzeMeaning(learnerLevel, scenario.englishParagraph(), scenario.germanParagraph(), learnerGermanAnswer),
                 validator::validateMeaning
         );
         var vocabulary = callWithSingleRetry(
                 "vocabulary-evaluation",
-                () -> llmApi.evaluateVocabulary(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, selectedVocabulary, meaning),
+                () -> llmApi.evaluateVocabulary(learnerLevel, scenario.englishParagraph(), scenario.germanParagraph(), learnerGermanAnswer, selectedVocabulary, meaning),
                 validator::validateVocabulary
         );
         var grammarIssues = callWithSingleRetry(
                 "grammar-issue-detection",
-                () -> llmApi.detectGrammarIssues(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, grammarCatalog, meaning, vocabulary),
+                () -> llmApi.detectGrammarIssues(learnerLevel, scenario.englishParagraph(), scenario.germanParagraph(), learnerGermanAnswer, grammarCatalog, meaning, vocabulary),
                 validator::validateGrammar
         );
 
@@ -77,14 +82,14 @@ public class WritingFeedbackPipelineService {
 
         var feedback = callWithSingleRetry(
                 "feedback-composition",
-                () -> llmApi.composeFeedback(learnerLevel, session.englishParagraph(), session.germanParagraph(), learnerGermanAnswer, meaning, vocabulary, grammarIssues, topIssues),
+                () -> llmApi.composeFeedback(learnerLevel, scenario.englishParagraph(), scenario.germanParagraph(), learnerGermanAnswer, meaning, vocabulary, grammarIssues, topIssues),
                 validator::validateFeedback
         );
 
         if (replaceExistingAnalytics) {
-            writingPracticeRepo.deleteGrammarIssueAnalytics(session.id().id(), session.userId().id());
+            writingPracticeRepo.deleteGrammarIssueAnalytics(sessionId.id(), scenario.id().id(), userId.id());
         }
-        writingPracticeRepo.saveGrammarIssueAnalytics(toAnalytics(session, grammarIssues));
+        writingPracticeRepo.saveGrammarIssueAnalytics(toAnalytics(sessionId, userId, scenario.id(), grammarIssues));
 
         return new WritingFeedbackPipelineResult(toDomainFeedback(feedback), toFeedbackText(feedback));
     }
@@ -111,7 +116,9 @@ public class WritingFeedbackPipelineService {
         throw failure;
     }
 
-    private List<WritingGrammarIssueAnalytics> toAnalytics(WritingPracticeSession session,
+    private List<WritingGrammarIssueAnalytics> toAnalytics(WritingPracticeSession.WritingPracticeSessionId sessionId,
+                                                           UserId userId,
+                                                           WritingPracticeScenario.WritingPracticeScenarioId scenarioId,
                                                            WritingGrammarIssueDetectionResult result) {
         if (result == null || result.issues() == null || result.issues().isEmpty()) {
             return List.of();
@@ -120,8 +127,9 @@ public class WritingFeedbackPipelineService {
         return result.issues().stream()
                 .map(issue -> new WritingGrammarIssueAnalytics(
                         new WritingGrammarIssueAnalytics.WritingGrammarIssueAnalyticsId(UUID.randomUUID().toString()),
-                        session.id(),
-                        session.userId(),
+                        sessionId,
+                        scenarioId,
+                        userId,
                         emptyToNull(issue.grammarRuleIdentifier()),
                         blankDefault(issue.issueType(), "writing_issue"),
                         issue.priority(),

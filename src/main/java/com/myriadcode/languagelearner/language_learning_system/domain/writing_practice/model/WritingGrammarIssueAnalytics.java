@@ -7,6 +7,7 @@ import java.time.Instant;
 public record WritingGrammarIssueAnalytics(
         WritingGrammarIssueAnalyticsId id,
         WritingPracticeSession.WritingPracticeSessionId sessionId,
+        WritingPracticeScenario.WritingPracticeScenarioId scenarioId,
         UserId userId,
         String grammarRuleIdentifier,
         String issueType,

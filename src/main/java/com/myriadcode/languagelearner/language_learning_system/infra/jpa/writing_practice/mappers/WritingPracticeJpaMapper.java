@@ -17,16 +17,20 @@ public interface WritingPracticeJpaMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
-    @Mapping(target = "sentencePairs", ignore = true)
-    @Mapping(target = "vocabularyUsages", ignore = true)
+    @Mapping(target = "scenarios", ignore = true)
+    @Mapping(target = "topic", ignore = true)
+    @Mapping(target = "englishParagraph", ignore = true)
+    @Mapping(target = "germanParagraph", ignore = true)
+    @Mapping(target = "submittedAnswer", ignore = true)
+    @Mapping(target = "submittedAt", ignore = true)
+    @Mapping(target = "feedbackText", ignore = true)
     @Mapping(target = "structuredFeedbackJson", ignore = true)
+    @Mapping(target = "feedbackGeneratedAt", ignore = true)
     WritingPracticeSessionEntity toEntity(WritingPracticeSession session);
 
     @Mapping(target = "id.id", source = "id")
     @Mapping(target = "userId.id", source = "userId")
-    @Mapping(target = "sentencePairs", ignore = true)
-    @Mapping(target = "vocabularyUsages", ignore = true)
-    @Mapping(target = "structuredFeedback", ignore = true)
+    @Mapping(target = "scenarios", ignore = true)
     WritingPracticeSession toDomain(WritingPracticeSessionEntity entity);
 
     @Mapping(target = "id", source = "id.id")

@@ -23,6 +23,7 @@ public interface WritingPracticeRepo {
     }
 
     WritingPracticeSession updateSubmission(String sessionId,
+                                            String scenarioId,
                                             String userId,
                                             String submittedAnswer,
                                             java.time.Instant submittedAt,
@@ -31,12 +32,13 @@ public interface WritingPracticeRepo {
                                             java.time.Instant feedbackGeneratedAt);
 
     default WritingPracticeSession updateSubmission(String sessionId,
+                                                    String scenarioId,
                                                     String userId,
                                                     String submittedAnswer,
                                                     java.time.Instant submittedAt,
                                                     String feedbackText,
                                                     java.time.Instant feedbackGeneratedAt) {
-        return updateSubmission(sessionId, userId, submittedAnswer, submittedAt, feedbackText, null, feedbackGeneratedAt);
+        return updateSubmission(sessionId, scenarioId, userId, submittedAnswer, submittedAt, feedbackText, null, feedbackGeneratedAt);
     }
 
     default void saveGrammarIssueAnalytics(List<WritingGrammarIssueAnalytics> analytics) {
@@ -49,7 +51,12 @@ public interface WritingPracticeRepo {
     default void deleteGrammarIssueAnalytics(String sessionId, String userId) {
     }
 
+    default void deleteGrammarIssueAnalytics(String sessionId, String scenarioId, String userId) {
+        deleteGrammarIssueAnalytics(sessionId, userId);
+    }
+
     void deleteByIdAndUserId(String sessionId, String userId);
 
-    void detachFlashcard(String userId, String sessionId, String flashcardId);
+    void detachFlashcard(String userId, String sessionId, String scenarioId, String flashcardId);
+
 }

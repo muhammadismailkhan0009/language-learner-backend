@@ -892,6 +892,326 @@ public static String readingUsedVocabularySelection(
                 """.formatted(difficultyLevel, topics, vocabList);
   }
 
+  public static String writingPracticeGeneration(
+    List<WritingPracticeVocabularySeed> vocabulary,
+    List<String> previousTopics,
+    LanguageLevel difficultyLevel,
+    List<String> grammarRuleTitles,
+    int scenarioCount) {
+
+  String vocabList = formatWritingVocabulary(vocabulary);
+
+  String topics = previousTopics == null || previousTopics.isEmpty()
+      ? "(none)"
+      : previousTopics.stream()
+          .filter(topic -> topic != null && !topic.isBlank())
+          .map(topic -> "- " + topic.trim())
+          .collect(java.util.stream.Collectors.joining("\n"));
+
+  String grammarTitles = grammarRuleTitles == null || grammarRuleTitles.isEmpty()
+      ? "(none provided)"
+      : grammarRuleTitles.stream()
+          .filter(title -> title != null && !title.isBlank())
+          .map(title -> "- " + title.trim())
+          .collect(java.util.stream.Collectors.joining("\n"));
+
+  return """
+      You are an expert German language teacher creating guided
+      English-to-German writing exercises.
+
+      CEFR Level: %s
+      Required Scenarios: %d
+
+      Generate exactly the requested number of independent writing scenarios.
+
+      Each scenario will be presented and solved independently.
+
+      ==================================================
+      TOPIC SELECTION
+      ==================================================
+
+      For each scenario, first choose one fresh writing topic.
+
+      Topic rules:
+      - The topic must be a short to medium phrase, approximately 4-20 words.
+      - Do not write the topic as a full explanatory sentence.
+      - The topic must describe a realistic situation, experience, event,
+        decision, problem, conversation, or sequence of actions.
+      - The topic must naturally support a short bilingual paragraph.
+      - Avoid repeating or closely paraphrasing recent topics.
+      - Generated scenarios must also be meaningfully different from one another.
+      - Do not generate topics about learning vocabulary, word meanings,
+        grammar explanations, or language learning itself.
+
+      Internally consider several possible topics before choosing each one.
+      Prefer topics that allow useful supplied vocabulary to occur naturally,
+      but never choose an awkward topic merely to consume vocabulary.
+
+      Across the requested scenarios, prefer reasonable contextual diversity.
+      When supplied vocabulary belongs naturally to different semantic groups,
+      distribute those groups across different scenarios rather than forcing
+      unrelated vocabulary into one situation.
+
+      Recent topics to avoid:
+      %s
+
+      ==================================================
+      BILINGUAL CONTENT GENERATION
+      ==================================================
+
+      For EACH selected topic, apply the following rules.
+
+      Primary Goal:
+      Create one natural, coherent everyday situation that the learner can first
+      read in English and then translate into German.
+
+      The exercise should practice useful learner vocabulary and suitable grammar,
+      but natural meaning and coherence are more important than vocabulary coverage.
+
+      Priority Order:
+      Follow this priority order strictly:
+
+      1. A coherent and realistic situation.
+      2. Natural English in the learner prompt.
+      3. Natural and idiomatic German in the reference answer.
+      4. Appropriate difficulty for the requested CEFR level.
+      5. Useful practice of a suitable subset of learner vocabulary.
+      6. Natural exposure to eligible grammar rules.
+
+      The English and German paragraphs must express exactly the same meaning.
+
+      Prefer the same number of sentences in both languages.
+      Each English sentence should correspond clearly to one German sentence.
+      Do not add, remove, or substantially rearrange information between languages.
+
+      Situation and Coherence:
+      - Build the paragraph around ONE clear situation, event, experience,
+        decision, problem, conversation, or sequence of actions.
+      - Every sentence should belong naturally to that same situation.
+      - Each sentence should normally add new information or move the situation forward.
+      - Do not add unrelated information merely to use additional vocabulary.
+      - Do not repeat the same idea using slightly different wording.
+      - When appropriate, give the paragraph a simple beginning,
+        development, and conclusion.
+      - The result must feel like a genuine mini-situation, not a vocabulary list
+        disguised as a paragraph.
+
+      English Paragraph Rules:
+      - Write natural contemporary English.
+      - The English must sound natural independently of the German reference.
+      - Do NOT create awkward English by translating German structures literally.
+      - Do NOT reverse-engineer unnatural English merely to force a German
+        vocabulary item into the reference paragraph.
+      - Prefer expressions a normal English speaker would actually use.
+      - Keep the meaning reasonably direct so that translation into German
+        remains appropriate for the requested CEFR level.
+      - Avoid idioms, literary expressions, unnecessarily abstract ideas,
+        and complicated English syntax.
+
+      German Paragraph Rules:
+      - Express exactly the same meaning as the English paragraph.
+      - Use natural, idiomatic German.
+      - Do not translate the English mechanically word-for-word when German
+        requires a different natural structure.
+      - Use grammar and sentence complexity appropriate to the requested CEFR level.
+      - Prefer common everyday constructions.
+      - Present tense, Perfekt, modal verbs, subordinate clauses, questions,
+        connectors, and other structures may appear when appropriate to the level.
+
+      Vocabulary Selection:
+      - The learner vocabulary is a pool of possible target vocabulary,
+        NOT a checklist.
+      - First decide which vocabulary items genuinely fit the topic and situation.
+      - Use only that coherent subset.
+      - It is completely acceptable to leave many provided vocabulary items unused.
+      - Never add an unrelated sentence merely because unused vocabulary remains.
+      - Never sacrifice coherence or naturalness to increase vocabulary coverage.
+      - Prefer vocabulary that naturally works together in the same semantic situation.
+      - Combine several compatible learner vocabulary items in one sentence when natural.
+      - Vocabulary may appear in any grammatically correct inflected form.
+
+      Used Vocabulary Reporting:
+      - Report only entries from the supplied learner vocabulary.
+      - For every used item, return its original supplied German surface exactly.
+      - If the German paragraph uses an inflected, declined, plural, conjugated,
+        or separated form, still report the original supplied canonical surface.
+      - Do not report the form appearing in the paragraph when it differs from
+        the supplied canonical surface.
+      - Do not report translations, synonyms, or invented surfaces.
+      - Report no supplied vocabulary for a scenario when none is actually used.
+
+      Vocabulary Repetition:
+      - Reuse a selected vocabulary item only when it naturally recurs in the situation.
+      - One natural occurrence is sufficient.
+      - A useful item may appear 2-3 times when repetition genuinely fits the text.
+      - Do not repeat an idea simply to repeat a vocabulary item.
+      - Do not force important vocabulary into multiple different sentences.
+      - Natural contextual usage is more valuable than artificial repetition.
+
+      Vocabulary Meaning:
+      - Vocabulary translations may contain several possible meanings,
+        senses, or notes separated by punctuation such as commas,
+        semicolons, slashes, or parentheses.
+      - Choose ONLY the meaning that naturally fits the current situation.
+      - Do not attempt to represent every supplied English gloss.
+      - If a vocabulary item's supplied meaning does not fit the topic naturally,
+        leave that vocabulary item unused.
+      - Prefer the common everyday meaning when several meanings are possible.
+
+      Behavior to Avoid:
+      - Do not add unrelated sentences merely to consume remaining target vocabulary.
+      - Do not create unnatural English by translating a desired German structure literally.
+      - Do not create multiple sentences with essentially the same meaning merely
+        to repeat vocabulary.
+      - Do not construct a paragraph by independently fitting vocabulary items
+        into sentences and then joining those sentences together.
+      - Do not prefer vocabulary coverage over a believable sequence of ideas.
+
+      Additional Vocabulary:
+      - Use learner vocabulary whenever it fits naturally.
+      - Additional vocabulary is allowed when necessary for coherent and natural expression.
+      - Additional words should be common, useful, and appropriate to the requested
+        CEFR level.
+      - Avoid unnecessary rare, literary, technical, or highly specialized vocabulary.
+
+      Additional Vocabulary by Level:
+      - A1:
+        Keep additional content vocabulary tightly controlled.
+        Normally introduce only about 3-5 additional content words in the full exercise.
+        If the situation requires many unfamiliar words, simplify the situation instead.
+
+      - A2:
+        Common additional vocabulary may be used when needed for natural expression,
+        but avoid introducing a large amount of new thematic vocabulary at once.
+
+      - B1:
+        Common CEFR-appropriate vocabulary may be used more freely when needed
+        for coherent and natural expression.
+        Still avoid unnecessary lexical complexity.
+
+      Function words, articles, pronouns, prepositions, auxiliaries,
+      and ordinary connectors do not count as additional content vocabulary.
+
+      Grammar Usage:
+      - Eligible grammar-rule titles are provided below.
+      - Choose only rules that naturally fit the topic, vocabulary,
+        and requested CEFR level.
+      - You do NOT need to use every eligible grammar rule.
+      - It is acceptable to use no eligible rule if none fits naturally.
+      - A useful grammar structure may recur a few times when natural.
+      - Never distort either paragraph merely to demonstrate a grammar rule.
+      - Ordinary grammar appropriate to the requested CEFR level may also be used.
+
+      Difficulty and Sentence Length:
+      Adapt sentence complexity to the requested CEFR level.
+
+      A1:
+      - Usually 4-10 words per sentence.
+      - Prefer very common vocabulary and straightforward main clauses.
+      - Use more advanced structures mainly when they are explicitly eligible
+        grammar rules.
+
+      A2:
+      - Usually 6-14 words per sentence.
+      - Allow common connectors, modal verbs, Perfekt, subordinate clauses,
+        and moderately varied word order.
+
+      B1:
+      - Usually 8-18 words per sentence.
+      - Allow connected clauses, explanations, reasons, conditions,
+        subordinate clauses, and more developed thoughts.
+
+      These are guidelines, not hard limits.
+      Occasional shorter or longer sentences are allowed when natural.
+
+      Paragraph Length:
+      - Usually 4-7 sentences.
+      - Prefer a compact coherent exercise over a longer paragraph
+        containing filler or unrelated ideas.
+
+      ==================================================
+      CROSS-SCENARIO VOCABULARY BEHAVIOR
+      ==================================================
+
+      Treat the learner vocabulary as one opportunity pool shared across all
+      requested scenarios.
+
+      Individual scenario coherence still has priority.
+
+      However, when several different supplied vocabulary items can be used
+      naturally across different scenarios:
+      - prefer useful diversity across the full generated set
+      - avoid unnecessarily using exactly the same small vocabulary subset
+        in every scenario
+      - distribute unrelated vocabulary among suitable scenarios
+      - do not repeat a supplied item across scenarios merely for coverage
+      - do not force unused vocabulary into any scenario
+
+      This is a diversity preference, NOT a vocabulary-coverage requirement.
+
+      ==================================================
+      SENTENCE PAIR ALIGNMENT
+      ==================================================
+
+      After creating the English and German paragraphs for each scenario,
+      align them sentence by sentence.
+
+      Alignment rules:
+      - Preserve the generated wording exactly.
+      - Do not rewrite either language during alignment.
+      - Preserve sentence order exactly.
+      - Each English sentence should map to exactly one corresponding German sentence.
+      - Prefer generating the paragraphs with naturally matching sentence boundaries
+        so that alignment is straightforward.
+      - If the generated sentence counts differ slightly, use the closest faithful
+        one-to-one segmentation without changing the paragraph meaning or wording.
+      - The aligned sentences must reproduce the same English and German content
+        already generated for that scenario.
+
+      ==================================================
+      FINAL QUALITY CHECK
+      ==================================================
+
+      Before returning the result, internally verify EACH scenario:
+
+      - Is the topic fresh and suitable?
+      - Is it sufficiently different from recent topics?
+      - Is it sufficiently different from the other scenarios generated in this call?
+      - Does the English sound natural on its own?
+      - Does the German sound natural on its own?
+      - Do both paragraphs express the same meaning?
+      - Does every sentence belong to the same situation?
+      - Does each sentence add meaningful information?
+      - Did any sentence exist mainly to force vocabulary?
+      - Did you use a sensible vocabulary subset rather than trying to cover the list?
+      - Are ambiguous vocabulary items used only in a meaning appropriate
+        to the context?
+      - Is additional vocabulary appropriate to the requested CEFR level?
+      - Is the grammar appropriate to the requested CEFR level?
+      - Does every reported used-vocabulary surface exactly match an originally
+        supplied canonical German surface?
+      - Is every reported vocabulary item genuinely represented in the German paragraph?
+      - Do the sentence pairs preserve the generated paragraphs exactly and in order?
+
+      If any scenario fails these checks, revise it before returning the result.
+
+      Style:
+      - Clear, contemporary, everyday language.
+      - No teaching explanations inside the generated exercise.
+
+      Learner Vocabulary (German - translation):
+      %s
+
+      Eligible Grammar-Rule Titles:
+      %s
+      """.formatted(
+      difficultyLevel,
+      scenarioCount,
+      topics,
+      vocabList,
+      grammarTitles);
+}
+
   public static String writingBilingualContent(
     String topic,
     List<WritingPracticeVocabularySeed> vocabulary,

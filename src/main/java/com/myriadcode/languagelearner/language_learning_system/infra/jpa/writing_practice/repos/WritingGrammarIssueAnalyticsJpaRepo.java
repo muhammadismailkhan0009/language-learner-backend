@@ -9,4 +9,6 @@ public interface WritingGrammarIssueAnalyticsJpaRepo extends JpaRepository<Writi
     List<WritingGrammarIssueAnalyticsEntity> findAllBySessionIdAndUserIdOrderByPriorityDescCreatedAtAsc(String sessionId, String userId);
 
     void deleteBySessionIdAndUserId(String sessionId, String userId);
+
+    void deleteBySessionIdAndScenarioIdAndUserId(String sessionId, String scenarioId, String userId);
 }

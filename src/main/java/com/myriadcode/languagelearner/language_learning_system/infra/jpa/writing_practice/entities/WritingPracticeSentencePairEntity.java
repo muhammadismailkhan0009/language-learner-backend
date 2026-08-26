@@ -20,6 +20,10 @@ public class WritingPracticeSentencePairEntity {
     @JoinColumn(name = "session_id", nullable = false)
     private WritingPracticeSessionEntity session;
 
+    @ManyToOne
+    @JoinColumn(name = "scenario_id", nullable = false)
+    private WritingPracticeScenarioEntity scenario;
+
     @Column(name = "sentence_index", nullable = false)
     private int position;
 
@@ -36,6 +40,8 @@ public class WritingPracticeSentencePairEntity {
     public void setId(String id) { this.id = id; }
     public WritingPracticeSessionEntity getSession() { return session; }
     public void setSession(WritingPracticeSessionEntity session) { this.session = session; }
+    public WritingPracticeScenarioEntity getScenario() { return scenario; }
+    public void setScenario(WritingPracticeScenarioEntity scenario) { this.scenario = scenario; }
     public int getPosition() { return position; }
     public void setPosition(int position) { this.position = position; }
     public String getEnglishSentence() { return englishSentence; }

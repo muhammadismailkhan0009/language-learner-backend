@@ -16,6 +16,9 @@ public class WritingGrammarIssueAnalyticsEntity {
     @Column(name = "session_id", nullable = false)
     private String sessionId;
 
+    @Column(name = "scenario_id", nullable = false)
+    private String scenarioId;
+
     @Column(name = "user_id", nullable = false)
     private String userId;
 
@@ -47,6 +50,8 @@ public class WritingGrammarIssueAnalyticsEntity {
     public void setId(String id) { this.id = id; }
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    public String getScenarioId() { return scenarioId; }
+    public void setScenarioId(String scenarioId) { this.scenarioId = scenarioId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
     public String getGrammarRuleIdentifier() { return grammarRuleIdentifier; }

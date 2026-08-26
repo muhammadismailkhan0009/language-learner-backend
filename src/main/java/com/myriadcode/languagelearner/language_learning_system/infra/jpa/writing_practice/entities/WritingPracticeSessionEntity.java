@@ -55,12 +55,7 @@ public class WritingPracticeSessionEntity {
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position ASC")
     @Fetch(FetchMode.SUBSELECT)
-    private Set<WritingPracticeSentencePairEntity> sentencePairs = new LinkedHashSet<>();
-
-    @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("createdAt ASC")
-    @Fetch(FetchMode.SUBSELECT)
-    private Set<WritingPracticeVocabularyUsageEntity> vocabularyUsages = new LinkedHashSet<>();
+    private Set<WritingPracticeScenarioEntity> scenarios = new LinkedHashSet<>();
 
     @PrePersist
     public void onCreate() {
@@ -91,28 +86,13 @@ public class WritingPracticeSessionEntity {
     public void setFeedbackGeneratedAt(Instant feedbackGeneratedAt) { this.feedbackGeneratedAt = feedbackGeneratedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
-    public Set<WritingPracticeSentencePairEntity> getSentencePairs() { return sentencePairs; }
-    public void setSentencePairs(Set<WritingPracticeSentencePairEntity> sentencePairs) {
-        this.sentencePairs.clear();
-        if (sentencePairs == null) {
-            return;
-        }
-        sentencePairs.forEach(this::addSentencePair);
+    public Set<WritingPracticeScenarioEntity> getScenarios() { return scenarios; }
+    public void setScenarios(Set<WritingPracticeScenarioEntity> scenarios) {
+        this.scenarios.clear();
+        if (scenarios != null) scenarios.forEach(this::addScenario);
     }
-    public void addSentencePair(WritingPracticeSentencePairEntity sentencePair) {
-        sentencePair.setSession(this);
-        this.sentencePairs.add(sentencePair);
-    }
-    public Set<WritingPracticeVocabularyUsageEntity> getVocabularyUsages() { return vocabularyUsages; }
-    public void setVocabularyUsages(Set<WritingPracticeVocabularyUsageEntity> vocabularyUsages) {
-        this.vocabularyUsages.clear();
-        if (vocabularyUsages == null) {
-            return;
-        }
-        vocabularyUsages.forEach(this::addVocabularyUsage);
-    }
-    public void addVocabularyUsage(WritingPracticeVocabularyUsageEntity usage) {
-        usage.setSession(this);
-        this.vocabularyUsages.add(usage);
+    public void addScenario(WritingPracticeScenarioEntity scenario) {
+        scenario.setSession(this);
+        this.scenarios.add(scenario);
     }
 }

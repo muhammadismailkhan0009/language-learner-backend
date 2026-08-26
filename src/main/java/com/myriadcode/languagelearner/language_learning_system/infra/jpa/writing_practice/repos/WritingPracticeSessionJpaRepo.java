@@ -10,7 +10,7 @@ import java.util.Optional;
 
 public interface WritingPracticeSessionJpaRepo extends JpaRepository<WritingPracticeSessionEntity, String> {
 
-    @EntityGraph(attributePaths = {"vocabularyUsages", "sentencePairs"})
+    @EntityGraph(attributePaths = {"scenarios", "scenarios.vocabularyUsages", "scenarios.sentencePairs"})
     Optional<WritingPracticeSessionEntity> findByIdAndUserId(String id, String userId);
 
     List<WritingPracticeSessionEntity> findAllByUserIdOrderByCreatedAtDesc(String userId);
