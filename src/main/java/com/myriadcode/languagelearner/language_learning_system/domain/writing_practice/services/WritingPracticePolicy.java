@@ -12,7 +12,7 @@ import java.util.Map;
 public class WritingPracticePolicy {
 
     private static final double FRAGILE_RETRIEVABILITY_THRESHOLD = 0.50;
-    public static final int MAX_WORDS = 50;
+    public static final int MAX_WORDS = 100;
     public static final double REVIEW_RATIO = 0.65;
     public static final double LEARNING_RATIO = 0.20;
     public static final double RE_LEARNING_RATIO = 0.15;

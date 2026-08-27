@@ -109,19 +109,19 @@ class ExerciseVocabularySelectionBehaviorTests {
     }
 
     @Test
-    @DisplayName("Selectors never exceed fifty candidates")
-    void selectorsCapOpportunityPoolAtFifty() {
+    @DisplayName("Selectors never exceed one hundred candidates")
+    void selectorsCapOpportunityPoolAtOneHundred() {
         var readingCandidates = new ArrayList<ReadingPracticeCandidate>();
         var writingCandidates = new ArrayList<WritingPracticeCandidate>();
-        for (int index = 0; index < 70; index++) {
+        for (int index = 0; index < 120; index++) {
             readingCandidates.add(readingCandidate("r-" + index, State.REVIEW,
                     NOW.plusSeconds(index), 0.90, 0, NOW));
             writingCandidates.add(writingCandidate("w-" + index, State.REVIEW,
                     NOW.plusSeconds(index), 0.90, 0, NOW));
         }
 
-        assertThat(new ReadingPracticePolicy().selectCandidates(readingCandidates, NOW, Map.of())).hasSize(50);
-        assertThat(new WritingPracticePolicy().selectCandidates(writingCandidates, NOW, Map.of())).hasSize(50);
+        assertThat(new ReadingPracticePolicy().selectCandidates(readingCandidates, NOW, Map.of())).hasSize(100);
+        assertThat(new WritingPracticePolicy().selectCandidates(writingCandidates, NOW, Map.of())).hasSize(100);
     }
 
     private ReadingPracticeCandidate readingCandidate(String id, State state, Instant due,
