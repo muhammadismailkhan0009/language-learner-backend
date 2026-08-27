@@ -96,9 +96,11 @@ public class WritingPracticeService {
                 var german = contentAssembler.sanitizeParagraph(source.germanParagraph());
                 var pairs = contentAssembler.buildSentencePairs(source.sentencePairs(), english, german);
                 var usedSurfaces = contentAssembler.findUsedVocabularySurfaces(
-                        preparation.selectedVocabulary(), source.usedVocabulary());
+                        candidateAssembler.toVocabularySeeds(
+                                preparation.candidates(), preparation.vocabularyRecords()),
+                        source.usedVocabulary());
                 var usages = candidateAssembler.buildUsages(
-                        preparation.selected(), preparation.vocabularyRecords(), usedSurfaces);
+                        preparation.candidates(), preparation.vocabularyRecords(), usedSurfaces);
                 return new WritingPracticeScenario(
                         new WritingPracticeScenario.WritingPracticeScenarioId(UUID.randomUUID().toString()), position,
                         source.topic().trim(), english, german, null, null, null, null, null, pairs, usages);
@@ -153,7 +155,8 @@ public class WritingPracticeService {
         var generationContext = writingGenerationContextService == null
                 ? new WritingGenerationContext(com.myriadcode.languagelearner.common.enums.LanguageLevel.B1, List.of())
                 : writingGenerationContextService.build(normalizedUserId);
-        return new WritingPracticeGenerationPreparation(selected, vocabRecords, selectedVocab, previousTopics, generationContext);
+        return new WritingPracticeGenerationPreparation(
+                candidates, vocabRecords, selectedVocab, previousTopics, generationContext);
     }
 
     private List<String> validateGeneration(WritingPracticeGeneration generated) {
@@ -185,7 +188,7 @@ public class WritingPracticeService {
     }
 
     private record WritingPracticeGenerationPreparation(
-            List<com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticeCandidate> selected,
+            List<com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticeCandidate> candidates,
             Map<String, PrivateVocabularyRecord> vocabularyRecords,
             List<WritingPracticeVocabularySeed> selectedVocabulary,
             List<String> previousTopics,
