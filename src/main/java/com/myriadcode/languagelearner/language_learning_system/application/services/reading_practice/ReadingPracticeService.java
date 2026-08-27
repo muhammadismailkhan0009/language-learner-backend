@@ -131,18 +131,19 @@ public class ReadingPracticeService {
             return record == null ? null : new ReadingPracticeVocabularySeed(
                     candidate.vocabularyId(), record.surface(), record.translation());
         }).filter(java.util.Objects::nonNull).toList();
-        return new ReadingPracticeGenerationPreparation(selected, vocabRecords, previousTopics, generationContext, sources);
+        return new ReadingPracticeGenerationPreparation(candidates, vocabRecords, previousTopics, generationContext, sources);
     }
 
     private void storePreparedGeneration(String userId, ReadingPracticeGenerationPreparation preparation,
                                          ReadingPracticeReadingContent generated) {
-        var errors = contentValidator.validate(3, preparation.sources(), generated);
+        var candidateSources = toVocabularySeeds(preparation.candidates(), preparation.vocabularyRecords());
+        var errors = contentValidator.validate(3, candidateSources, generated);
         if (!errors.isEmpty()) {
             throw new ReadingPracticeValidationException(errors);
         }
-        var candidatesByVocabularyId = preparation.selected().stream().collect(Collectors.toMap(
+        var candidatesByVocabularyId = preparation.candidates().stream().collect(Collectors.toMap(
                 ReadingPracticeCandidate::vocabularyId, Function.identity(), (first, ignored) -> first));
-        var candidatesBySurface = preparation.sources().stream().collect(Collectors.toMap(
+        var candidatesBySurface = candidateSources.stream().collect(Collectors.toMap(
                 seed -> normalizeSurface(seed.surface()),
                 seed -> candidatesByVocabularyId.get(seed.id()),
                 (first, ignored) -> first));
@@ -158,12 +159,23 @@ public class ReadingPracticeService {
     }
 
     private record ReadingPracticeGenerationPreparation(
-            List<ReadingPracticeCandidate> selected,
+            List<ReadingPracticeCandidate> candidates,
             Map<String, PrivateVocabularyRecord> vocabularyRecords,
             List<String> previousTopics,
             ReadingGenerationContext generationContext,
             List<ReadingPracticeVocabularySeed> sources
     ) {
+    }
+
+    private List<ReadingPracticeVocabularySeed> toVocabularySeeds(
+            List<ReadingPracticeCandidate> candidates,
+            Map<String, PrivateVocabularyRecord> vocabularyRecords
+    ) {
+        return candidates.stream().map(candidate -> {
+            var record = vocabularyRecords.get(candidate.vocabularyId());
+            return record == null ? null : new ReadingPracticeVocabularySeed(
+                    candidate.vocabularyId(), record.surface(), record.translation());
+        }).filter(java.util.Objects::nonNull).toList();
     }
 
     private ReadingPracticeScenario buildScenario(ReadingPracticeReadingContent.Scenario generated, int position,
