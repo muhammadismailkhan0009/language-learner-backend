@@ -27,10 +27,9 @@ public class PracticeVocabularyExtractionRequestService {
     public String request(String userId, String text) {
         if (userId == null || userId.isBlank()) throw new IllegalArgumentException("userId is required");
         if (text == null || text.isBlank()) throw new IllegalArgumentException("text is required");
-        var normalizedUserId = userId.trim();
         requestRepo.save(new PracticeVocabularyExtractionRequest(
-                new UserId(normalizedUserId), text.trim(), clock.instant()));
-        jobService.createOrReplace(normalizedUserId, PRACTICE_VOCABULARY_EXTRACTION);
+                new UserId(userId), text.trim(), clock.instant()));
+        jobService.createOrReplace(userId, PRACTICE_VOCABULARY_EXTRACTION);
         return "Vocabulary extraction requested. Run your MCP tool.";
     }
 }

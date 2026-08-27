@@ -29,19 +29,20 @@ public class PracticeVocabularyService {
     }
 
     public String prepareExtractionPrompt(String userId) {
-        var request = extractionRequestRepo.findByUserId(requireUserId(userId))
+        requireUserId(userId);
+        var request = extractionRequestRepo.findByUserId(userId)
                 .orElseThrow(() -> new IllegalStateException("No practice vocabulary extraction request found for user"));
         return PromptsGenerator.readingUsedVocabularySelection(loadVocabularySeeds(userId), request.text());
     }
 
     public ExtractPracticeVocabularyResult storeExtraction(String userId, ReadingUsedVocabularySelection selection) {
-        var normalizedUserId = requireUserId(userId);
-        extractionRequestRepo.findByUserId(normalizedUserId)
+        requireUserId(userId);
+        extractionRequestRepo.findByUserId(userId)
                 .orElseThrow(() -> new IllegalStateException("No practice vocabulary extraction request found for user"));
         if (selection == null || selection.usedSurfaces() == null) {
             throw new PracticeVocabularyExtractionValidationException(List.of("usedSurfaces is required"));
         }
-        var userVocabulary = vocabularyRepo.findByUserId(normalizedUserId);
+        var userVocabulary = vocabularyRepo.findByUserId(userId);
         if (userVocabulary.isEmpty()) {
             throw new IllegalArgumentException("No vocabulary found for user");
         }
@@ -82,48 +83,51 @@ public class PracticeVocabularyService {
 
         int added = 0;
         int existing = 0;
-        var now = Instant.now();
         for (var vocabularyId : matchedVocabularyIds) {
-            var maybeExisting = practiceVocabularyReferenceRepo.findByUserIdAndVocabularyId(normalizedUserId, vocabularyId);
-            if (maybeExisting.isPresent()) {
-                var current = maybeExisting.get();
-                practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
-                        current.id(),
-                        current.userId(),
-                        current.vocabularyId(),
-                        current.timesMatched() + 1,
-                        current.createdAt(),
-                        now
-                ));
-                existing++;
-                continue;
-            }
-            practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
-                    new PracticeVocabularyReference.PracticeVocabularyReferenceId(UUID.randomUUID().toString()),
-                    new UserId(normalizedUserId),
-                    new com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary.VocabularyId(vocabularyId),
-                    1,
-                    now,
-                    now
-            ));
-            added++;
+            if (recordVocabularyMatch(userId, vocabularyId)) added++;
+            else existing++;
         }
 
         return new ExtractPracticeVocabularyResult(added, existing, matchedWords, matchedVocabularyIds);
     }
 
+    public boolean recordVocabularyMatch(String userId, String vocabularyId) {
+        requireUserId(userId);
+        if (vocabularyId == null || vocabularyId.isBlank()) {
+            throw new IllegalArgumentException("vocabularyId is required");
+        }
+        var now = Instant.now();
+        var existing = practiceVocabularyReferenceRepo.findByUserIdAndVocabularyId(
+                userId, vocabularyId);
+        if (existing.isPresent()) {
+            var current = existing.get();
+            practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
+                    current.id(), current.userId(), current.vocabularyId(), current.timesMatched() + 1,
+                    current.createdAt(), now));
+            return false;
+        }
+        practiceVocabularyReferenceRepo.save(new PracticeVocabularyReference(
+                new PracticeVocabularyReference.PracticeVocabularyReferenceId(UUID.randomUUID().toString()),
+                new UserId(userId),
+                new com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary.VocabularyId(
+                        vocabularyId),
+                1, now, now));
+        return true;
+    }
+
     public void deleteExtractionRequest(String userId) {
-        extractionRequestRepo.deleteByUserId(requireUserId(userId));
+        requireUserId(userId);
+        extractionRequestRepo.deleteByUserId(userId);
     }
 
     private List<ReadingPracticeVocabularySeed> loadVocabularySeeds(String userId) {
-        var vocabulary = vocabularyRepo.findByUserId(requireUserId(userId));
+        requireUserId(userId);
+        var vocabulary = vocabularyRepo.findByUserId(userId);
         if (vocabulary.isEmpty()) throw new IllegalArgumentException("No vocabulary found for user");
         return vocabulary.stream().map(value -> new ReadingPracticeVocabularySeed(value.surface(), value.translation())).toList();
     }
 
-    private String requireUserId(String userId) {
+    private void requireUserId(String userId) {
         if (userId == null || userId.isBlank()) throw new IllegalArgumentException("userId is required");
-        return userId.trim();
     }
 }
