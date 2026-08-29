@@ -6,6 +6,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "practice_vocabulary_extraction_request")
+@Deprecated(forRemoval = true)
 public class PracticeVocabularyExtractionRequestEntity {
     @Id @Column(name = "user_id", nullable = false) private String userId;
     @Column(name = "source_text", nullable = false, columnDefinition = "text") private String text;

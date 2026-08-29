@@ -16,6 +16,7 @@ import static com.myriadcode.languagelearner.language_learning_system.content_ge
 
 @Service
 @Slf4j
+@Deprecated(forRemoval = true)
 public class PracticeVocabularyExtractionMcpTools {
     private final ContentGenerationJobService jobService;
     private final PracticeVocabularyService vocabularyService;

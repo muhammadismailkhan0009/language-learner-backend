@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Optional;
 
 @Repository
+@Deprecated(forRemoval = true)
 public class PracticeVocabularyExtractionRequestRepoJpaAdapter implements PracticeVocabularyExtractionRequestRepo {
     private final PracticeVocabularyExtractionRequestJpaRepo jpaRepo;
 

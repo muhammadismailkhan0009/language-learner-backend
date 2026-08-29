@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_learning_system.application.servi
 
 import java.util.List;
 
+@Deprecated(forRemoval = true)
 public record PracticeVocabularyExtractionStoreResponse(
         boolean stored,
         List<String> validationErrors,

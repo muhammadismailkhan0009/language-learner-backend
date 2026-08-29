@@ -12,6 +12,7 @@ import java.time.Clock;
 import static com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType.PRACTICE_VOCABULARY_EXTRACTION;
 
 @Service
+@Deprecated(forRemoval = true)
 public class PracticeVocabularyExtractionRequestService {
     private final PracticeVocabularyExtractionRequestRepo requestRepo;
     private final ContentGenerationJobService jobService;

@@ -21,8 +21,17 @@ public final class PromptsGenerator {
     return """
         You are extracting useful German vocabulary candidates for a learner's
         self-expanding vocabulary system.
+
+        First, detect the language of the source text.
+
+        - If the source text is already German, extract vocabulary directly from it.
+        - If the source text is not German, translate the complete text internally
+          into natural German before extracting vocabulary.
+        - Perform all candidate extraction against the resulting natural German text.
+        - Do not return the translated source text or the detected language. Return only
+          the candidate schema required below.
   
-        German source text:
+        Source text:
   
         %s
   
@@ -249,16 +258,15 @@ public final class PromptsGenerator {
   
         Return a candidates array.
   
-        Every candidate must contain exactly one field:
-        
-        surface
+        The candidate schema has exactly one field.
+        Every candidate must contain only one field: surface
   
         Requirements:
   
         - surface must contain the canonical German word or chunk
         - use correct German spelling and capitalization
         - preserve umlauts and ß correctly
-        - do not return translations
+        - Do not return translations
         - do not return meanings
         - do not return notes
         - do not return examples

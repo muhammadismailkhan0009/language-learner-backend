@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 
 import java.util.Optional;
 
+@Deprecated(forRemoval = true)
 public interface PracticeVocabularyExtractionRequestRepo {
     PracticeVocabularyExtractionRequest save(PracticeVocabularyExtractionRequest request);
     Optional<PracticeVocabularyExtractionRequest> findByUserId(String userId);

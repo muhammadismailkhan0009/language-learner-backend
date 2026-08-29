@@ -2,11 +2,15 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.AddVocabularyRequest;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.SubmitVocabularyExtractionRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.request.UpdateVocabularyRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.GenerateVocabularyClozeSentencesResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.SubmitVocabularyExtractionResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.vocabulary.response.VocabularyResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyClozeGenerationService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyExtractionService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,11 +31,14 @@ public class VocabularyController {
 
     private final VocabularyOrchestrationService vocabularyOrchestrationService;
     private final VocabularyClozeGenerationService vocabularyClozeGenerationService;
+    private final VocabularyExtractionService vocabularyExtractionService;
 
     public VocabularyController(VocabularyOrchestrationService vocabularyOrchestrationService,
-                                VocabularyClozeGenerationService vocabularyClozeGenerationService) {
+                                VocabularyClozeGenerationService vocabularyClozeGenerationService,
+                                VocabularyExtractionService vocabularyExtractionService) {
         this.vocabularyOrchestrationService = vocabularyOrchestrationService;
         this.vocabularyClozeGenerationService = vocabularyClozeGenerationService;
+        this.vocabularyExtractionService = vocabularyExtractionService;
     }
 
     @PostMapping("v1")
@@ -85,6 +92,17 @@ public class VocabularyController {
     ) {
         var response = vocabularyClozeGenerationService.generate(userId);
         return ResponseEntity.ok(new ApiResponse<>(response));
+    }
+
+    @PostMapping("extractions/v1")
+    public ResponseEntity<ApiResponse<SubmitVocabularyExtractionResponse>> submitExtraction(
+            @Valid @RequestBody SubmitVocabularyExtractionRequest request
+    ) {
+        var extraction = vocabularyExtractionService.submit(request.userId(), request.sourceText());
+        return ResponseEntity.accepted().body(new ApiResponse<>(new SubmitVocabularyExtractionResponse(
+                extraction.id().id(),
+                "Vocabulary extraction requested. Run your MCP tool."
+        )));
     }
 
 }

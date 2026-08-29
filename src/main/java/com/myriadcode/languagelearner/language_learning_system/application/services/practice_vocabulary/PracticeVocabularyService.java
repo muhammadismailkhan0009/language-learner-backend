@@ -28,6 +28,7 @@ public class PracticeVocabularyService {
         this.extractionRequestRepo = extractionRequestRepo;
     }
 
+    @Deprecated(forRemoval = true)
     public String prepareExtractionPrompt(String userId) {
         requireUserId(userId);
         var request = extractionRequestRepo.findByUserId(userId)
@@ -35,6 +36,7 @@ public class PracticeVocabularyService {
         return PromptsGenerator.readingUsedVocabularySelection(loadVocabularySeeds(userId), request.text());
     }
 
+    @Deprecated(forRemoval = true)
     public ExtractPracticeVocabularyResult storeExtraction(String userId, ReadingUsedVocabularySelection selection) {
         requireUserId(userId);
         extractionRequestRepo.findByUserId(userId)
@@ -115,6 +117,7 @@ public class PracticeVocabularyService {
         return true;
     }
 
+    @Deprecated(forRemoval = true)
     public void deleteExtractionRequest(String userId) {
         requireUserId(userId);
         extractionRequestRepo.deleteByUserId(userId);
