@@ -19,13 +19,14 @@ class ReadingPracticeMcpToolsTests {
 
     @Test
     void fetchReturnsExactPromptForAuthenticatedPendingJob() {
+        when(jobService.exists("user-1", READING_PRACTICE)).thenReturn(true);
         when(readingPracticeService.prepareGenerationPrompt("user-1")).thenReturn("reading prompt");
 
         try (var ignored = McpUserContextHolder.scoped("user-1")) {
             assertThat(tools.getReadingPracticeGeneration()).isEqualTo("reading prompt");
         }
 
-        verify(jobService).require("user-1", READING_PRACTICE);
+        verify(jobService).exists("user-1", READING_PRACTICE);
     }
 
     @Test
@@ -41,7 +42,7 @@ class ReadingPracticeMcpToolsTests {
         var order = inOrder(jobService, readingPracticeService);
         order.verify(jobService).require("user-1", READING_PRACTICE);
         order.verify(readingPracticeService).storeGeneration("user-1", generated);
-        order.verify(jobService).delete("user-1");
+        order.verify(jobService).delete("user-1", READING_PRACTICE);
     }
 
     @Test
@@ -56,6 +57,6 @@ class ReadingPracticeMcpToolsTests {
             assertThat(result.validationErrors()).containsExactly("Expected 3 scenarios but received 0");
         }
 
-        verify(jobService, never()).delete("user-1");
+        verify(jobService, never()).delete("user-1", READING_PRACTICE);
     }
 }

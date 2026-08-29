@@ -6,18 +6,21 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "content_generation_jobs")
+@IdClass(ContentGenerationJobEntityId.class)
 class ContentGenerationJobEntity {
     @Id
     @Column(name = "user_id", nullable = false)
     private String userId;
 
     @Enumerated(EnumType.STRING)
+    @Id
     @Column(name = "type", nullable = false, length = 64)
     private ContentGenerationJobType type;
 

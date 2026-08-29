@@ -11,6 +11,8 @@ public class ReadingPracticeScenarioEntity {
     @Column(name = "scenario_label", nullable = false) private String label;
     @Column(name = "reading_text", nullable = false, columnDefinition = "text") private String readingText;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
+    @Column(name = "rated_cards_count", nullable = false) private int ratedCardsCount;
+    @Column(name = "all_cards_rated", nullable = false) private boolean allCardsRated;
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "scenario_id", nullable = false)
     @OrderColumn(name = "paragraph_index")
@@ -23,6 +25,8 @@ public class ReadingPracticeScenarioEntity {
     public String getLabel() { return label; } public void setLabel(String label) { this.label = label; }
     public String getReadingText() { return readingText; } public void setReadingText(String readingText) { this.readingText = readingText; }
     public Instant getCreatedAt() { return createdAt; } public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+    public int getRatedCardsCount() { return ratedCardsCount; } public void setRatedCardsCount(int value) { this.ratedCardsCount = value; }
+    public boolean isAllCardsRated() { return allCardsRated; } public void setAllCardsRated(boolean value) { this.allCardsRated = value; }
     public List<ReadingPracticeParagraphEntity> getParagraphs() { return paragraphs; }
     public void setParagraphs(List<ReadingPracticeParagraphEntity> values) { paragraphs.clear(); if (values != null) paragraphs.addAll(values); }
     public Set<ReadingPracticeVocabularyUsageEntity> getVocabularyUsages() { return vocabularyUsages; }

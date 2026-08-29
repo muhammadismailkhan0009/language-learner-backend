@@ -31,23 +31,18 @@ public class ContentGenerationJobService {
 
     @Transactional(readOnly = true)
     public ContentGenerationJob require(String userId, ContentGenerationJobType expectedType) {
-        var job = jobRepo.findByUserId(userId)
+        var job = jobRepo.findByUserIdAndType(userId, expectedType)
                 .orElseThrow(() -> new IllegalStateException("No content generation job found for user"));
-        if (job.type() != expectedType) {
-            throw new IllegalStateException("Content generation job has unexpected type");
-        }
         return job;
     }
 
     @Transactional(readOnly = true)
     public boolean exists(String userId, ContentGenerationJobType expectedType) {
-        return jobRepo.findByUserId(userId)
-                .map(job -> job.type() == expectedType)
-                .orElse(false);
+        return jobRepo.findByUserIdAndType(userId, expectedType).isPresent();
     }
 
     @Transactional
-    public void delete(String userId) {
-        jobRepo.deleteByUserId(userId);
+    public void delete(String userId, ContentGenerationJobType type) {
+        jobRepo.deleteByUserIdAndType(userId, type);
     }
 }

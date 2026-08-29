@@ -45,7 +45,7 @@ public class PracticeVocabularyExtractionMcpTools {
         try {
             var result = vocabularyService.storeExtraction(userId, selection);
             vocabularyService.deleteExtractionRequest(userId);
-            jobService.delete(userId);
+            jobService.delete(userId, PRACTICE_VOCABULARY_EXTRACTION);
             return new PracticeVocabularyExtractionStoreResponse(true, List.of(), result);
         } catch (PracticeVocabularyExtractionValidationException exception) {
             log.warn("Practice vocabulary extraction validation failed for userId='{}': {}", userId, exception.getMessage());

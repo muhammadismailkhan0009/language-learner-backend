@@ -25,7 +25,7 @@ public class ReadingFlashcardReviewController {
             @PathVariable String flashcardId,
             @RequestBody ReviewReadingFlashcardRequest request
     ) {
-        reviewService.review(request.userId(), flashcardId, request.rating());
+        reviewService.review(request.userId(), request.scenarioId(), flashcardId, request.rating());
         return ResponseEntity.ok().build();
     }
 }

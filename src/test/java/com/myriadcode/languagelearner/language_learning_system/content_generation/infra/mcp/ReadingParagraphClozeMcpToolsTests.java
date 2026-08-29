@@ -23,6 +23,7 @@ class ReadingParagraphClozeMcpToolsTests {
     @Test
     void fetchReturnsExistingLlmInputObject() {
         var context = new ClozeParagraphGenerationContext(LanguageLevel.A2, List.of(), List.of());
+        when(jobService.exists("user-1", READING_PARAGRAPH_CLOZE)).thenReturn(true);
         when(clozeService.prepareGeneration("user-1")).thenReturn(context);
         when(clozeService.buildGenerationPrompt(context)).thenReturn("same prompt");
 
@@ -30,7 +31,7 @@ class ReadingParagraphClozeMcpToolsTests {
             assertThat(tools.getReadingParagraphClozeGeneration()).isEqualTo("same prompt");
         }
 
-        verify(jobService).require("user-1", READING_PARAGRAPH_CLOZE);
+        verify(jobService).exists("user-1", READING_PARAGRAPH_CLOZE);
     }
 
     @Test
@@ -49,7 +50,7 @@ class ReadingParagraphClozeMcpToolsTests {
         var order = inOrder(jobService, clozeService);
         order.verify(jobService).require("user-1", READING_PARAGRAPH_CLOZE);
         order.verify(clozeService).storeGeneration("user-1", generated);
-        order.verify(jobService).delete("user-1");
+        order.verify(jobService).delete("user-1", READING_PARAGRAPH_CLOZE);
     }
 
     @Test
@@ -65,6 +66,6 @@ class ReadingParagraphClozeMcpToolsTests {
             assertThat(result.session()).isNull();
         }
 
-        verify(jobService, never()).delete("user-1");
+        verify(jobService, never()).delete("user-1", READING_PARAGRAPH_CLOZE);
     }
 }

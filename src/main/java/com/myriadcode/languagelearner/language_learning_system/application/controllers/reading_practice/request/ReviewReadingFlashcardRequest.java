@@ -2,5 +2,5 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import com.myriadcode.fsrs.api.enums.Rating;
 
-public record ReviewReadingFlashcardRequest(String userId, Rating rating) {
+public record ReviewReadingFlashcardRequest(String userId, String scenarioId, Rating rating) {
 }

@@ -49,8 +49,8 @@ class ContentGenerationJobServiceTests {
     @Test
     void deleteRemovesUsersJob() {
         service.createOrReplace("user-1", ContentGenerationJobType.VOCABULARY_CLOZE);
-        service.delete("user-1");
-        assertThat(repo.findByUserId("user-1")).isEmpty();
+        service.delete("user-1", ContentGenerationJobType.VOCABULARY_CLOZE);
+        assertThat(repo.findByUserIdAndType("user-1", ContentGenerationJobType.VOCABULARY_CLOZE)).isEmpty();
     }
 
     private static final class InMemoryJobRepo implements ContentGenerationJobRepo {
@@ -58,18 +58,22 @@ class ContentGenerationJobServiceTests {
 
         @Override
         public ContentGenerationJob save(ContentGenerationJob job) {
-            jobs.put(job.userId(), job);
+            jobs.put(key(job.userId(), job.type()), job);
             return job;
         }
 
         @Override
-        public Optional<ContentGenerationJob> findByUserId(String userId) {
-            return Optional.ofNullable(jobs.get(userId));
+        public Optional<ContentGenerationJob> findByUserIdAndType(String userId, ContentGenerationJobType type) {
+            return Optional.ofNullable(jobs.get(key(userId, type)));
         }
 
         @Override
-        public void deleteByUserId(String userId) {
-            jobs.remove(userId);
+        public void deleteByUserIdAndType(String userId, ContentGenerationJobType type) {
+            jobs.remove(key(userId, type));
+        }
+
+        private String key(String userId, ContentGenerationJobType type) {
+            return userId + ":" + type;
         }
     }
 }

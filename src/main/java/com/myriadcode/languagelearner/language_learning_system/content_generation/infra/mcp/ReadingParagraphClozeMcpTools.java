@@ -50,7 +50,7 @@ public class ReadingParagraphClozeMcpTools {
         jobService.require(userId, READING_PARAGRAPH_CLOZE);
         try {
             var response = clozeService.storeGeneration(userId, generated);
-            jobService.delete(userId);
+            jobService.delete(userId, READING_PARAGRAPH_CLOZE);
             return new ReadingParagraphClozeStoreResponse(true, java.util.List.of(), response);
         } catch (IllegalArgumentException exception) {
             log.warn("Reading paragraph cloze validation failed for userId='{}': {}", userId, exception.getMessage());

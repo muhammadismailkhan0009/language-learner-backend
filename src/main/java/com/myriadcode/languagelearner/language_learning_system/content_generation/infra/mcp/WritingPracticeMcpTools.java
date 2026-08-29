@@ -41,7 +41,7 @@ public class WritingPracticeMcpTools {
         jobService.require(userId, WRITING_PRACTICE);
         try {
             writingPracticeService.storeGeneration(userId, generated);
-            jobService.delete(userId);
+            jobService.delete(userId, WRITING_PRACTICE);
             return new WritingPracticeStoreResponse(true, java.util.List.of());
         } catch (WritingPracticeGenerationValidationException exception) {
             log.warn("Writing practice validation failed for userId='{}': {}", userId, exception.getMessage());

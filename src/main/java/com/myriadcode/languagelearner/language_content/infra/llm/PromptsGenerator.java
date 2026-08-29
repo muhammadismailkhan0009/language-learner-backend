@@ -17,6 +17,734 @@ public final class PromptsGenerator {
   private PromptsGenerator() {
   }
 
+  public static String vocabularyCandidateExtraction(String sourceText) {
+    return """
+        You are extracting useful German vocabulary candidates for a learner's
+        self-expanding vocabulary system.
+  
+        German source text:
+  
+        %s
+  
+        GOAL
+  
+        Identify useful and reusable German lexical units that are genuinely
+        represented in the source text.
+  
+        Extract BOTH:
+  
+        1. useful standalone WORDS
+        2. useful reusable CHUNKS
+  
+        The application will later deduplicate these candidates against the learner's
+        complete vocabulary database.
+  
+        Therefore:
+  
+        - Do NOT try to determine whether a candidate is already known.
+        - Do NOT omit a useful candidate merely because it is basic or common.
+        - Do NOT perform semantic deduplication against an imagined vocabulary list.
+        - Avoid duplicate surface values inside this extraction result.
+  
+        ==================================================
+        STANDALONE WORDS
+        ==================================================
+  
+        Extract a standalone word when it is independently useful vocabulary, such as:
+  
+        - noun
+        - verb
+        - adjective
+        - meaningful adverb
+        - other useful lexical/content word
+  
+        Return standalone words in a useful canonical learner form.
+  
+        NOUNS
+  
+        Return the singular nominative form with its definite article when appropriate.
+  
+        Examples:
+  
+        "Fehler" -> "der Fehler"
+        "Aufgaben" -> "die Aufgabe"
+        "Kollegen" -> "der Kollege"
+  
+        VERBS
+  
+        Return the infinitive.
+  
+        Examples:
+  
+        "arbeitet" -> "arbeiten"
+        "fährt" -> "fahren"
+        "findet" -> "finden"
+  
+        For separable verbs, reconstruct the normal infinitive:
+  
+        "hört ... auf" -> "aufhören"
+        "fährt ... los" -> "losfahren"
+  
+        For reflexive verbs, preserve the reflexive form when it belongs to the
+        lexical item:
+  
+        "treffen sich" -> "sich treffen"
+  
+        ADJECTIVES
+  
+        Return the undeclined base adjective.
+  
+        Examples:
+  
+        "wichtigen" -> "wichtig"
+        "kleinen" -> "klein"
+  
+        OTHER WORDS
+  
+        Return the normal canonical German form.
+  
+        Preserve:
+        - correct spelling
+        - umlauts
+        - ß where appropriate
+        - noun capitalization
+  
+        Do not return multiple inflected forms of the same lexical word.
+  
+        ==================================================
+        REUSABLE CHUNKS
+        ==================================================
+  
+        Independently extract a chunk when learning the combination as a unit would
+        materially help future comprehension or production.
+  
+        Good chunk candidates include:
+  
+        - common collocations
+        - verb + preposition constructions
+        - reflexive constructions
+        - separable-verb constructions
+        - fixed and semi-fixed expressions
+        - useful time/place expressions
+        - common conversational expressions
+        - productive argument structures
+        - constructions involving an important case relationship
+        - combinations whose natural German usage is not obvious merely from knowing
+          the individual words
+  
+        Examples of useful chunks:
+  
+        "am Abend"
+        "auch nicht"
+        "Spaß machen"
+        "pünktlich ankommen"
+        "eine Entscheidung treffen"
+        "über etwas nachdenken"
+        "darüber nachdenken"
+        "auf jemanden warten"
+        "jemandem etwas zeigen"
+        "jemandem etwas erzählen"
+  
+        WORDS AND RELATED CHUNKS MAY BOTH BE EXTRACTED.
+  
+        For example, from:
+  
+        "Paul zeigt ihr den Fehler."
+  
+        useful candidates may include:
+  
+        "zeigen"
+        "der Fehler"
+        "jemandem etwas zeigen"
+  
+        Do NOT remove "jemandem etwas zeigen" merely because "zeigen" is also present.
+  
+        Likewise, related lexical units may coexist when they have independent
+        learning value:
+  
+        "denken"
+        "nachdenken"
+        "über etwas nachdenken"
+        "darüber nachdenken"
+  
+        ==================================================
+        GENERALIZING CHUNKS
+        ==================================================
+  
+        A chunk may be generalized when the source text clearly demonstrates a
+        reusable construction.
+  
+        Replace scenario-specific people or objects with natural German placeholders
+        when useful:
+  
+        jemand
+        jemanden
+        jemandem
+        etwas
+  
+        Example:
+  
+        Source:
+        "Paul zeigt Anna das Problem."
+  
+        Candidate:
+        "jemandem etwas zeigen"
+  
+        Source:
+        "Mia wartet auf Paul."
+  
+        Candidate:
+        "auf jemanden warten"
+  
+        Only generalize when the generalized chunk represents the same construction
+        genuinely demonstrated by the source text.
+  
+        Do NOT invent a construction that is not supported by the text.
+  
+        ==================================================
+        WHAT NOT TO EXTRACT
+        ==================================================
+  
+        Do NOT mechanically extract every token or every possible phrase.
+  
+        Normally exclude as standalone candidates:
+  
+        - articles
+        - ordinary personal pronouns
+        - proper names
+        - punctuation
+        - auxiliaries with no independent learning value in context
+        - arbitrary sentence fragments
+        - accidental word combinations
+        - phrases useful only for this exact story
+        - redundant inflected variants
+        - combinations that have no meaningful value beyond their individual words
+  
+        Very common function words such as articles, conjunctions, pronouns,
+        auxiliaries, and prepositions should normally not be extracted independently
+        unless they themselves represent useful vocabulary for a learner.
+  
+        They may freely appear inside useful chunks.
+  
+        ==================================================
+        SELECTION STANDARD
+        ==================================================
+  
+        Prefer vocabulary that would help the learner later:
+  
+        - understand ordinary German
+        - retrieve German while writing or speaking
+        - use natural collocations
+        - remember useful constructions
+        - choose appropriate prepositions or cases
+        - recognize recurring everyday expressions
+  
+        Do not over-extract.
+  
+        Extract useful lexical units, not every theoretically possible unit.
+  
+        ==================================================
+        OUTPUT
+        ==================================================
+  
+        Return a candidates array.
+  
+        Every candidate must contain exactly one field:
+  
+        surface
+  
+        Requirements:
+  
+        - surface must contain the canonical German word or chunk
+        - use correct German spelling and capitalization
+        - preserve umlauts and ß correctly
+        - do not return translations
+        - do not return meanings
+        - do not return notes
+        - do not return examples
+        - do not return grammar metadata
+        - do not return entryKind
+        - do not return duplicate surface values
+        - preserve first-occurrence order where practical
+        """.formatted(sourceText);
+  }
+
+  public static String vocabularyDetailGeneration(
+    List<com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyDetailSeed> candidates) {
+
+  String candidateList = candidates.stream()
+      .map(candidate -> "- candidateId=%s | surface=%s"
+          .formatted(candidate.candidateId(), candidate.surface()))
+      .collect(java.util.stream.Collectors.joining("\n"));
+
+  return """
+      You are creating complete reusable German vocabulary and chunk details
+      for a language learner.
+
+      The supplied candidates have already been:
+
+      - extracted from German material
+      - canonicalized
+      - deduplicated by the application
+
+      Candidates:
+
+      %s
+
+      Create exactly ONE learner-vocabulary detail for EVERY supplied candidate.
+
+      ==================================================
+      STRICT CANDIDATE PRESERVATION
+      ==================================================
+
+      For every returned detail:
+
+      - Copy candidateId EXACTLY.
+      - Copy surface EXACTLY.
+      - Never correct surface.
+      - Never normalize surface.
+      - Never rewrite surface.
+      - Never merge candidates.
+      - Never split candidates.
+      - Never remove candidates.
+      - Never add candidates.
+
+      The supplied surface is already the canonical vocabulary surface.
+
+      Your responsibility is enrichment, NOT candidate discovery or correction.
+
+      ==================================================
+      GENERAL LEARNING STYLE
+      ==================================================
+
+      Make every entry:
+
+      - learner-friendly
+      - usage-first
+      - compact but sufficiently informative
+      - practical
+      - reusable independently of the scenario where it was first encountered
+      - independent of any CEFR or proficiency level
+
+      Explain ordinary contemporary German usage.
+
+      Do NOT make the entry scenario-specific.
+
+      Do NOT produce an exhaustive dictionary entry.
+
+      Prefer common everyday meanings and constructions.
+
+      Ignore rare, literary, obsolete, highly technical, or specialized meanings
+      unless they are essential to understanding the lexical item.
+
+      ==================================================
+      ENTRY KIND
+      ==================================================
+
+      Set entryKind to exactly one of:
+
+      WORD
+      CHUNK
+
+      WORD means an independent lexical item, for example:
+
+      "der Fehler"
+      "fahren"
+      "wichtig"
+      "draußen"
+      "nachdenken"
+
+      CHUNK means a reusable multi-word expression, collocation, construction,
+      lexical pattern, or fixed/semi-fixed phrase, for example:
+
+      "auch nicht"
+      "am Abend"
+      "Spaß machen"
+      "darüber nachdenken"
+      "jemandem etwas zeigen"
+
+      ==================================================
+      CONCISE MEANING
+      ==================================================
+
+      Provide a concise English core meaning using approximately 1-4 words.
+
+      Examples:
+
+      "der Fehler" -> "mistake; error"
+      "aufhören" -> "to stop"
+      "auch nicht" -> "not either"
+      "darüber nachdenken" -> "think about it"
+
+      ==================================================
+      MEANING
+      ==================================================
+
+      Give a clear learner-friendly explanation of what the vocabulary item means.
+
+      The meaning must describe the lexical item GENERICALLY rather than referring
+      to any particular scenario.
+
+      If the item has several common learner-relevant meanings:
+
+      - include the important common meanings
+      - keep the list concise
+      - prioritize everyday meanings
+      - avoid obscure dictionary senses
+
+      Example:
+
+      "tragen"
+      -> "to carry something; also commonly to wear clothing"
+
+      ==================================================
+      USAGE MEANING
+      ==================================================
+
+      Explain briefly how German speakers actually use the item.
+
+      Focus especially on information that helps the learner choose between similar
+      German expressions.
+
+      Example:
+
+      "kennen"
+
+      Meaning:
+      to know or be familiar with someone or something
+
+      Usage meaning:
+      Used for familiarity with a person, place, or thing. For knowing a fact or
+      piece of information, German normally uses "wissen".
+
+      Keep this practical rather than theoretical.
+
+      ==================================================
+      COMMON STRUCTURES
+      ==================================================
+
+      Provide approximately 1-3 useful common structures when they genuinely help
+      the learner use the item.
+
+      Examples:
+
+      "warten"
+
+      auf jemanden warten
+      -> to wait for someone
+
+      "zeigen"
+
+      jemandem etwas zeigen
+      -> to show someone something
+
+      "nachdenken"
+
+      über etwas nachdenken
+      -> to think about something
+
+      darüber nachdenken
+      -> to think about it
+
+      Do not invent structures merely to fill this section.
+
+      Do not return arbitrary example fragments as structures.
+
+      ==================================================
+      NOUNS
+      ==================================================
+
+      For nouns, include the essential noun information.
+
+      Include:
+
+      Article:
+      the correct definite article and singular noun
+
+      Plural:
+      the normal useful plural
+
+      Example:
+
+      Article: der Fehler
+      Plural: die Fehler
+
+      If the noun normally has no plural or has an unusual plural restriction,
+      mention it concisely.
+
+      ==================================================
+      VERBS
+      ==================================================
+
+      For verbs, provide:
+
+      - infinitive / base form
+      - base stem when useful
+      - full Präsens conjugation
+      - full Präteritum conjugation
+      - full Perfekt conjugation
+
+      Use this format:
+
+      Präsens:
+      ich ..., du ..., er/sie/es ..., wir ..., ihr ..., sie/Sie ...
+
+      Präteritum:
+      ich ..., du ..., er/sie/es ..., wir ..., ihr ..., sie/Sie ...
+
+      Perfekt:
+      ich habe/bin ...,
+      du hast/bist ...,
+      er/sie/es hat/ist ...,
+      wir haben/sind ...,
+      ihr habt/seid ...,
+      sie/Sie haben/sind ...
+
+      Always use the ACTUAL German forms.
+
+      Do not mechanically assume that a verb is regular.
+
+      ==================================================
+      SEPARABLE VERBS
+      ==================================================
+
+      For separable verbs:
+
+      - conjugate the verb naturally
+      - show the separated prefix in forms where German separates it
+      - mention separability in the grammar information
+
+      Example:
+
+      "aufstehen"
+
+      Präsens:
+      ich stehe auf,
+      du stehst auf,
+      er/sie/es steht auf,
+      wir stehen auf,
+      ihr steht auf,
+      sie/Sie stehen auf
+
+      Perfekt:
+      ich bin aufgestanden, ...
+
+      ==================================================
+      REFLEXIVE VERBS
+      ==================================================
+
+      For reflexive verbs:
+
+      - preserve the reflexive meaning
+      - include the appropriate reflexive pronoun in conjugation
+      - mention any important case behavior
+
+      Example:
+
+      "sich treffen"
+
+      Präsens:
+      ich treffe mich,
+      du triffst dich,
+      er/sie/es trifft sich,
+      wir treffen uns,
+      ihr trefft euch,
+      sie/Sie treffen sich
+
+      ==================================================
+      CHUNKS
+      ==================================================
+
+      Treat the WHOLE chunk as the learner's vocabulary item.
+
+      Do not reduce a chunk to only its main verb.
+
+      For a verbal chunk, show conjugation of the useful complete construction
+      when personal conjugation represents its normal productive use.
+
+      Examples:
+
+      "darüber nachdenken"
+
+      Präsens:
+      ich denke darüber nach,
+      du denkst darüber nach,
+      er/sie/es denkt darüber nach,
+      wir denken darüber nach,
+      ihr denkt darüber nach,
+      sie/Sie denken darüber nach
+
+      "jemandem etwas zeigen"
+
+      Präsens:
+      ich zeige jemandem etwas,
+      du zeigst jemandem etwas,
+      er/sie/es zeigt jemandem etwas,
+      ...
+
+      However, do NOT blindly create personal conjugations when they would teach an
+      unnatural interpretation of the chunk.
+
+      For example, with a construction such as:
+
+      "Spaß machen"
+
+      explain and demonstrate its normal construction, such as:
+
+      "Das macht Spaß."
+      "Fußball macht Spaß."
+
+      Do not imply that "ich mache Spaß" is automatically the ordinary equivalent
+      of English "I have fun".
+
+      For non-verbal chunks where conjugation does not apply, use "—" for verb-only
+      fields.
+
+      Examples:
+
+      "auch nicht"
+      "am Abend"
+      "wie lange"
+
+      ==================================================
+      ADJECTIVES
+      ==================================================
+
+      For adjectives:
+
+      - give the base adjective
+      - provide only useful form/grammar information
+      - mention important usage distinctions when applicable
+
+      Do NOT dump a complete adjective-declension table merely because the item is
+      an adjective.
+
+      ==================================================
+      FORMS / GRAMMAR
+      ==================================================
+
+      Include grammar information that materially helps the learner use the item
+      correctly.
+
+      Depending on the candidate, useful information can include:
+
+      - noun article
+      - plural
+      - Akkusativ or Dativ requirement
+      - preposition + case
+      - separability
+      - reflexive behavior
+      - auxiliary haben or sein
+      - irregular forms
+      - argument structure
+      - replaceable placeholders
+      - adjective information
+      - important word-order behavior
+      - fixed grammatical restrictions
+
+      Examples:
+
+      "mit"
+      -> mit + Dativ
+
+      "jemandem etwas zeigen"
+      -> person/receiver = Dativ
+         thing shown = Akkusativ
+
+      "auf jemanden warten"
+      -> auf + Akkusativ in this construction
+
+      Do not turn this section into a general grammar lesson.
+
+      ==================================================
+      ADDITIONAL USAGE NOTE
+      ==================================================
+
+      Give one concise practical note when it would help the learner use the item
+      correctly or avoid a common mistake.
+
+      Prefer useful contrasts when relevant, for example:
+
+      wissen vs. kennen
+      fertig vs. beenden
+      morgen vs. morgens
+      zu Hause vs. nach Hause
+
+      Do not invent an artificial contrast merely to fill the field.
+
+      ==================================================
+      EXAMPLE SENTENCE
+      ==================================================
+
+      Provide at least one natural German example sentence for every candidate,
+      together with an accurate English translation.
+
+      The German example must:
+
+      - demonstrate a common use of the candidate
+      - be natural contemporary German
+      - remain reasonably clear and learner-friendly
+      - avoid unnecessary complexity that does not help demonstrate the vocabulary item
+      - avoid unnecessary advanced vocabulary
+      - demonstrate important grammar when useful
+
+      Do not create random examples unrelated to the actual vocabulary meaning.
+
+      For generalized chunks containing placeholders such as:
+
+      jemand
+      jemanden
+      jemandem
+      etwas
+
+      instantiate the placeholders naturally.
+
+      Example:
+
+      Candidate:
+      "jemandem etwas zeigen"
+
+      German:
+      "Anna zeigt ihrem Bruder das Problem."
+
+      English:
+      "Anna shows her brother the problem."
+
+      ==================================================
+      FIELDS THAT DO NOT APPLY
+      ==================================================
+
+      Use "—" for verb-related fields that genuinely do not apply.
+
+      For example, a non-verbal chunk such as "auch nicht" should not receive
+      artificial conjugations.
+
+      ==================================================
+      FINAL VALIDATION
+      ==================================================
+
+      Before returning the result, verify:
+
+      - there is exactly one detail for every supplied candidate
+      - candidateId is copied exactly
+      - surface is copied exactly
+      - no candidate was added
+      - no candidate was removed
+      - no candidate was merged or split
+      - entryKind is exactly WORD or CHUNK
+      - meanings are generic rather than scenario-specific
+      - meanings prioritize common learner-relevant German
+      - noun article and plural are correct where applicable
+      - verb conjugations are correct where applicable
+      - separable verbs are represented correctly
+      - reflexive verbs are represented correctly
+      - chunks are treated as complete lexical units
+      - grammar notes are practically useful
+      - example sentences are natural German
+      - English example translations accurately match the German
+      """.formatted(candidateList);
+}
+
   public static String chunkGenerator(
       LangConfigsAdaptive config,
       List<Sentence.SentenceData> sentences,

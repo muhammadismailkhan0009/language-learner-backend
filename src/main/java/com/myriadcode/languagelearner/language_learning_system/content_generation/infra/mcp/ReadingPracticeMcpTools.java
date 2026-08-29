@@ -51,7 +51,7 @@ public class ReadingPracticeMcpTools {
         jobService.require(userId, READING_PRACTICE);
         try {
             readingPracticeService.storeGeneration(userId, generated);
-            jobService.delete(userId);
+            jobService.delete(userId, READING_PRACTICE);
             return new ReadingPracticeStoreResponse(true, List.of());
         } catch (ReadingPracticeValidationException exception) {
             log.warn("Reading practice validation failed for userId='{}': {}", userId, exception.getMessage());

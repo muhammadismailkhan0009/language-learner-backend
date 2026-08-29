@@ -2,5 +2,5 @@ package com.myriadcode.languagelearner.language_learning_system.content_generati
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-interface ContentGenerationJobJpaRepo extends JpaRepository<ContentGenerationJobEntity, String> {
+interface ContentGenerationJobJpaRepo extends JpaRepository<ContentGenerationJobEntity, ContentGenerationJobEntityId> {
 }

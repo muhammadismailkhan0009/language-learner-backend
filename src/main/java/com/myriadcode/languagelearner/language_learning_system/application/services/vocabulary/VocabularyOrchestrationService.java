@@ -143,6 +143,14 @@ public class VocabularyOrchestrationService {
         return VOCABULARY_API_MAPPER.toResponse(saved);
     }
 
+    public VocabularyResponse createGeneratedVocabulary(String userId, CreateGeneratedVocabularyCommand command) {
+        var examples = command.exampleSentences().stream()
+                .map(value -> new AddVocabularyRequest.ExampleSentenceRequest(value.sentence(), value.translation()))
+                .toList();
+        return addVocabulary(userId, new AddVocabularyRequest(
+                command.surface(), command.translation(), command.entryKind(), command.notes(), examples));
+    }
+
     public VocabularyResponse updateVocabulary(String userId, String vocabularyId, UpdateVocabularyRequest request) {
         var existing = vocabularyRepo.findByIdAndUserId(vocabularyId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("Vocabulary not found for this user"));

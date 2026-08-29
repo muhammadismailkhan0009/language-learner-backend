@@ -21,13 +21,13 @@ class ContentGenerationJobJpaAdapter implements ContentGenerationJobRepo {
     }
 
     @Override
-    public Optional<ContentGenerationJob> findByUserId(String userId) {
-        return jpaRepo.findById(userId).map(this::toDomain);
+    public Optional<ContentGenerationJob> findByUserIdAndType(String userId, com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType type) {
+        return jpaRepo.findById(new ContentGenerationJobEntityId(userId, type)).map(this::toDomain);
     }
 
     @Override
-    public void deleteByUserId(String userId) {
-        jpaRepo.deleteById(userId);
+    public void deleteByUserIdAndType(String userId, com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType type) {
+        jpaRepo.deleteById(new ContentGenerationJobEntityId(userId, type));
     }
 
     private ContentGenerationJob toDomain(ContentGenerationJobEntity entity) {

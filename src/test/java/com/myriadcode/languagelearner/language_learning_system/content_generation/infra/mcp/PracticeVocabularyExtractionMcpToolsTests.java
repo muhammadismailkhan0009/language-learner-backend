@@ -41,7 +41,7 @@ class PracticeVocabularyExtractionMcpToolsTests {
         order.verify(jobService).require("user-1", PRACTICE_VOCABULARY_EXTRACTION);
         order.verify(vocabularyService).storeExtraction("user-1", selection);
         order.verify(vocabularyService).deleteExtractionRequest("user-1");
-        order.verify(jobService).delete("user-1");
+        order.verify(jobService).delete("user-1", PRACTICE_VOCABULARY_EXTRACTION);
     }
 
     @Test
@@ -56,6 +56,6 @@ class PracticeVocabularyExtractionMcpToolsTests {
             assertThat(response.validationErrors()).containsExactly("Unknown vocabulary surfaces: [unknown]");
         }
         verify(vocabularyService, never()).deleteExtractionRequest(anyString());
-        verify(jobService, never()).delete(anyString());
+        verify(jobService, never()).delete(anyString(), eq(PRACTICE_VOCABULARY_EXTRACTION));
     }
 }

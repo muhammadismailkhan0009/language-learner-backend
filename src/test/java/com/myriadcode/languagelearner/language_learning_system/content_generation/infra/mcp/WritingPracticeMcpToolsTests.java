@@ -43,7 +43,7 @@ class WritingPracticeMcpToolsTests {
         var order = inOrder(jobService, writingPracticeService);
         order.verify(jobService).require("user-1", WRITING_PRACTICE);
         order.verify(writingPracticeService).storeGeneration("user-1", generated);
-        order.verify(jobService).delete("user-1");
+        order.verify(jobService).delete("user-1", WRITING_PRACTICE);
     }
 
     @Test
@@ -56,6 +56,6 @@ class WritingPracticeMcpToolsTests {
             assertThat(result.stored()).isFalse();
             assertThat(result.validationErrors()).containsExactly("scenarios must contain exactly 3 items");
         }
-        verify(jobService, never()).delete("user-1");
+        verify(jobService, never()).delete("user-1", WRITING_PRACTICE);
     }
 }
