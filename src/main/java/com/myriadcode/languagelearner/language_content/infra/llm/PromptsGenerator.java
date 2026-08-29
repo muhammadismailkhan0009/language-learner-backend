@@ -250,7 +250,7 @@ public final class PromptsGenerator {
         Return a candidates array.
   
         Every candidate must contain exactly one field:
-  
+        
         surface
   
         Requirements:
@@ -720,6 +720,20 @@ public final class PromptsGenerator {
       artificial conjugations.
 
       ==================================================
+      EXPLANATION MAPPING AND NOTES HTML TEMPLATE
+      ==================================================
+
+      Store all explanatory detail requested above in the notes field as ONE HTML
+      string. The HTML tags are part of the notes value and must be returned so the
+      application stores them with the vocabulary entry.
+      - use <br> tag for line break.
+      - use <strong/> tag to emphasize something in notes
+      - wrap them up with <section /> tag.
+
+      Return notes as raw HTML text. Do not wrap it in Markdown or a code fence.
+      Do not place example sentences inside notes.
+
+      ==================================================
       FINAL VALIDATION
       ==================================================
 
@@ -740,6 +754,8 @@ public final class PromptsGenerator {
       - reflexive verbs are represented correctly
       - chunks are treated as complete lexical units
       - grammar notes are practically useful
+      - notes contains the applicable detail sections as a single HTML string
+      - notes HTML is returned without Markdown or code fences
       - example sentences are natural German
       - English example translations accurately match the German
       """.formatted(candidateList);
