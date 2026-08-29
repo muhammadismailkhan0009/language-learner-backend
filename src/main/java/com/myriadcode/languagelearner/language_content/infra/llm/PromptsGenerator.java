@@ -21,21 +21,23 @@ public final class PromptsGenerator {
     return """
         You are extracting useful German vocabulary candidates for a learner's
         self-expanding vocabulary system.
-
+  
         First, detect the language of the source text.
-
+  
         - If the source text is already German, extract vocabulary directly from it.
         - If the source text is not German, translate the complete text internally
           into natural German before extracting vocabulary.
         - Perform all candidate extraction against the resulting natural German text.
-        - Do not return the translated source text or the detected language. Return only
-          the candidate schema required below.
+        - Do not return the translated source text or the detected language.
+        - Return only the candidate schema required below.
   
         Source text:
   
         %s
   
+        ==================================================
         GOAL
+        ==================================================
   
         Identify useful and reusable German lexical units that are genuinely
         represented in the source text.
@@ -225,9 +227,10 @@ public final class PromptsGenerator {
         - auxiliaries with no independent learning value in context
         - arbitrary sentence fragments
         - accidental word combinations
-        - phrases useful only for this exact story
+        - phrases useful only for this exact story or document
         - redundant inflected variants
-        - combinations that have no meaningful value beyond their individual words
+        - combinations that have no meaningful learning value beyond their
+          individual words
   
         Very common function words such as articles, conjunctions, pronouns,
         auxiliaries, and prepositions should normally not be extracted independently
@@ -239,18 +242,80 @@ public final class PromptsGenerator {
         SELECTION STANDARD
         ==================================================
   
+        The goal is NOT exhaustive vocabulary extraction.
+  
+        Return AT MOST 25 candidates.
+  
+        The limit is a maximum, NOT a target.
+  
+        If the source contains fewer than 25 genuinely high-value lexical units,
+        return fewer than 25.
+  
+        If the source contains more than 25 useful lexical units, rank them by
+        expected future learning value and return only the strongest candidates.
+  
+        PRIORITIZE, roughly in this order:
+  
+        1. Highly reusable chunks, collocations, and constructions.
+        2. Common German vocabulary likely to recur across many contexts.
+        3. Vocabulary central to understanding the main subject of the source text.
+        4. Vocabulary likely to recur in similar texts from the same domain.
+        5. Productive verbs and adjectives useful for future writing or speaking.
+        6. Useful verb + preposition, case, reflexive, or separable constructions.
+        7. Important nouns with clear practical or domain value.
+        8. Domain-specific terminology that is likely to recur and materially helps
+           comprehension of similar real-world texts.
+  
         Prefer vocabulary that would help the learner later:
   
-        - understand ordinary German
+        - understand frequently recurring German
+        - understand similar future texts
         - retrieve German while writing or speaking
-        - use natural collocations
-        - remember useful constructions
+        - use natural collocations and constructions
         - choose appropriate prepositions or cases
-        - recognize recurring everyday expressions
+        - recognize recurring domain language
   
-        Do not over-extract.
+        DEPRIORITIZE:
   
-        Extract useful lexical units, not every theoretically possible unit.
+        - incidental details specific only to this source
+        - location-specific vocabulary unless it has broad practical value
+        - names, identifiers, phone numbers, reference numbers, and contact information
+        - administrative metadata with little reusable learning value
+        - document labels with little practical reuse
+        - vocabulary useful only for one sentence or one specific document
+        - rare or highly specialized terminology unless central to the source domain
+        - generic nouns with little independent learning value
+        - obvious compositional phrases that add little beyond their component words
+        - several closely related candidates when they provide almost the same
+          practical learning value
+        - vocabulary unlikely to recur or be useful outside this exact source
+  
+        A standalone word and a related chunk may BOTH be returned when each has clear
+        independent learning value.
+  
+        Examples:
+  
+        "Kenntnisse"
+        "Kenntnisse in"
+  
+        or:
+  
+        "sprechen"
+        "mit jemandem über etwas sprechen"
+  
+        may both be useful.
+  
+        Do not remove genuinely useful lexical relationships merely to reduce the
+        candidate count.
+  
+        However, when many candidates are available, prefer the most reusable,
+        frequent, relevant, and productive vocabulary rather than trying to represent
+        every learnable word in the source.
+  
+        Do not fill the 25-candidate limit merely because space remains.
+  
+        Prefer QUALITY, REUSABILITY, FREQUENCY, RELEVANCE, and FUTURE VALUE
+        over vocabulary coverage.
   
         ==================================================
         OUTPUT
@@ -263,10 +328,11 @@ public final class PromptsGenerator {
   
         Requirements:
   
+        - return no more than 25 candidates
         - surface must contain the canonical German word or chunk
         - use correct German spelling and capitalization
         - preserve umlauts and ß correctly
-        - Do not return translations
+        - do not return translations
         - do not return meanings
         - do not return notes
         - do not return examples
@@ -276,7 +342,6 @@ public final class PromptsGenerator {
         - preserve first-occurrence order where practical
         """.formatted(sourceText);
   }
-
   public static String vocabularyDetailGeneration(
     List<com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyDetailSeed> candidates) {
 
