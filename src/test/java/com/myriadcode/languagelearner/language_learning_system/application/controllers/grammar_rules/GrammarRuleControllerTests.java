@@ -3,6 +3,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.ProfileGrammarRuleQueryService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarGenerationRequestService;
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarExplanationParagraph;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarRule;
@@ -73,20 +74,28 @@ public class GrammarRuleControllerTests {
     public void draftGrammarRulesAcceptsLevelAndAdminKeyPayload() throws Exception {
         var repo = new FakeGrammarRuleRepo();
         GrammarRuleOrchestrationService service = new GrammarRuleOrchestrationService(repo);
-        var controller = new GrammarRuleController(service);
+        var requestService = new GrammarGenerationRequestService(null, null, null) {
+            @Override
+            public String requestRuleDrafts(String userId, String level) {
+                return "Grammar rule drafting requested. Run your MCP tool.";
+            }
+        };
+        var controller = new GrammarRuleController(service, null, null, requestService);
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 
         mockMvc.perform(post("/api/v1/grammar-rules/admin/drafts/v1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                  "userId": "user-1",
                                   "level": "a2",
                                   "admin_key": "112233"
                                 }
                                 """)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response").isArray());
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.response.message")
+                        .value("Grammar rule drafting requested. Run your MCP tool."));
     }
 
     @Test

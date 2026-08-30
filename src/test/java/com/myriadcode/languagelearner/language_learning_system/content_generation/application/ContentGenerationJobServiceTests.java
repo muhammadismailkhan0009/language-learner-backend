@@ -40,6 +40,18 @@ class ContentGenerationJobServiceTests {
     }
 
     @Test
+    void grammarOperationsKeepIndependentPendingJobs() {
+        service.createOrReplace("user-1", ContentGenerationJobType.GRAMMAR_RULE_DRAFT);
+        service.createOrReplace("user-1", ContentGenerationJobType.GRAMMAR_RULE_DETAILS);
+        service.createOrReplace("user-1", ContentGenerationJobType.GRAMMAR_LEVEL_REASSIGNMENT);
+
+        assertThat(repo.jobs).hasSize(3);
+        assertThat(service.exists("user-1", ContentGenerationJobType.GRAMMAR_RULE_DRAFT)).isTrue();
+        assertThat(service.exists("user-1", ContentGenerationJobType.GRAMMAR_RULE_DETAILS)).isTrue();
+        assertThat(service.exists("user-1", ContentGenerationJobType.GRAMMAR_LEVEL_REASSIGNMENT)).isTrue();
+    }
+
+    @Test
     void requireRejectsMissingJob() {
         assertThatThrownBy(() -> service.require("user-1", ContentGenerationJobType.VOCABULARY_CLOZE))
                 .isInstanceOf(IllegalStateException.class)

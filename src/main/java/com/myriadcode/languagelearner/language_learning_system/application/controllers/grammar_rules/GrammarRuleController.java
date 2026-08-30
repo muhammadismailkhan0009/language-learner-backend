@@ -6,6 +6,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.contr
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleDraftResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarLevelReassignmentSummaryResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarRuleResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.grammar_rules.response.GrammarGenerationRequestResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarLevelReassignmentService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.GrammarRuleOrchestrationService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.grammar_rules.ProfileGrammarRuleQueryService;
@@ -23,14 +25,23 @@ public class GrammarRuleController {
     private final GrammarRuleOrchestrationService grammarRuleOrchestrationService;
     private final GrammarLevelReassignmentService grammarLevelReassignmentService;
     private final ProfileGrammarRuleQueryService profileGrammarRuleQueryService;
+    private final GrammarGenerationRequestService grammarGenerationRequestService;
 
     @Autowired
     public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService,
                                  GrammarLevelReassignmentService grammarLevelReassignmentService,
-                                 ProfileGrammarRuleQueryService profileGrammarRuleQueryService) {
+                                 ProfileGrammarRuleQueryService profileGrammarRuleQueryService,
+                                 GrammarGenerationRequestService grammarGenerationRequestService) {
         this.grammarRuleOrchestrationService = grammarRuleOrchestrationService;
         this.grammarLevelReassignmentService = grammarLevelReassignmentService;
         this.profileGrammarRuleQueryService = profileGrammarRuleQueryService;
+        this.grammarGenerationRequestService = grammarGenerationRequestService;
+    }
+
+    public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService,
+                                 GrammarLevelReassignmentService grammarLevelReassignmentService,
+                                 ProfileGrammarRuleQueryService profileGrammarRuleQueryService) {
+        this(grammarRuleOrchestrationService, grammarLevelReassignmentService, profileGrammarRuleQueryService, null);
     }
 
     public GrammarRuleController(GrammarRuleOrchestrationService grammarRuleOrchestrationService) {
@@ -75,13 +86,14 @@ public class GrammarRuleController {
     }
 
     @PostMapping("reassign-levels/v1")
-    public ResponseEntity<ApiResponse<GrammarLevelReassignmentSummaryResponse>> reassignGrammarLevels(
+    public ResponseEntity<ApiResponse<GrammarGenerationRequestResponse>> reassignGrammarLevels(
             @RequestParam("userId") String userId
     ) {
-        if (grammarLevelReassignmentService == null) {
-            throw new IllegalStateException("Grammar level reassignment service is not configured");
+        if (grammarGenerationRequestService == null) {
+            throw new IllegalStateException("Grammar generation request service is not configured");
         }
-        return ResponseEntity.ok(new ApiResponse<>(grammarLevelReassignmentService.reassignLevels(userId)));
+        return ResponseEntity.accepted().body(new ApiResponse<>(new GrammarGenerationRequestResponse(
+                grammarGenerationRequestService.requestLevelReassignment(userId))));
     }
 
     @GetMapping("{grammarRuleId}/v1")
@@ -93,10 +105,13 @@ public class GrammarRuleController {
     }
 
     @PostMapping("admin/drafts/v1")
-    public ResponseEntity<ApiResponse<List<GrammarRuleDraftResponse>>> draftGrammarRules(
+    public ResponseEntity<ApiResponse<GrammarGenerationRequestResponse>> draftGrammarRules(
             @RequestBody DraftGrammarRulesRequest request
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.draftGrammarRules(request)));
+        grammarRuleOrchestrationService.validateAdminAccess(request.adminKey());
+        requireGenerationRequestService();
+        return ResponseEntity.accepted().body(new ApiResponse<>(new GrammarGenerationRequestResponse(
+                grammarGenerationRequestService.requestRuleDrafts(request.userId(), request.level()))));
     }
 
     @GetMapping("admin/drafts/v1")
@@ -112,14 +127,18 @@ public class GrammarRuleController {
     }
 
     @PostMapping("admin/drafts/{draftId}/details/v1")
-    public ResponseEntity<ApiResponse<GrammarRuleDraftDetailsResponse>> generateDraftDetailsForDraftId(
+    public ResponseEntity<ApiResponse<GrammarGenerationRequestResponse>> generateDraftDetailsForDraftId(
             @PathVariable("draftId") String draftId,
             @RequestBody GenerateGrammarRuleDraftDetailsRequest request
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(grammarRuleOrchestrationService.generateDraftDetailsForDraftId(draftId, request)));
+        grammarRuleOrchestrationService.validateAdminAccess(request.adminKey());
+        requireGenerationRequestService();
+        return ResponseEntity.accepted().body(new ApiResponse<>(new GrammarGenerationRequestResponse(
+                grammarGenerationRequestService.requestRuleDetailsForDraft(request.userId(), draftId))));
     }
 
     @PostMapping("admin/details/v1")
+    @Deprecated(forRemoval = true)
     public ResponseEntity<ApiResponse<List<GrammarRuleDraftDetailsResponse>>> generateGrammarRuleDetails(
             @RequestBody GenerateGrammarRuleDetailsRequest request
     ) {
@@ -131,5 +150,11 @@ public class GrammarRuleController {
             @RequestBody ApproveGrammarRulesRequest request
     ) {
         return ResponseEntity.status(201).body(new ApiResponse<>(grammarRuleOrchestrationService.approveGrammarRules(request)));
+    }
+
+    private void requireGenerationRequestService() {
+        if (grammarGenerationRequestService == null) {
+            throw new IllegalStateException("Grammar generation request service is not configured");
+        }
     }
 }

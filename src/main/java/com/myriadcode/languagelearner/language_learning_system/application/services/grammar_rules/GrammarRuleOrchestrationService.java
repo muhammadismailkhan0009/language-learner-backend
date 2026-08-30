@@ -219,6 +219,7 @@ public class GrammarRuleOrchestrationService {
         );
     }
 
+    @Deprecated(forRemoval = true)
     public List<GrammarRuleDraftDetailsResponse> generateDraftDetails(GenerateGrammarRuleDetailsRequest request) {
         validateAdminKey(request.adminKey());
         if (request.rules() == null || request.rules().isEmpty()) {
