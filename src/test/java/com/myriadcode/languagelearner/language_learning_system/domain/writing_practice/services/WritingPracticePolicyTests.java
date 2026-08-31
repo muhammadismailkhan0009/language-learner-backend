@@ -16,20 +16,20 @@ class WritingPracticePolicyTests {
     private final WritingPracticePolicy policy = new WritingPracticePolicy();
 
     @Test
-    @DisplayName("Writing selection applies 0.65/0.20/0.15 ratio and excludes new cards")
+    @DisplayName("Writing selection applies 0.25/0.35/0.40 ratio and excludes new cards")
     void appliesRatioAndExcludesNewCards() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<WritingPracticeCandidate>();
 
-        for (int i = 1; i <= 13; i++) {
+        for (int i = 1; i <= 5; i++) {
             candidates.add(candidate("r" + i, State.REVIEW, "2026-01-01T00:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(3600L * i), 0.98, 0, rotationHour.minusSeconds(1800L * i)));
         }
-        for (int i = 1; i <= 4; i++) {
+        for (int i = 1; i <= 7; i++) {
             candidates.add(candidate("l" + i, State.LEARNING, "2026-01-01T01:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(1200L * i), 0.95, 0, rotationHour.minusSeconds(1200L * i)));
         }
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 8; i++) {
             candidates.add(candidate("rl" + i, State.RE_LEARNING, "2026-01-01T02:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(900L * i), 0.95, 0, rotationHour.minusSeconds(900L * i)));
         }
@@ -42,9 +42,9 @@ class WritingPracticePolicyTests {
 
         assertThat(selected).hasSize(20);
         assertThat(selected.stream().filter(c -> c.state() == State.NEW)).isEmpty();
-        assertThat(selected.stream().filter(c -> c.state() == State.REVIEW)).hasSize(13);
-        assertThat(selected.stream().filter(c -> c.state() == State.LEARNING)).hasSize(4);
-        assertThat(selected.stream().filter(c -> c.state() == State.RE_LEARNING)).hasSize(3);
+        assertThat(selected.stream().filter(c -> c.state() == State.REVIEW)).hasSize(5);
+        assertThat(selected.stream().filter(c -> c.state() == State.LEARNING)).hasSize(7);
+        assertThat(selected.stream().filter(c -> c.state() == State.RE_LEARNING)).hasSize(8);
     }
 
     @Test
@@ -82,8 +82,8 @@ class WritingPracticePolicyTests {
     }
 
     @Test
-    @DisplayName("Writing selection keeps fragile cards under cap")
-    void keepsFragileCardsUnderCap() {
+    @DisplayName("Writing selection does not cap low-retrievability cards")
+    void doesNotCapLowRetrievabilityCards() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new ArrayList<WritingPracticeCandidate>();
 
@@ -98,9 +98,49 @@ class WritingPracticePolicyTests {
 
         var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
-        assertThat(selected).hasSize(22);
+        assertThat(selected).hasSize(30);
         assertThat(selected.stream().filter(candidate -> candidate.retrievability() <= 0.50))
-                .hasSizeLessThanOrEqualTo(2);
+                .hasSize(10);
+    }
+
+    @Test
+    @DisplayName("Writing selection prioritizes lower recent usage within the same due-status bucket")
+    void prioritizesLowerRecentUsageWithinDueStatusBucket() {
+        var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = List.of(
+                candidate("frequent", State.REVIEW, "2026-01-01T00:00:00Z",
+                        rotationHour.minusSeconds(259200), 0.40, 4, rotationHour.minusSeconds(259200)),
+                candidate("unused", State.REVIEW, "2026-01-01T00:01:00Z",
+                        rotationHour.minusSeconds(86400), 0.95, 0, rotationHour.minusSeconds(86400))
+        );
+
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of(
+                "vocab-frequent", 6,
+                "vocab-unused", 0
+        ));
+
+        assertThat(selected).extracting(WritingPracticeCandidate::flashCardId)
+                .containsExactly("unused", "frequent");
+    }
+
+    @Test
+    @DisplayName("Writing selection still prioritizes overdue cards before unused future cards")
+    void prioritizesOverdueBeforeRecentUsage() {
+        var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
+        var candidates = List.of(
+                candidate("overdue", State.REVIEW, "2026-01-01T00:00:00Z",
+                        rotationHour.minusSeconds(60), 0.95, 0, rotationHour.minusSeconds(60)),
+                candidate("future-unused", State.REVIEW, "2026-01-01T00:01:00Z",
+                        rotationHour.plusSeconds(60), 0.40, 4, rotationHour.minusSeconds(86400))
+        );
+
+        var selected = policy.selectCandidates(candidates, rotationHour, Map.of(
+                "vocab-overdue", 10,
+                "vocab-future-unused", 0
+        ));
+
+        assertThat(selected).extracting(WritingPracticeCandidate::flashCardId)
+                .containsExactly("overdue", "future-unused");
     }
 
     private WritingPracticeCandidate candidate(String cardId,

@@ -93,8 +93,8 @@ class ExerciseVocabularySelectionBehaviorTests {
     }
 
     @Test
-    @DisplayName("Reading weak threshold caps unstable opportunity pool at ten")
-    void readingCapsVeryWeakCardsAtTen() {
+    @DisplayName("Reading selection does not cap weak cards")
+    void readingDoesNotCapWeakCards() {
         var candidates = new ArrayList<ReadingPracticeCandidate>();
         for (int index = 0; index < 12; index++) {
             candidates.add(readingCandidate("weak-" + index, State.REVIEW,
@@ -104,7 +104,7 @@ class ExerciseVocabularySelectionBehaviorTests {
 
         var selected = new ReadingPracticePolicy().selectCandidates(candidates, NOW, Map.of());
 
-        assertThat(selected.stream().filter(candidate -> candidate.retrievability() <= 0.60)).hasSize(10);
+        assertThat(selected.stream().filter(candidate -> candidate.retrievability() <= 0.60)).hasSize(12);
         assertThat(selected).extracting(ReadingPracticeCandidate::flashCardId).contains("stable");
     }
 

@@ -11,12 +11,10 @@ import java.util.Map;
 
 public class WritingPracticePolicy {
 
-    private static final double FRAGILE_RETRIEVABILITY_THRESHOLD = 0.50;
     public static final int MAX_WORDS = 100;
-    public static final double REVIEW_RATIO = 0.65;
-    public static final double LEARNING_RATIO = 0.20;
-    public static final double RE_LEARNING_RATIO = 0.15;
-    public static final int MAX_FRAGILE_CARDS = 2;
+    public static final double REVIEW_RATIO = 0.25;
+    public static final double LEARNING_RATIO = 0.35;
+    public static final double RE_LEARNING_RATIO = 0.40;
     private static final List<State> STATE_ORDER = List.of(State.REVIEW, State.LEARNING, State.RE_LEARNING);
 
     public List<WritingPracticeCandidate> selectCandidates(List<WritingPracticeCandidate> candidates,
@@ -91,22 +89,12 @@ public class WritingPracticePolicy {
             if (selected.size() >= capacity || added >= requested) {
                 return;
             }
-            if (selected.contains(candidate) || exceedsFragileCap(selected, candidate)) {
+            if (selected.contains(candidate)) {
                 continue;
             }
             selected.add(candidate);
             added++;
         }
-    }
-
-    private boolean exceedsFragileCap(List<WritingPracticeCandidate> selected, WritingPracticeCandidate candidate) {
-        return isFragile(candidate)
-                && selected.stream().filter(this::isFragile).count() >= MAX_FRAGILE_CARDS;
-    }
-
-    private boolean isFragile(WritingPracticeCandidate candidate) {
-        return !Double.isNaN(candidate.retrievability())
-                && candidate.retrievability() <= FRAGILE_RETRIEVABILITY_THRESHOLD;
     }
 
     private Comparator<WritingPracticeCandidate> revisionComparator(
@@ -115,11 +103,11 @@ public class WritingPracticePolicy {
     ) {
         return Comparator
                 .comparingInt((WritingPracticeCandidate candidate) -> isOverdue(candidate, now) ? 0 : 1)
+                .thenComparingInt(candidate -> usageCounts.getOrDefault(candidate.vocabularyId(), 0))
                 .thenComparing(WritingPracticeCandidate::due, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparingDouble(this::retrievabilityOrMax)
                 .thenComparing(WritingPracticeCandidate::lapses, Comparator.reverseOrder())
                 .thenComparing(WritingPracticeCandidate::lastReview, Comparator.nullsFirst(Comparator.naturalOrder()))
-                .thenComparingInt(candidate -> usageCounts.getOrDefault(candidate.vocabularyId(), 0))
                 .thenComparing(WritingPracticeCandidate::flashCardId, Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
