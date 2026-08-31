@@ -28,6 +28,12 @@ public class UserProfileEntity {
     @Column(name = "difficulty_level", nullable = false)
     private String difficultyLevel;
 
+    @Column(name = "reading_difficulty_level", nullable = false)
+    private String readingDifficultyLevel;
+
+    @Column(name = "writing_difficulty_level", nullable = false)
+    private String writingDifficultyLevel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -80,6 +86,22 @@ public class UserProfileEntity {
 
     public void setDifficultyLevel(String difficultyLevel) {
         this.difficultyLevel = difficultyLevel;
+    }
+
+    public String getReadingDifficultyLevel() {
+        return readingDifficultyLevel;
+    }
+
+    public void setReadingDifficultyLevel(String readingDifficultyLevel) {
+        this.readingDifficultyLevel = readingDifficultyLevel;
+    }
+
+    public String getWritingDifficultyLevel() {
+        return writingDifficultyLevel;
+    }
+
+    public void setWritingDifficultyLevel(String writingDifficultyLevel) {
+        this.writingDifficultyLevel = writingDifficultyLevel;
     }
 
     public Instant getCreatedAt() {

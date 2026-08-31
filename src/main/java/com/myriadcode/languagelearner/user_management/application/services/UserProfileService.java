@@ -29,20 +29,64 @@ public class UserProfileService {
         var updated = userProfileRepo.save(new UserProfile(
                 existing.userId(),
                 selectedLevel,
+                existing.readingDifficultyLevel(),
+                existing.writingDifficultyLevel(),
                 existing.createdAt(),
                 existing.updatedAt()
         ));
         return toResponse(updated);
     }
 
+    @Transactional
+    public UserProfileResponse updatePracticeDifficultyLevels(
+            String userId,
+            String readingDifficultyLevel,
+            String writingDifficultyLevel
+    ) {
+        var existing = getOrCreateProfile(requireUserId(userId));
+        var updated = existing.withPracticeDifficultyLevels(
+                LanguageLevel.from(readingDifficultyLevel),
+                LanguageLevel.from(writingDifficultyLevel)
+        );
+        return toResponse(userProfileRepo.save(updated));
+    }
+
+    @Transactional
+    public UserProfileResponse updateProfileLevels(
+            String userId,
+            String difficultyLevel,
+            String readingDifficultyLevel,
+            String writingDifficultyLevel
+    ) {
+        var existing = getOrCreateProfile(requireUserId(userId));
+        var updated = new UserProfile(
+                existing.userId(),
+                difficultyLevel == null ? existing.difficultyLevel() : LanguageLevel.from(difficultyLevel),
+                readingDifficultyLevel == null
+                        ? existing.readingDifficultyLevel()
+                        : LanguageLevel.from(readingDifficultyLevel),
+                writingDifficultyLevel == null
+                        ? existing.writingDifficultyLevel()
+                        : LanguageLevel.from(writingDifficultyLevel),
+                existing.createdAt(),
+                existing.updatedAt()
+        );
+        return toResponse(userProfileRepo.save(updated));
+    }
+
+    @Transactional
+    public LanguageLevel getReadingDifficultyLevel(String userId) {
+        return getOrCreateProfile(requireUserId(userId)).readingDifficultyLevel();
+    }
+
+    @Transactional
+    public LanguageLevel getWritingDifficultyLevel(String userId) {
+        return getOrCreateProfile(requireUserId(userId)).writingDifficultyLevel();
+    }
+
     private UserProfile getOrCreateProfile(String userId) {
         return userProfileRepo.findByUserId(userId)
-                .orElseGet(() -> userProfileRepo.save(new UserProfile(
-                        userId,
-                        LanguageLevel.defaultLevel(),
-                        null,
-                        null
-                )));
+                .orElseGet(() -> userProfileRepo.save(UserProfile.create(userId)));
     }
 
     private String requireUserId(String userId) {
@@ -56,6 +100,8 @@ public class UserProfileService {
         return new UserProfileResponse(
                 profile.userId(),
                 profile.difficultyLevel().name(),
+                profile.readingDifficultyLevel().name(),
+                profile.writingDifficultyLevel().name(),
                 profile.createdAt(),
                 profile.updatedAt()
         );

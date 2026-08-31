@@ -5,6 +5,8 @@ import java.time.Instant;
 public record UserProfileResponse(
         String userId,
         String difficultyLevel,
+        String readingDifficultyLevel,
+        String writingDifficultyLevel,
         Instant createdAt,
         Instant updatedAt
 ) {

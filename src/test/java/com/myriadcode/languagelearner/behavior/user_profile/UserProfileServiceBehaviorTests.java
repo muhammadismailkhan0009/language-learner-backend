@@ -43,6 +43,24 @@ class UserProfileServiceBehaviorTests {
     }
 
     @Test
+    void updates_reading_and_writing_levels_without_changing_unified_level() {
+        var repo = new InMemoryUserProfileRepo();
+        var service = new UserProfileService(repo);
+        service.updateDifficultyLevel("user-1", "B1");
+
+        service.updatePracticeDifficultyLevels("user-1", "B2", "C1");
+        service.updateDifficultyLevel("user-1", "B1");
+
+        assertThat(repo.findByUserId("user-1").orElseThrow())
+                .extracting(
+                        UserProfile::difficultyLevel,
+                        UserProfile::readingDifficultyLevel,
+                        UserProfile::writingDifficultyLevel
+                )
+                .containsExactly(LanguageLevel.B1, LanguageLevel.B2, LanguageLevel.C1);
+    }
+
+    @Test
     @DisplayName("updateDifficultyLevel: rejects unsupported levels")
     void updateDifficultyLevelRejectsUnsupportedLevels() {
         var service = new UserProfileService(new InMemoryUserProfileRepo());
@@ -66,6 +84,8 @@ class UserProfileServiceBehaviorTests {
             var saved = new UserProfile(
                     profile.userId(),
                     profile.difficultyLevel(),
+                    profile.readingDifficultyLevel(),
+                    profile.writingDifficultyLevel(),
                     profile.createdAt() == null ? now : profile.createdAt(),
                     now
             );

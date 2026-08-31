@@ -20,12 +20,13 @@ public class WritingGenerationContextService {
     }
 
     public WritingGenerationContext build(String userId) {
-        var learnerLevel = userDifficultyLevelApi.getDifficultyLevel(userId);
+        var unifiedLevel = userDifficultyLevelApi.getDifficultyLevel(userId);
+        var writingLevel = userDifficultyLevelApi.getWritingDifficultyLevel(userId);
         var titles = grammarRuleRepo.findAll().stream()
-                .filter(rule -> GrammarRuleVisibilityPolicy.isVisibleTo(rule, learnerLevel))
+                .filter(rule -> GrammarRuleVisibilityPolicy.isVisibleTo(rule, unifiedLevel))
                 .map(rule -> rule.name() == null ? "" : rule.name().trim())
                 .filter(title -> !title.isBlank())
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
-        return new WritingGenerationContext(learnerLevel, java.util.List.copyOf(titles));
+        return new WritingGenerationContext(writingLevel, java.util.List.copyOf(titles));
     }
 }

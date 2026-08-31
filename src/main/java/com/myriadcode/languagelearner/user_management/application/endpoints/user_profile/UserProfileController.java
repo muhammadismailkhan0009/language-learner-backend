@@ -34,7 +34,12 @@ public class UserProfileController {
             @RequestParam("userId") String userId,
             @RequestBody UpdateUserDifficultyLevelRequest request
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(userProfileService.updateDifficultyLevel(userId, request.difficultyLevel())));
+        return ResponseEntity.ok(new ApiResponse<>(userProfileService.updateProfileLevels(
+                userId,
+                request.difficultyLevel(),
+                request.readingDifficultyLevel(),
+                request.writingDifficultyLevel()
+        )));
     }
 
 }

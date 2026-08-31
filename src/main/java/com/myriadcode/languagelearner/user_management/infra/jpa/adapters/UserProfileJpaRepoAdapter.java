@@ -33,6 +33,8 @@ public class UserProfileJpaRepoAdapter implements UserProfileRepo {
                 .orElseGet(UserProfileEntity::new);
         entity.setUserInfo(entityManager.getReference(UserInfoEntity.class, profile.userId()));
         entity.setDifficultyLevel(profile.difficultyLevel().name());
+        entity.setReadingDifficultyLevel(profile.readingDifficultyLevel().name());
+        entity.setWritingDifficultyLevel(profile.writingDifficultyLevel().name());
         entity.setCreatedAt(profile.createdAt());
         var saved = userProfileJpaRepo.save(entity);
         return toDomain(saved);
@@ -42,6 +44,8 @@ public class UserProfileJpaRepoAdapter implements UserProfileRepo {
         return new UserProfile(
                 entity.getUserId(),
                 LanguageLevel.from(entity.getDifficultyLevel()),
+                LanguageLevel.from(entity.getReadingDifficultyLevel()),
+                LanguageLevel.from(entity.getWritingDifficultyLevel()),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

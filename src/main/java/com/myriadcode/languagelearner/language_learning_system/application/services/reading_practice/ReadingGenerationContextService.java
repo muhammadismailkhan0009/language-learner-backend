@@ -20,7 +20,8 @@ public class ReadingGenerationContextService {
     }
 
     public ReadingGenerationContext build(String userId) {
-        var learnerLevel = userDifficultyLevelApi.getDifficultyLevel(userId);
+        var unifiedLevel = userDifficultyLevelApi.getDifficultyLevel(userId);
+        var readingLevel = userDifficultyLevelApi.getReadingDifficultyLevel(userId);
         var candidates = grammarRuleRepo.findAll().stream()
                 .map(rule -> new ReadingGrammarEligibilityPolicy.Candidate(
                         rule.name(),
@@ -28,7 +29,7 @@ public class ReadingGenerationContextService {
                         rule.active()
                 ))
                 .toList();
-        return new ReadingGenerationContext(learnerLevel, eligibilityPolicy.selectTitles(learnerLevel, candidates));
+        return new ReadingGenerationContext(readingLevel, eligibilityPolicy.selectTitles(unifiedLevel, candidates));
     }
 
     private LanguageLevel parseLevel(String rawLevel) {

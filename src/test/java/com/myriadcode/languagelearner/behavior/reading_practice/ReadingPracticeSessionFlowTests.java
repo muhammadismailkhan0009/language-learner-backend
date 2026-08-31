@@ -163,6 +163,7 @@ class ReadingPracticeSessionFlowTests {
     @DisplayName("createSession: supplies profile level and eligible grammar titles to reading generation")
     void createSessionUsesProfileLevelAndEligibleGrammar() {
         userProfileService.updateDifficultyLevel("user-1", "A2");
+        userProfileService.updatePracticeDifficultyLevels("user-1", "B1", "B2");
         grammarRuleRepo.save(grammarRule("a1", "Present tense", "A1", true));
         grammarRuleRepo.save(grammarRule("a2", "Modal verbs", "A2", true));
         grammarRuleRepo.save(grammarRule("b1", "Relative clauses", "B1", true));
@@ -170,7 +171,7 @@ class ReadingPracticeSessionFlowTests {
 
         readingPracticeService.createSession("user-1");
 
-        assertThat(stubReadingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A2);
+        assertThat(stubReadingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.B1);
         assertThat(stubReadingPracticeLlmApi.lastGrammarRuleTitles)
                 .containsExactlyInAnyOrder("Present tense", "Modal verbs")
                 .doesNotContain("Relative clauses", "Inactive basics");
@@ -183,7 +184,14 @@ class ReadingPracticeSessionFlowTests {
         readingPracticeService.createSession("user-2");
 
         assertThat(stubReadingPracticeLlmApi.lastDifficultyLevel).isEqualTo(LanguageLevel.A1);
-        assertThat(userProfileJpaRepo.findByUserInfoId("user-2")).isPresent();
+        assertThat(userProfileJpaRepo.findByUserInfoId("user-2")).hasValueSatisfying(profile ->
+                assertThat(profile)
+                        .extracting(
+                                profileEntity -> profileEntity.getDifficultyLevel(),
+                                profileEntity -> profileEntity.getReadingDifficultyLevel(),
+                                profileEntity -> profileEntity.getWritingDifficultyLevel()
+                        )
+                        .containsExactly("A1", "A1", "A1"));
     }
 
     @Test

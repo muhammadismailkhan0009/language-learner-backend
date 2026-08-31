@@ -1,4 +1,4 @@
-package com.myriadcode.languagelearner.language_learning_system.application.services.writing_practice;
+package com.myriadcode.languagelearner.language_learning_system.application.services.reading_practice;
 
 import com.myriadcode.languagelearner.common.enums.LanguageLevel;
 import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarRule;
@@ -12,27 +12,22 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class WritingGenerationContextServiceTests {
+class ReadingGenerationContextServiceTests {
 
     @Test
-    void buildsProfileLevelAndEligibleGrammarTitles() {
+    void uses_reading_level_for_prompt_and_unified_level_for_grammar_eligibility() {
         var repo = new InMemoryGrammarRuleRepo(List.of(
-                rule("a1", "Present Tense", "A1", "READY", true),
-                rule("a2", "Modal Verbs", "A2", "READY", true),
-                rule("duplicate", " Modal Verbs ", "A2", "READY", true),
-                rule("high", "Relative Clauses", "B1", "READY", true),
-                rule("inactive", "Past Tense", "A1", "READY", false),
-                rule("draft", "Draft Rule", "A1", "DRAFT", true),
-                rule("invalid", "Invalid Rule", "unknown", "READY", true)
+                rule("a2", "Modal Verbs", "A2"),
+                rule("b1", "Relative Clauses", "B1")
         ));
-        var service = new WritingGenerationContextService(new UserDifficultyLevelApi() {
+        var service = new ReadingGenerationContextService(new UserDifficultyLevelApi() {
             @Override
             public LanguageLevel getDifficultyLevel(String userId) {
                 return LanguageLevel.A2;
             }
 
             @Override
-            public LanguageLevel getWritingDifficultyLevel(String userId) {
+            public LanguageLevel getReadingDifficultyLevel(String userId) {
                 return LanguageLevel.B1;
             }
         }, repo);
@@ -40,11 +35,11 @@ class WritingGenerationContextServiceTests {
         var context = service.build("user-1");
 
         assertThat(context.learnerLevel()).isEqualTo(LanguageLevel.B1);
-        assertThat(context.grammarRuleTitles()).containsExactly("Present Tense", "Modal Verbs");
+        assertThat(context.grammarRuleTitles()).containsExactly("Modal Verbs");
     }
 
-    private GrammarRule rule(String id, String name, String level, String status, boolean active) {
-        return new GrammarRule(new GrammarRule.GrammarRuleId(id), id, name, level, status, active, List.of(), null);
+    private GrammarRule rule(String id, String name, String level) {
+        return new GrammarRule(new GrammarRule.GrammarRuleId(id), id, name, level, "READY", true, List.of(), null);
     }
 
     private static class InMemoryGrammarRuleRepo implements GrammarRuleRepo {

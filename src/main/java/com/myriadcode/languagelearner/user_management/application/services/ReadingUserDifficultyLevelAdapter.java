@@ -17,4 +17,14 @@ public class ReadingUserDifficultyLevelAdapter implements UserDifficultyLevelApi
     public LanguageLevel getDifficultyLevel(String userId) {
         return LanguageLevel.from(userProfileService.getProfile(userId).difficultyLevel());
     }
+
+    @Override
+    public LanguageLevel getReadingDifficultyLevel(String userId) {
+        return userProfileService.getReadingDifficultyLevel(userId);
+    }
+
+    @Override
+    public LanguageLevel getWritingDifficultyLevel(String userId) {
+        return userProfileService.getWritingDifficultyLevel(userId);
+    }
 }
