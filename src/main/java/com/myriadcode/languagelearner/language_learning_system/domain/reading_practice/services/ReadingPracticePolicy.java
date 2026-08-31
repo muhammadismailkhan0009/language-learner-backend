@@ -13,10 +13,10 @@ public class ReadingPracticePolicy {
 
     private static final double VERY_WEAK_RETRIEVABILITY_THRESHOLD = 0.60;
     public static final int MAX_WORDS = 100;
-    public static final double REVIEW_RATIO = 0.40;
-    public static final double RE_LEARNING_RATIO = 0.30;
-    public static final double LEARNING_RATIO = 0.20;
-    public static final double NEW_RATIO = 0.10;
+    public static final double REVIEW_RATIO = 0.20;
+    public static final double RE_LEARNING_RATIO = 0.35;
+    public static final double LEARNING_RATIO = 0.30;
+    public static final double NEW_RATIO = 0.15;
     public static final int MAX_VERY_WEAK_CARDS = 10;
     private static final List<State> STATE_ORDER = List.of(
             State.REVIEW, State.RE_LEARNING, State.LEARNING, State.NEW
@@ -93,7 +93,7 @@ public class ReadingPracticePolicy {
             if (selected.size() >= capacity || added >= requested) {
                 return;
             }
-            if (selected.contains(candidate) || exceedsWeakCap(selected, candidate)) {
+            if (selected.contains(candidate)) {
                 continue;
             }
             selected.add(candidate);
@@ -101,6 +101,7 @@ public class ReadingPracticePolicy {
         }
     }
 
+    @Deprecated(forRemoval = true)
     private boolean exceedsWeakCap(List<ReadingPracticeCandidate> selected, ReadingPracticeCandidate candidate) {
         return isVeryWeak(candidate)
                 && selected.stream().filter(this::isVeryWeak).count() >= MAX_VERY_WEAK_CARDS;

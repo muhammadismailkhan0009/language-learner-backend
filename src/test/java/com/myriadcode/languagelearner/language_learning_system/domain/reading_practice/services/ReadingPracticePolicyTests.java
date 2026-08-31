@@ -53,7 +53,7 @@ class ReadingPracticePolicyTests {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
 
-        for (int i = 1; i <= 12; i++) {
+        for (int i = 1; i <= 40; i++) {
             candidates.add(candidate(
                     "review-" + i,
                     State.REVIEW,
@@ -64,7 +64,7 @@ class ReadingPracticePolicyTests {
                     rotationHour.minusSeconds(7200L * i)
             ));
         }
-        for (int i = 1; i <= 9; i++) {
+        for (int i = 1; i <= 40; i++) {
             candidates.add(candidate(
                     "re-learning-" + i,
                     State.RE_LEARNING,
@@ -75,7 +75,7 @@ class ReadingPracticePolicyTests {
                     rotationHour.minusSeconds(5400L * i)
             ));
         }
-        for (int i = 1; i <= 6; i++) {
+        for (int i = 1; i <= 40; i++) {
             candidates.add(candidate(
                     "learning-" + i,
                     State.LEARNING,
@@ -86,7 +86,7 @@ class ReadingPracticePolicyTests {
                     rotationHour.minusSeconds(4800L * i)
             ));
         }
-        for (int i = 1; i <= 3; i++) {
+        for (int i = 1; i <= 40; i++) {
             candidates.add(candidate(
                     "new-" + i,
                     State.NEW,
@@ -100,27 +100,27 @@ class ReadingPracticePolicyTests {
 
         var selected = policy.selectCandidates(candidates, rotationHour, Map.of());
 
-        assertThat(selected).hasSize(30);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.REVIEW)).hasSize(12);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.RE_LEARNING)).hasSize(9);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.LEARNING)).hasSize(6);
-        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(3);
+        assertThat(selected).hasSize(100);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.REVIEW)).hasSize(20);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.RE_LEARNING)).hasSize(35);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.LEARNING)).hasSize(30);
+        assertThat(selected.stream().filter(candidate -> candidate.state() == State.NEW)).hasSize(15);
     }
 
     @Test
-    @DisplayName("Reading selection backfills missing ratio buckets")
-    void backfillsMissingRatioBuckets() {
+    @DisplayName("Reading selection backfills missing ratio buckets without capping weak cards")
+    void backfillsMissingRatioBucketsWithoutCappingWeakCards() {
         var rotationHour = Instant.parse("2026-03-11T10:00:00Z");
         var candidates = new java.util.ArrayList<ReadingPracticeCandidate>();
 
         for (int i = 1; i <= 30; i++) {
             candidates.add(candidate(
-                    "review-stable-" + i,
+                    "review-weak-" + i,
                     State.REVIEW,
                     "2026-01-01T00:%02d:00Z".formatted(i % 60),
                     rotationHour.minusSeconds(900L * i),
-                    0.97,
-                    0,
+                    0.50,
+                    2,
                     rotationHour.minusSeconds(1200L * i)
             ));
         }
