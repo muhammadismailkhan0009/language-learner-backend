@@ -22,6 +22,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.practice_v
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.repo.WritingPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.writing_practice.services.WritingPracticePolicy;
 import com.myriadcode.languagelearner.language_learning_system.application.services.exercise_vocabulary.RecentExerciseVocabularyUsageService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyExtractionService;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +54,7 @@ public class WritingPracticeService {
     private final WritingGenerationContextService writingGenerationContextService;
     private final UserDifficultyLevelApi userDifficultyLevelApi;
     private final RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService;
+    private final VocabularyExtractionService vocabularyExtractionService;
     private final WritingPracticePolicy writingPracticePolicy = new WritingPracticePolicy();
     private final WritingPracticeCandidateAssembler candidateAssembler = new WritingPracticeCandidateAssembler();
     private final WritingPracticeContentAssembler contentAssembler = new WritingPracticeContentAssembler();
@@ -65,7 +67,8 @@ public class WritingPracticeService {
                                   WritingFeedbackPipelineService writingFeedbackPipelineService,
                                   WritingGenerationContextService writingGenerationContextService,
                                   UserDifficultyLevelApi userDifficultyLevelApi,
-                                  RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService) {
+                                  RecentExerciseVocabularyUsageService recentExerciseVocabularyUsageService,
+                                  VocabularyExtractionService vocabularyExtractionService) {
         this.writingPracticeRepo = writingPracticeRepo;
         this.vocabularyFlashcardReviewsApi = vocabularyFlashcardReviewsApi;
         this.fetchPrivateVocabularyApi = fetchPrivateVocabularyApi;
@@ -74,6 +77,7 @@ public class WritingPracticeService {
         this.writingGenerationContextService = writingGenerationContextService;
         this.userDifficultyLevelApi = userDifficultyLevelApi;
         this.recentExerciseVocabularyUsageService = recentExerciseVocabularyUsageService;
+        this.vocabularyExtractionService = vocabularyExtractionService;
     }
 
     public String prepareGenerationPrompt(String userId) {
@@ -82,6 +86,7 @@ public class WritingPracticeService {
                 preparation.generationContext().learnerLevel(), preparation.generationContext().grammarRuleTitles(), SCENARIO_COUNT);
     }
 
+    @Transactional
     public void storeGeneration(String userId, WritingPracticeGeneration generated) {
         var normalizedUserId = requireUserId(userId);
         var preparation = prepareGeneration(normalizedUserId);
@@ -112,6 +117,8 @@ public class WritingPracticeService {
         writingPracticeRepo.save(new WritingPracticeSession(
                 new WritingPracticeSession.WritingPracticeSessionId(UUID.randomUUID().toString()),
                 new UserId(normalizedUserId), Instant.now(), scenarios));
+        scenarios.forEach(scenario ->
+                vocabularyExtractionService.submit(normalizedUserId, scenario.germanParagraph()));
     }
 
     private WritingPracticeGenerationPreparation prepareGeneration(String userId) {
