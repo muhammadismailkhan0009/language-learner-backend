@@ -65,6 +65,7 @@ public class GrammarRuleController {
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 
+    @Deprecated(forRemoval = true)
     @DeleteMapping("{grammarRuleId}/explanation/v1")
     public ResponseEntity<ApiResponse<GrammarRuleResponse>> deleteGrammarRuleExplanation(
             @PathVariable("grammarRuleId") String grammarRuleId,
@@ -138,7 +139,7 @@ public class GrammarRuleController {
     }
 
     @PostMapping("admin/details/v1")
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = false)
     public ResponseEntity<ApiResponse<List<GrammarRuleDraftDetailsResponse>>> generateGrammarRuleDetails(
             @RequestBody GenerateGrammarRuleDetailsRequest request
     ) {

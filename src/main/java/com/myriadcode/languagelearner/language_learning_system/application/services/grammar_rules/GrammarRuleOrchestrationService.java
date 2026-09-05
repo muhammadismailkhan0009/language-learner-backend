@@ -82,6 +82,7 @@ public class GrammarRuleOrchestrationService {
         return GRAMMAR_RULE_API_MAPPER.toResponse(grammarRuleRepo.save(toSave));
     }
 
+    @Deprecated(forRemoval = true)
     public GrammarRuleResponse deleteGrammarRuleExplanation(String grammarRuleId, DeleteGrammarRuleExplanationRequest request) {
         validateAdminKey(request.adminKey());
         var existing = grammarRuleRepo.findById(grammarRuleId)
@@ -219,7 +220,7 @@ public class GrammarRuleOrchestrationService {
         );
     }
 
-    @Deprecated(forRemoval = true)
+    @Deprecated(forRemoval = false)
     public List<GrammarRuleDraftDetailsResponse> generateDraftDetails(GenerateGrammarRuleDetailsRequest request) {
         validateAdminKey(request.adminKey());
         if (request.rules() == null || request.rules().isEmpty()) {
