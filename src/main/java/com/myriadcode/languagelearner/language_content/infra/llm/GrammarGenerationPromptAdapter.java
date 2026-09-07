@@ -15,8 +15,13 @@ public class GrammarGenerationPromptAdapter implements GrammarGenerationPromptAp
 
     public String ruleDetailsPrompt(String level, String targetLanguage,
                                     List<GrammarGenerationRequest.RuleSeed> rules) {
-        return rules.stream().map(rule -> PromptsGenerator.grammarRuleDetails(
-                rule.identifier(), rule.name(), level, targetLanguage)).reduce((left, right) -> left + "\n\n" + right)
+        return rules.stream().map(rule -> """
+                Grammar draft ID: %s
+                When calling store_grammar_rule_details, return this exact value as draftId for these details.
+
+                %s
+                """.formatted(rule.draftId(), PromptsGenerator.grammarRuleDetails(
+                rule.identifier(), rule.name(), level, targetLanguage))).reduce((left, right) -> left + "\n\n" + right)
                 .orElse("");
     }
 

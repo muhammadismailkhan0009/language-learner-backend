@@ -1,6 +1,7 @@
 package com.myriadcode.languagelearner.language_content.infra.llm;
 
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
+import com.myriadcode.languagelearner.language_learning_system.domain.grammar_rules.model.GrammarGenerationRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -28,5 +29,22 @@ class GrammarRuleDraftPromptTests {
         assertThat(prompt).contains("identifier=present-tense-basics");
         assertThat(prompt).contains("identifier=relative-clauses");
         assertThat(prompt).contains("Requested level: A2");
+    }
+
+    @Test
+    @DisplayName("MCP grammar-rule details prompt includes exact draft ID needed for storage")
+    void grammarRuleDetailsPromptIncludesDraftId() {
+        var prompt = new GrammarGenerationPromptAdapter().ruleDetailsPrompt(
+                "B1",
+                "de",
+                List.of(new GrammarGenerationRequest.RuleSeed(
+                        "draft-7f3a", "relative-clauses", "Relative Clauses"))
+        );
+
+        assertThat(prompt)
+                .contains("Grammar draft ID: draft-7f3a")
+                .contains("return this exact value as draftId")
+                .contains("Identifier: relative-clauses")
+                .contains("Rule name: Relative Clauses");
     }
 }
