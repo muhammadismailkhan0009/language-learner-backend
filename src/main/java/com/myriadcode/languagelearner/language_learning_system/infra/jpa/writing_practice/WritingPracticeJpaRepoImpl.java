@@ -200,7 +200,8 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
 
     private WritingPracticeScenario toScenarioDomain(WritingPracticeScenarioEntity entity) {
         return new WritingPracticeScenario(new WritingPracticeScenario.WritingPracticeScenarioId(entity.getId()), entity.getPosition(),
-                entity.getTopic(), entity.getEnglishParagraph(), entity.getGermanParagraph(), entity.getSubmittedAnswer(), entity.getSubmittedAt(),
+                entity.getTopic(), entity.getEnglishParagraph(), entity.getGermanParagraph(),
+                null, null, entity.getSubmittedAnswer(), entity.getSubmittedAt(),
                 entity.getFeedbackText(), fromJson(entity.getStructuredFeedbackJson()), entity.getFeedbackGeneratedAt(),
                 entity.getSentencePairs().stream().sorted(Comparator.comparingInt(value -> value.getPosition())).map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairDomain).toList(),
                 entity.getVocabularyUsages().stream().map(WRITING_PRACTICE_JPA_MAPPER::toUsageDomain).toList());

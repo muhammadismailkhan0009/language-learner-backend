@@ -11,6 +11,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class WritingGenerationPromptTests {
 
     @Test
+    void writingPracticePromptRequiresOneShortFreeWritingScaffoldPerScenario() {
+        var prompt = PromptsGenerator.writingPracticeGeneration(
+                List.of(new WritingPracticeVocabularySeed("kaufen", "to buy")),
+                List.of(),
+                LanguageLevel.A2,
+                List.of(),
+                3
+        );
+
+        assertThat(prompt).contains("For each scenario, also generate one free-style writing scaffold");
+        assertThat(prompt).contains("freeWritingInstructions: minimal instructions containing a short realistic");
+        assertThat(prompt).contains("Do not generate the learner's free-writing answer");
+    }
+
+    @Test
     void bilingualPromptIncludesProfileLevelAndEligibleGrammarTitles() {
         var prompt = PromptsGenerator.writingBilingualContent(
                 "At the market",

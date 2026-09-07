@@ -35,7 +35,7 @@ public class WritingPracticeMcpTools {
             description = "Validate and store three-scenario writing exercise output using the exact generation schema.")
     @Transactional
     public WritingPracticeStoreResponse storeWritingPracticeGeneration(
-            @McpToolParam(description = "Generated three-scenario writing exercise output", required = true)
+            @McpToolParam(description = "Generated three-scenario writing exercise output, including one minimal free-writing instruction with a short scenario per writing scenario", required = true)
             WritingPracticeGeneration generated) {
         var userId = McpUserContextHolder.requireUserId();
         jobService.require(userId, WRITING_PRACTICE);

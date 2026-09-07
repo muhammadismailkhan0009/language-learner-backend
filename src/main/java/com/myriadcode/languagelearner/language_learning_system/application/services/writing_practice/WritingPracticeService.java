@@ -108,7 +108,9 @@ public class WritingPracticeService {
                         preparation.candidates(), preparation.vocabularyRecords(), usedSurfaces);
                 return new WritingPracticeScenario(
                         new WritingPracticeScenario.WritingPracticeScenarioId(UUID.randomUUID().toString()), position,
-                        source.topic().trim(), english, german, null, null, null, null, null, pairs, usages);
+                        source.topic().trim(), english, german,
+                        contentAssembler.sanitizeParagraph(source.freeWritingInstructions()),
+                        null, null, null, null, null, null, pairs, usages);
             }).toList();
         } catch (IllegalArgumentException exception) {
             throw new WritingPracticeGenerationValidationException(List.of(exception.getMessage()));
@@ -181,6 +183,7 @@ public class WritingPracticeService {
             if (scenario.topic() == null || scenario.topic().isBlank()) errors.add(path + ".topic is required");
             if (scenario.englishParagraph() == null || scenario.englishParagraph().isBlank()) errors.add(path + ".englishParagraph is required");
             if (scenario.germanParagraph() == null || scenario.germanParagraph().isBlank()) errors.add(path + ".germanParagraph is required");
+            if (scenario.freeWritingInstructions() == null || scenario.freeWritingInstructions().isBlank()) errors.add(path + ".freeWritingInstructions is required");
             if (scenario.sentencePairs() == null || scenario.sentencePairs().isEmpty()) errors.add(path + ".sentencePairs is required");
             else for (int pairIndex = 0; pairIndex < scenario.sentencePairs().size(); pairIndex++) {
                 var pair = scenario.sentencePairs().get(pairIndex);

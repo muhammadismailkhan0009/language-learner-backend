@@ -27,6 +27,7 @@ class WritingPracticeScenarioApiMapperTests {
 
     private WritingPracticeScenario scenario(String id, int position, String topic) {
         return new WritingPracticeScenario(new WritingPracticeScenario.WritingPracticeScenarioId(id), position, topic,
-                "English", "Deutsch", null, null, null, null, null, List.of(), List.of());
+                "English", "Deutsch", null, null,
+                null, null, null, null, null, List.of(), List.of());
     }
 }

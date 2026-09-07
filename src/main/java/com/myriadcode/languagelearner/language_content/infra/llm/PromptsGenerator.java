@@ -1864,6 +1864,12 @@ public static String readingUsedVocabularySelection(
 
       Each scenario will be presented and solved independently.
 
+      For each scenario, also generate one free-style writing scaffold:
+      - freeWritingInstructions: minimal instructions containing a short realistic
+        situation and asking the learner to write a short text
+
+      Keep this scaffold short. Do not generate the learner's free-writing answer.
+
       ==================================================
       TOPIC SELECTION
       ==================================================

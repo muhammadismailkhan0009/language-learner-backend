@@ -9,6 +9,8 @@ public record WritingPracticeScenario(
         String topic,
         String englishParagraph,
         String germanParagraph,
+        String freeWritingInstructions,
+        String freeWritingText,
         String submittedAnswer,
         Instant submittedAt,
         String feedbackText,

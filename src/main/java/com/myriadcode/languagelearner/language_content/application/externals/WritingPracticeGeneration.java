@@ -7,6 +7,7 @@ public record WritingPracticeGeneration(List<Scenario> scenarios) {
             String topic,
             String englishParagraph,
             String germanParagraph,
+            String freeWritingInstructions,
             List<WritingPracticeSentencePairSeed> sentencePairs,
             List<String> usedVocabulary
     ) {
