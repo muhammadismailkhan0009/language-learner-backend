@@ -10,10 +10,8 @@ public final class ReadingPracticeReadingContentValidator {
         var errors = new ArrayList<String>();
         var scenarios = content == null || content.scenarios() == null ? List.<ReadingPracticeReadingContent.Scenario>of() : content.scenarios();
         if (scenarios.size() != expectedCount) errors.add("Expected %d scenarios but received %d".formatted(expectedCount, scenarios.size()));
-        var byId = new HashMap<String, ReadingPracticeVocabularySeed>();
         var bySurface = new HashMap<String, ReadingPracticeVocabularySeed>();
         if (vocabulary != null) vocabulary.stream().filter(Objects::nonNull).forEach(seed -> {
-            if (!blank(seed.id())) byId.put(seed.id(), seed);
             if (!blank(seed.surface())) bySurface.putIfAbsent(normalize(seed.surface()), seed);
         });
         var labels = new HashSet<String>();
@@ -32,15 +30,12 @@ public final class ReadingPracticeReadingContentValidator {
             }
             var seen = new HashSet<String>();
             var used = scenario == null || scenario.usedVocabulary() == null
-                    ? List.<ReadingPracticeReadingContent.UsedVocabulary>of() : scenario.usedVocabulary();
-            for (var reference : used) {
-                var seed = reference == null ? null : byId.get(reference.vocabularyId());
-                if (seed == null && reference != null && !blank(reference.surface())) {
-                    seed = bySurface.get(normalize(reference.surface()));
+                    ? List.<String>of() : scenario.usedVocabulary();
+            for (var surface : used) {
+                var seed = blank(surface) ? null : bySurface.get(normalize(surface));
+                if (seed != null && !seen.add(seed.id())) {
+                    errors.add("Scenario %d contains duplicate vocabulary reference: %s".formatted(i, seed.id()));
                 }
-                if (seed == null) errors.add("Scenario %d contains unknown vocabulary reference: %s / %s"
-                        .formatted(i, reference == null ? null : reference.vocabularyId(), reference == null ? null : reference.surface()));
-                else if (!seen.add(seed.id())) errors.add("Scenario %d contains duplicate vocabulary reference: %s".formatted(i, seed.id()));
             }
         }
         return List.copyOf(errors);

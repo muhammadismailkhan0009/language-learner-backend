@@ -222,8 +222,7 @@ class ReadingPracticeServiceOrchestratorTests {
         return new ReadingPracticeReadingContent(java.util.stream.IntStream.range(0, 3)
                 .mapToObj(index -> new ReadingPracticeReadingContent.Scenario("Scenario " + index,
                         List.of(new ReadingPracticeReadingContent.Paragraph(text, List.of(text))),
-                        vocabulary.stream().map(seed -> new ReadingPracticeReadingContent.UsedVocabulary(
-                                seed.id(), seed.surface())).toList())).toList());
+                        vocabulary.stream().map(ReadingPracticeVocabularySeed::surface).toList())).toList());
     }
 
     private PrivateVocabularyRecord vocab(String id) {

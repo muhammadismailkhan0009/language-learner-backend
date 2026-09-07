@@ -28,10 +28,10 @@ class ReadingMultiScenarioContentContractTests {
     }
 
     @Test
-    void unknownIdFallsBackToNormalizedSurface() {
+    void matchesVocabularyByNormalizedSurfaceAndIgnoresUnknownSurfaces() {
         var scenario = new ReadingPracticeReadingContent.Scenario("One",
                 List.of(new ReadingPracticeReadingContent.Paragraph("Ich gehe.", List.of("Ich gehe."))),
-                List.of(new ReadingPracticeReadingContent.UsedVocabulary("wrong-id", " GEHEN ")));
+                List.of(" GEHEN ", "Bahnhof"));
         var content = new ReadingPracticeReadingContent(List.of(scenario, scenario("Two"), scenario("Three")));
 
         assertThat(new ReadingPracticeReadingContentValidator().validate(3,
@@ -41,6 +41,6 @@ class ReadingMultiScenarioContentContractTests {
     private ReadingPracticeReadingContent.Scenario scenario(String label) {
         return new ReadingPracticeReadingContent.Scenario(label,
                 List.of(new ReadingPracticeReadingContent.Paragraph("Ich gehe.", List.of("Ich gehe."))),
-                List.of(new ReadingPracticeReadingContent.UsedVocabulary("v1", "gehen")));
+                List.of("gehen"));
     }
 }

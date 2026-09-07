@@ -47,9 +47,7 @@ public class ReadingPracticeLlmAdapter implements ReadingPracticeLlmApi {
                 new ReadingPracticeReadingContent.Scenario(scenario.scenarioLabel(),
                         scenario.paragraphs().stream().map(paragraph ->
                                 new ReadingPracticeReadingContent.Paragraph(paragraph.text(), paragraph.sentences())).toList(),
-                        scenario.usedVocabulary().stream().map(used ->
-                                new ReadingPracticeReadingContent.UsedVocabulary(
-                                        used.vocabularyId(), used.surface())).toList())).toList());
+                        scenario.usedVocabulary())).toList());
     }
 
     @Override

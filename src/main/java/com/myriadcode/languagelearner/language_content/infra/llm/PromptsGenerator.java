@@ -1138,7 +1138,8 @@ public final class PromptsGenerator {
       - listening and reading comprehension
       - repeated exposure to useful learner vocabulary
       - coherent contextual use of vocabulary
-      - natural exposure to suitable grammar
+      - grammatical difficulty appropriate to the requested CEFR level
+      - natural use of supplied grammar rules
 
       SCENARIO DESIGN
 
@@ -1167,11 +1168,14 @@ public final class PromptsGenerator {
 
       1. Natural and idiomatic German.
       2. Clear and coherent progression of meaning.
-      3. Appropriate CEFR difficulty.
+      3. Grammatical and overall difficulty appropriate to the requested CEFR level.
       4. Useful and reasonably diverse reuse of learner vocabulary.
-      5. Natural exposure to suitable grammar.
+      5. Natural use of suitable supplied grammar rules.
 
       Naturalness and coherence are more important than maximizing vocabulary coverage.
+
+      However, naturalness must not be achieved by repeatedly falling back to grammatical
+      structures substantially below the requested CEFR level.
 
       VOCABULARY USAGE
 
@@ -1192,32 +1196,38 @@ public final class PromptsGenerator {
 
       USED VOCABULARY METADATA
 
-      For each scenario, report the supplied vocabulary entries that are actually represented
-      in that scenario.
+      For each scenario, report every vocabulary item or reusable chunk present in that
+      scenario that could plausibly correspond to an existing vocabulary entry.
+
+      This includes:
+      - supplied learner vocabulary actually used in the scenario
+      - other vocabulary already occurring naturally in the generated German
+      - reusable lexical chunks represented by contextual or inflected forms
 
       Important:
-      - vocabularyId must be copied from the corresponding supplied vocabulary entry
-      - surface must be copied EXACTLY from the original supplied German surface
-      - return the original canonical supplied surface, not the inflected form appearing
-        in the generated text
-      - include an entry only when that vocabulary item is genuinely used in the scenario
-      - never invent, normalize, translate, or reconstruct vocabulary surfaces
-      - never return vocabulary that was not supplied
+      - return surfaces only; never return vocabulary IDs
+      - normalize inflected, declined, plural, conjugated, separated, or contextual forms
+        to a plausible canonical German vocabulary surface where possible
+      - for nouns, prefer a canonical noun surface including its article when reasonably known
+      - for verbs and reusable chunks, prefer the normal infinitive or canonical chunk form
+      - report the canonical lexical item rather than merely copying the exact contextual form
+      - do not invent vocabulary records merely to increase reported coverage
+      - do not report vocabulary that is not genuinely represented in the generated German
+      - unmatched surfaces are allowed because the backend will ignore them
 
       Example:
 
       Supplied:
-      id=123 | German=sich erinnern | translation=to remember
+      German=sich erinnern | translation=to remember
 
       Generated text:
       "Anna erinnert sich an ihren ersten Tag."
 
       Report:
-      vocabularyId=123
-      surface=sich erinnern
+      sich erinnern
 
       not:
-      surface=erinnert sich
+      erinnert sich
 
       ADDITIONAL VOCABULARY
 
@@ -1235,42 +1245,131 @@ public final class PromptsGenerator {
 
       GRAMMAR USAGE
 
-      Use natural German grammar appropriate to the learner level.
-
       Eligible grammar-rule titles are supplied below.
 
-      - Prefer grammar rules from the supplied list when they fit naturally.
-      - Do not force every supplied grammar rule.
-      - Approximately 1-3 useful grammar structures per scenario is usually sufficient.
-      - Important structures may recur naturally.
-      - Ordinary CEFR-appropriate grammar may also appear even when not explicitly supplied.
-      - Do not artificially simplify German so much that the result becomes unnatural.
-      - Do not introduce unnecessary syntactic complexity merely for variety.
+      These titles may include:
+      - grammar appropriate to the requested CEFR level
+      - grammar from lower CEFR levels that remains necessary for natural language
+
+      Treat these two roles differently.
+
+      The requested CEFR level defines the TARGET grammatical difficulty.
+
+      Grammar below the requested level may be used freely as supporting grammar, but it must
+      not dominate so strongly that the scenario effectively becomes a lower-level exercise.
+
+      Internally identify which supplied grammar rules are appropriate to the requested CEFR
+      level and use them as the primary source of target-level grammatical difficulty.
+
+      General requirements:
+      - each scenario must meaningfully exercise grammar appropriate to the requested CEFR level
+        when suitable supplied rules are available
+      - lower-level supplied grammar should support natural sentence construction rather than
+        become the main grammatical challenge
+      - do not satisfy the requested level merely by inserting one isolated target-level
+        structure into an otherwise substantially lower-level scenario
+      - target-level grammar should meaningfully influence the grammatical demands of the
+        scenario as a whole
+      - do not force every supplied grammar rule
+      - approximately 1-3 useful grammar structures per scenario is usually sufficient,
+        provided the scenario as a whole genuinely reflects the requested level
+      - important structures may recur naturally
+      - across multiple scenarios, prefer reasonable diversity among suitable supplied
+        target-level grammar rules
+      - do not repeatedly choose the easiest lower-level construction merely because it is
+        simpler to generate
+      - ordinary supporting grammar required to form natural German may appear even when it is
+        not explicitly represented by a supplied title
+      - do not introduce unnecessary syntactic complexity merely for variety
+      - never damage naturalness or coherence solely to demonstrate a grammar rule
+
+      LEVEL-SENSITIVE GRAMMAR EXPECTATIONS
+
+      A1:
+      - The grammatical center of gravity must remain at A1.
+      - Prefer transparent and predictable structures.
+      - Supplied A1 grammar should carry the main grammatical load.
+      - Avoid unnecessary complexity beyond the requested level.
+
+      A2:
+      - The grammatical center of gravity must clearly be A2.
+      - Each scenario should meaningfully depend on supplied grammar appropriate to A2.
+      - Lower-level grammar may appear naturally and frequently as supporting structure,
+        but successful comprehension should require more than only A1 grammatical control.
+      - Do not generate an A1-style scenario with only a token A2 feature.
+      - Across a multi-scenario batch, vary the supplied A2-level grammar carrying the main
+        grammatical load when natural.
+
+      B1:
+      - The grammatical center of gravity must clearly be B1.
+      - Each scenario should meaningfully depend on supplied grammar appropriate to B1.
+      - Lower-level grammar remains available as supporting structure, but the scenario as a
+        whole should require B1 grammatical control.
+      - Prefer meaningful structural diversity across the batch rather than repeated fallback
+        to lower-level patterns.
+
+      B2:
+      - The grammatical center of gravity must clearly be B2.
+      - Use supplied B2-appropriate grammar as a substantial part of the scenario's
+        grammatical organization.
+      - Lower-level grammar may occur naturally but must not determine the effective difficulty.
+      - The scenario should require the structural control expected at B2 rather than simply
+        using longer lower-level sentences.
+
+      C1:
+      - The grammatical center of gravity must clearly be C1.
+      - Use supplied C1-appropriate grammar flexibly and naturally.
+      - Lower-level structures remain part of normal language, but the overall grammatical
+        organization should require advanced control appropriate to C1.
+      - Avoid artificial complexity; advanced grammar must serve the meaning.
+
+      C2:
+      - The grammatical center of gravity must clearly be C2.
+      - Use supplied C2-appropriate grammar with unrestricted natural flexibility where
+        appropriate.
+      - Lower-level grammar remains naturally present, but must not reduce the effective
+        grammatical difficulty.
+      - Structural choices should be driven by discourse, nuance, emphasis, and register.
+
+      Judge grammatical level across the COMPLETE SCENARIO, not sentence by sentence.
+
+      Simple supporting sentences remain valid at every level, but the combined grammatical
+      demands of each scenario must clearly correspond to the requested CEFR level.
 
       SENTENCE DIFFICULTY
 
-      Adapt complexity to the requested CEFR level.
+      Adapt sentence length and overall structural load to the requested CEFR level.
 
       A1:
       - usually about 5-10 words per sentence
-      - mostly simple main clauses
-      - very common connectors and constructions
+      - structurally transparent sentences
       - occasional slightly longer sentences when naturally understandable
 
       A2:
       - usually about 6-14 words per sentence
-      - common connectors
-      - modal verbs
-      - perfect tense
-      - common subordinate clauses
-      - moderately varied word order
+      - moderate structural variation
+      - sentences may combine grammar naturally when supported by the supplied rules
+      - avoid a scenario composed almost entirely of repeated A1-style sentence patterns
 
       B1:
       - usually about 8-18 words per sentence
-      - connected clauses
-      - subordinate clauses
-      - explanations, reasons, conditions, and developed thoughts
-      - naturally varied word order
+      - greater structural variety
+      - connected and developed ideas
+      - multiple grammatical relationships may interact naturally
+
+      B2:
+      - allow broader syntactic variation and more flexible information structure
+      - sentences may contain several interacting grammatical relationships when natural
+      - complexity should serve meaning rather than merely increase length
+
+      C1:
+      - allow broad, flexible, idiomatic structural variation
+      - longer or more layered sentences may appear when appropriate
+      - grammar should reflect advanced control rather than artificial complexity
+
+      C2:
+      - allow unrestricted natural structural variation appropriate to context
+      - sentence form may vary substantially according to discourse, register, and nuance
 
       These are guidelines, not strict word limits.
 
@@ -1331,6 +1430,27 @@ public final class PromptsGenerator {
       - unnecessary abstraction
       - disconnected example sentences disguised as a story
 
+      FINAL QUALITY CHECK
+
+      Before returning the result, internally verify EACH scenario:
+
+      - Is the scenario natural and coherent?
+      - Does it stand alone without depending on another scenario?
+      - Does its overall grammatical difficulty clearly match CEFR level %s?
+      - Does target-level supplied grammar meaningfully contribute to the scenario?
+      - Has lower-level grammar remained supporting grammar rather than reducing the effective
+        difficulty below the requested level?
+      - Is the scenario more than a lower-level text containing one token target-level feature?
+      - Across the batch, is there reasonable grammatical diversity when the supplied rules
+        support it?
+      - Is vocabulary used naturally rather than stuffed into the text?
+      - Is every reported used-vocabulary surface normalized to a plausible canonical German
+        vocabulary surface where possible?
+      - Is every reported vocabulary item genuinely represented in the German scenario?
+      - Do paragraph text and sentence segmentation contain exactly identical wording?
+
+      If any scenario fails these checks, revise it before returning the result.
+
       Learner Vocabulary:
       %s
 
@@ -1342,6 +1462,7 @@ public final class PromptsGenerator {
       """.formatted(
           difficultyLevel,
           scenarioCount,
+          difficultyLevel,
           vocabList,
           grammarTitles,
           recentLabels);
@@ -1797,7 +1918,8 @@ public static String readingUsedVocabularySelection(
       The exercise should primarily test:
       - retrieval of already supplied learner vocabulary
       - construction of natural German sentences
-      - appropriate grammar for the requested CEFR level
+      - grammatical control at the requested CEFR level
+      - appropriate use of supplied grammar rules
 
       Writing practice should not normally become a test of German content
       vocabulary that has never been supplied to the learner.
@@ -1810,9 +1932,14 @@ public static String readingUsedVocabularySelection(
       2. Natural English in the learner prompt.
       3. Natural and idiomatic German in the reference answer.
       4. The situation must be expressible primarily with supplied learner vocabulary.
-      5. Appropriate difficulty for the requested CEFR level.
+      5. The grammatical demands must genuinely reflect the requested CEFR level.
       6. Useful practice of a suitable subset of learner vocabulary.
-      7. Natural exposure to eligible grammar rules.
+      7. Natural and meaningful use of suitable supplied grammar rules.
+
+      The requested CEFR level is a real difficulty requirement.
+
+      Do not preserve naturalness by repeatedly choosing grammar substantially below
+      the requested level when suitable supplied target-level grammar can fit naturally.
 
       The English and German paragraphs must express exactly the same meaning.
 
@@ -1830,12 +1957,12 @@ public static String readingUsedVocabularySelection(
         decision, problem, conversation, or sequence of actions.
       - Every sentence should belong naturally to that same situation.
       - Each sentence should normally add new information or move the situation forward.
-      - Do not add unrelated information merely to use additional vocabulary.
+      - Do not add unrelated information merely to use additional vocabulary or grammar.
       - Do not repeat the same idea using slightly different wording.
       - When appropriate, give the paragraph a simple beginning,
         development, and conclusion.
-      - The result must feel like a genuine mini-situation, not a vocabulary list
-        disguised as a paragraph.
+      - The result must feel like a genuine mini-situation, not a vocabulary or grammar
+        list disguised as a paragraph.
       - Prefer situations with some natural progression rather than a static list
         of unrelated facts.
 
@@ -1847,7 +1974,7 @@ public static String readingUsedVocabularySelection(
       - The English must sound natural independently of the German reference.
       - Do NOT create awkward English by translating German structures literally.
       - Do NOT reverse-engineer unnatural English merely to force a German
-        vocabulary item into the reference paragraph.
+        vocabulary item or grammar rule into the reference paragraph.
       - Prefer expressions a normal English speaker would actually use.
       - Keep the meaning reasonably direct so that translation into German
         remains appropriate for the requested CEFR level.
@@ -1858,13 +1985,20 @@ public static String readingUsedVocabularySelection(
       meaning can be translated naturally into German primarily using vocabulary
       already supplied to the learner.
 
+      Also verify that the scenario as a whole naturally permits grammar at the
+      requested CEFR level.
+
+      If the initial situation would force grammatically trivial output substantially
+      below the requested level, prefer adjusting the details or choosing another
+      equally natural situation that supports suitable supplied target-level grammar.
+
       Do not create an English sentence whose natural German translation depends
       on several content words absent from the supplied learner vocabulary.
 
       If that happens, prefer these actions in order:
 
       1. Express the idea naturally using supplied vocabulary.
-      2. Simplify the idea while preserving a coherent situation.
+      2. Simplify the lexical content while preserving suitable grammatical difficulty.
       3. Choose a different detail.
       4. Choose a different situation.
       5. Only then introduce a small amount of additional vocabulary.
@@ -1881,10 +2015,12 @@ public static String readingUsedVocabularySelection(
       - Use natural, idiomatic German.
       - Do not translate the English mechanically word-for-word when German
         requires a different natural structure.
-      - Use grammar and sentence complexity appropriate to the requested CEFR level.
+      - The overall grammatical difficulty must clearly match the requested CEFR level.
       - Prefer common everyday constructions where appropriate.
-      - Present tense, Perfekt, modal verbs, subordinate clauses, questions,
-        connectors, and other structures may appear when appropriate to the level.
+      - Use supplied target-level grammar meaningfully when it fits the scenario.
+      - Lower-level grammar remains freely available for natural sentence construction.
+      - Do not deliberately avoid a natural target-level grammatical structure merely
+        because a simpler lower-level construction would be easier to generate.
       - Do not deliberately avoid a natural grammatical structure merely because
         it changes or inflects a supplied vocabulary surface.
       - Supplied vocabulary may appear in any grammatically correct inflected,
@@ -1926,16 +2062,36 @@ public static String readingUsedVocabularySelection(
       USED VOCABULARY REPORTING
       ==================================================
 
-      - Report only entries from the supplied learner vocabulary.
-      - For every used item, return its original supplied German surface exactly.
-      - If the German paragraph uses an inflected, declined, plural, conjugated,
-        separated, or otherwise modified form, still report the original supplied
-        canonical surface.
-      - Do not report the form appearing in the paragraph when it differs from
-        the supplied canonical surface.
-      - Do not report translations, synonyms, reconstructed surfaces,
-        or additional vocabulary not present in the supplied vocabulary list.
-      - Report no supplied vocabulary for a scenario when none is actually used.
+      For each scenario, report every vocabulary item or reusable chunk present in the
+      generated German that could plausibly correspond to an existing vocabulary entry.
+
+      This includes:
+      - supplied learner vocabulary actually used
+      - other vocabulary already occurring naturally in the generated German
+      - reusable lexical chunks represented by contextual or inflected forms
+
+      Important:
+      - return surfaces only
+      - include items not supplied as generation targets
+      - normalize inflected, declined, plural, conjugated, separated, or contextual forms
+        to a plausible canonical German vocabulary surface where possible
+      - for nouns, prefer a canonical noun surface including its article when reasonably known
+      - for verbs and reusable chunks, prefer the normal infinitive or canonical chunk form
+      - report the canonical lexical item rather than merely copying the contextual form
+      - do not invent vocabulary records merely to increase reported coverage
+      - do not report vocabulary absent from the generated German
+      - unmatched surfaces are allowed and will be ignored by the backend
+
+      Example:
+
+      Generated German:
+      "Anna erinnert sich an ihren ersten Tag."
+
+      Report:
+      sich erinnern
+
+      not:
+      erinnert sich
 
       ==================================================
       VOCABULARY REPETITION
@@ -2025,51 +2181,144 @@ public static String readingUsedVocabularySelection(
         every common vocabulary item associated with that level.
       - Treat the supplied vocabulary list, not generic CEFR vocabulary assumptions,
         as the main representation of available productive content vocabulary.
+      - Do not generate a substantially lower-level grammatical exercise merely because
+        lower-level grammar is easier to combine with the supplied vocabulary.
 
       ==================================================
       GRAMMAR USAGE
       ==================================================
 
-      Eligible grammar-rule titles are provided below.
+      Eligible grammar-rule titles are supplied below.
 
-      - Choose only rules that naturally fit the topic, vocabulary,
-        and requested CEFR level.
-      - You do NOT need to use every eligible grammar rule.
-      - It is acceptable to use no eligible rule if none fits naturally.
-      - A useful grammar structure may recur a few times when natural.
-      - Never distort either paragraph merely to demonstrate a grammar rule.
-      - Ordinary grammar appropriate to the requested CEFR level may also be used.
-      - Grammar difficulty and vocabulary availability are separate:
-        do not introduce unknown content vocabulary merely to demonstrate
-        an eligible grammar rule.
+      These titles may include:
+      - grammar appropriate to the requested CEFR level
+      - grammar from lower CEFR levels included so that natural German can be constructed
+
+      The requested CEFR level defines the TARGET grammatical difficulty.
+
+      Lower-level supplied grammar is SUPPORTING grammar.
+
+      Internally identify which supplied grammar rules are appropriate to the requested CEFR
+      level and use them as the primary source of grammatical challenge.
+
+      General requirements:
+
+      - each scenario must meaningfully exercise grammar appropriate to the requested CEFR
+        level when suitable supplied rules are available
+      - lower-level grammar may appear freely and naturally
+      - lower-level grammar must not dominate so strongly that the effective exercise
+        difficulty falls below the requested level
+      - do not satisfy the requested level merely by inserting one isolated target-level
+        structure into an otherwise lower-level paragraph
+      - target-level grammar should meaningfully affect what the learner must construct
+        across the scenario
+      - you do NOT need to use every eligible grammar rule
+      - choose rules that fit the vocabulary, topic, and intended meaning naturally
+      - a useful grammar structure may recur a few times when natural
+      - across multiple scenarios, prefer reasonable diversity among the supplied
+        target-level grammar rules
+      - do not repeatedly choose the grammatically simplest available construction merely
+        because it is safer
+      - ordinary supporting grammar needed to form natural German may appear even if not
+        explicitly represented by a supplied title
+      - grammar difficulty and vocabulary availability are separate:
+        do not introduce unknown content vocabulary merely to demonstrate grammar
+      - never distort either paragraph merely to demonstrate a grammar rule
+
+      ==================================================
+      LEVEL-SENSITIVE GRAMMAR EXPECTATIONS
+      ==================================================
+
+      A1:
+      - The grammatical center of gravity must remain at A1.
+      - Supplied A1 grammar should carry the main grammatical load.
+      - Prefer transparent and predictable structures.
+      - Avoid unnecessary grammatical complexity beyond the requested level.
+
+      A2:
+      - The grammatical center of gravity must clearly be A2.
+      - Each scenario should meaningfully depend on supplied grammar appropriate to A2.
+      - Lower-level grammar may appear naturally and frequently as support, but successful
+        production must require more than only A1 grammatical control.
+      - Do not generate an A1-style paragraph containing only one token A2 feature.
+      - The paragraph as a whole should require A2-level grammatical construction.
+      - Across multiple scenarios, vary which supplied A2-level grammar rules carry the
+        main grammatical load when natural.
+
+      B1:
+      - The grammatical center of gravity must clearly be B1.
+      - Each scenario should meaningfully depend on supplied grammar appropriate to B1.
+      - Lower-level grammar remains available as support, but successful production should
+        require B1 grammatical control.
+      - Prefer meaningful structural diversity across a batch rather than repeated fallback
+        to lower-level constructions.
+
+      B2:
+      - The grammatical center of gravity must clearly be B2.
+      - Use supplied B2-appropriate grammar as a substantial part of the scenario's
+        grammatical organization.
+      - Lower-level grammar may occur naturally but must not determine the effective difficulty.
+      - The learner should need B2-level grammatical control rather than merely producing
+        longer lower-level sentences.
+
+      C1:
+      - The grammatical center of gravity must clearly be C1.
+      - Use supplied C1-appropriate grammar flexibly and naturally.
+      - Lower-level structures remain part of normal German, but successful production should
+        require advanced grammatical control appropriate to C1.
+      - Avoid artificial complexity; advanced grammar must serve the intended meaning.
+
+      C2:
+      - The grammatical center of gravity must clearly be C2.
+      - Use supplied C2-appropriate grammar with unrestricted natural flexibility where
+        appropriate.
+      - Lower-level grammar remains naturally present, but must not reduce the effective
+        grammatical difficulty.
+      - Structural choices should follow discourse, nuance, emphasis, and register.
+
+      Judge grammatical level across the COMPLETE SCENARIO, not sentence by sentence.
+
+      Simple supporting sentences are allowed at every level.
+
+      However, the combined grammatical demands of the paragraph must clearly correspond
+      to the requested CEFR level.
 
       ==================================================
       DIFFICULTY AND SENTENCE LENGTH
       ==================================================
 
-      Adapt sentence complexity to the requested CEFR level.
+      Adapt sentence length and structural load to the requested CEFR level.
 
       A1:
       - Usually 4-10 words per sentence.
-      - Prefer straightforward main clauses and common constructions.
-      - Use more advanced structures mainly when appropriate to the supplied
-        grammar rules or natural context.
+      - Prefer structurally transparent sentences.
+      - Keep the exercise manageable for beginning production.
 
       A2:
       - Usually 6-14 words per sentence.
-      - Allow common connectors, modal verbs, Perfekt, subordinate clauses,
-        and moderately varied word order.
+      - Use moderate structural variation.
+      - The paragraph should clearly demand A2 grammatical control overall.
+      - Avoid producing a scenario composed almost entirely of repeated A1-style structures.
 
       B1:
       - Usually 8-18 words per sentence.
-      - Allow connected clauses, explanations, reasons, conditions,
-        subordinate clauses, and more developed thoughts.
+      - Use broader structural variation and more developed relationships between ideas.
+      - Multiple grammatical relationships may interact naturally.
 
-      B2 and above:
-      - Allow increasingly natural syntactic variation, connected reasoning,
-        subordinate structures, nuance, and longer sentences appropriate
-        to the requested CEFR level.
+      B2:
+      - Allow increasingly flexible syntax and information structure.
+      - Sentences may contain several interacting grammatical relationships when natural.
       - Do not increase complexity merely to make the exercise look advanced.
+
+      C1:
+      - Allow broad, flexible, idiomatic structural variation.
+      - Longer or more layered sentences may appear when appropriate.
+      - Grammar should reflect advanced control rather than artificial complexity.
+
+      C2:
+      - Allow unrestricted natural structural variation appropriate to context.
+      - Sentence structure may vary substantially according to discourse, register,
+        emphasis, and nuance.
 
       These are guidelines, not hard word limits.
 
@@ -2086,17 +2335,19 @@ public static String readingUsedVocabularySelection(
         rather than simply increasing the number of sentences.
 
       ==================================================
-      CROSS-SCENARIO VOCABULARY BEHAVIOR
+      CROSS-SCENARIO VOCABULARY AND GRAMMAR BEHAVIOR
       ==================================================
 
       Treat the learner vocabulary as one opportunity pool shared across all
       requested scenarios.
 
+      Treat the supplied target-level grammar rules as a shared opportunity pool as well.
+
       Individual scenario coherence still has priority.
 
-      However, when several different supplied vocabulary items can be used
-      naturally across different scenarios:
+      However, across the full generated set:
 
+      Vocabulary:
       - prefer useful diversity across the full generated set
       - avoid unnecessarily using exactly the same small vocabulary subset
         in every scenario
@@ -2106,7 +2357,14 @@ public static String readingUsedVocabularySelection(
       - prefer different semantic clusters when the supplied vocabulary
         supports them naturally
 
-      This is a diversity preference, NOT a vocabulary-coverage requirement.
+      Grammar:
+      - prefer reasonable diversity among suitable target-level supplied grammar rules
+      - avoid generating every scenario with essentially the same grammatical architecture
+      - do not repeatedly fall back to the easiest lower-level grammar
+      - do not force grammatical diversity when it would damage naturalness
+      - each scenario must still independently meet the requested CEFR grammatical level
+
+      These are diversity preferences, not requirements to exhaust either pool.
 
       ==================================================
       SENTENCE PAIR ALIGNMENT
@@ -2142,11 +2400,18 @@ public static String readingUsedVocabularySelection(
       - Do both paragraphs express exactly the same meaning?
       - Does every sentence belong to the same situation?
       - Does each sentence add meaningful information?
-      - Did any sentence exist mainly to force vocabulary?
+      - Did any sentence exist mainly to force vocabulary or grammar?
       - Did you use a sensible vocabulary subset rather than trying to cover the list?
       - Are ambiguous vocabulary items used only in a meaning appropriate
         to the context?
-      - Is the grammar appropriate to the requested CEFR level?
+      - Does the scenario's overall grammatical difficulty clearly match CEFR level %s?
+      - Does supplied target-level grammar meaningfully contribute to the paragraph?
+      - Has lower-level grammar remained supporting grammar rather than reducing the effective
+        difficulty below the requested level?
+      - Is the paragraph more than a lower-level exercise containing one token
+        target-level feature?
+      - Across the batch, is there reasonable target-level grammatical diversity when the
+        supplied rules naturally support it?
       - Can the learner express nearly all important content concepts using
         supplied vocabulary?
       - Did the scenario introduce a new noun, verb, adjective, adverb,
@@ -2154,10 +2419,11 @@ public static String readingUsedVocabularySelection(
       - Could any unsupplied content word be avoided by choosing a simpler
         but equally natural formulation?
       - Is each additional content word genuinely necessary rather than convenient?
-      - Would failure on this exercise primarily test known-vocabulary retrieval
-        and grammar rather than knowledge of previously unseen vocabulary?
-      - Does every reported used-vocabulary surface exactly match an originally
-        supplied canonical German surface?
+      - Would failure on this exercise primarily test known-vocabulary retrieval,
+        target-level grammar, inflection, word order, or sentence construction rather than
+        knowledge of previously unseen vocabulary?
+      - Is every reported used-vocabulary surface normalized to a plausible canonical
+        German vocabulary surface where possible?
       - Is every reported vocabulary item genuinely represented in the German paragraph?
       - Do the sentence pairs preserve the generated paragraphs exactly and in order?
 
@@ -2173,12 +2439,14 @@ public static String readingUsedVocabularySelection(
       Eligible Grammar-Rule Titles:
       %s
       """.formatted(
-      difficultyLevel,
-      scenarioCount,
-      topics,
-      vocabList,
-      grammarTitles);
+          difficultyLevel,
+          scenarioCount,
+          topics,
+          difficultyLevel,
+          vocabList,
+          grammarTitles);
 }
+
   public static String writingBilingualContent(
     String topic,
     List<WritingPracticeVocabularySeed> vocabulary,
@@ -2223,8 +2491,8 @@ public static String readingUsedVocabularySelection(
 
       1. One English paragraph for the learner to translate into German.
       2. One correct German reference paragraph.
-      3. `usedVocabulary`: the canonical surfaces of supplied learner vocabulary
-         actually used in the German paragraph.
+      3. `usedVocabulary`: canonical surfaces for every vocabulary item or reusable chunk
+         present in the German paragraph that could match an existing vocabulary entry.
 
       The English and German paragraphs must express exactly the same meaning.
 
@@ -2279,14 +2547,13 @@ public static String readingUsedVocabularySelection(
       - Vocabulary may appear in any grammatically correct inflected form.
 
       Used Vocabulary Reporting:
-      - Report only entries from the supplied learner vocabulary.
-      - For every used item, return its original supplied German surface exactly.
-      - If the German paragraph uses an inflected, declined, plural, conjugated,
-        or separated form, still report the original supplied canonical surface.
-      - Do not report the form appearing in the paragraph when it differs from
-        the supplied canonical surface.
-      - Do not report translations, synonyms, or invented surfaces.
-      - Return an empty `usedVocabulary` list when no supplied item is used.
+      - Report every vocabulary item or reusable chunk present in the generated German that
+        could correspond to an existing vocabulary entry.
+      - Include items not supplied as generation targets.
+      - Normalize inflected, declined, plural, conjugated, separated, or contextual forms to
+        their canonical German vocabulary surface where possible.
+      - Return surfaces only. Do not invent vocabulary records or report items absent from
+        the German paragraph. Unmatched surfaces are allowed and will be ignored by the backend.
 
       Vocabulary Repetition:
       - Reuse a selected vocabulary item only when it naturally recurs in the situation.

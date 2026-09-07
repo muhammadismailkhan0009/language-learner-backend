@@ -27,7 +27,11 @@ class ReadingGenerationPromptContractTests {
                 .contains("CEFR level A2")
                 .contains("- Present tense", "- Modal verbs")
                 .contains("Prefer grammar rules from the supplied list when they fit naturally")
-                .contains("Do not force every supplied grammar rule");
+                .contains("Do not force every supplied grammar rule")
+                .contains("including items not", "supplied as generation targets")
+                .contains("return surfaces only; never return vocabulary IDs")
+                .contains("normalize inflected or contextual forms to their canonical German vocabulary surface", "where possible")
+                .contains("unmatched surfaces are allowed because the backend will ignore them");
     }
 
     @Test

@@ -29,13 +29,9 @@ final class WritingPracticeContentAssembler {
                 .map(this::normalizeSurface)
                 .filter(surface -> !surface.isBlank())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
-        var unknownSurfaces = normalizedUsedSurfaces.stream()
-                .filter(surface -> !suppliedSurfaces.contains(surface))
-                .toList();
-        if (!unknownSurfaces.isEmpty()) {
-            throw new IllegalArgumentException("LLM returned unknown writing vocabulary surfaces: " + unknownSurfaces);
-        }
-        return normalizedUsedSurfaces;
+        return normalizedUsedSurfaces.stream()
+                .filter(suppliedSurfaces::contains)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     List<WritingSentencePair> buildSentencePairs(List<WritingPracticeSentencePairSeed> pairs,

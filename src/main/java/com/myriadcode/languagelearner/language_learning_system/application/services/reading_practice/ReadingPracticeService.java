@@ -149,7 +149,7 @@ public class ReadingPracticeService {
                 (first, ignored) -> first));
         var scenarios = java.util.stream.IntStream.range(0, generated.scenarios().size())
                 .mapToObj(index -> buildScenario(generated.scenarios().get(index), index,
-                        candidatesByVocabularyId, candidatesBySurface))
+                        candidatesBySurface))
                 .toList();
         var first = scenarios.getFirst();
         readingPracticeRepo.save(new ReadingPracticeSession(
@@ -179,7 +179,6 @@ public class ReadingPracticeService {
     }
 
     private ReadingPracticeScenario buildScenario(ReadingPracticeReadingContent.Scenario generated, int position,
-                                                  Map<String, ReadingPracticeCandidate> candidatesByVocabularyId,
                                                   Map<String, ReadingPracticeCandidate> candidatesBySurface) {
         var paragraphs = java.util.stream.IntStream.range(0, generated.paragraphs().size()).mapToObj(index -> {
             var source = generated.paragraphs().get(index);
@@ -191,11 +190,11 @@ public class ReadingPracticeService {
                     new ReadingPracticeParagraph.ReadingPracticeParagraphId(UUID.randomUUID().toString()),
                     source.text(), index, sentences);
         }).toList();
-        var usages = generated.usedVocabulary().stream()
-                .map(reference -> {
-                    var candidate = candidatesByVocabularyId.get(reference.vocabularyId());
-                    return candidate != null ? candidate : candidatesBySurface.get(normalizeSurface(reference.surface()));
-                }).filter(java.util.Objects::nonNull)
+        var reportedVocabulary = generated.usedVocabulary() == null
+                ? List.<String>of() : generated.usedVocabulary();
+        var usages = reportedVocabulary.stream()
+                .map(surface -> candidatesBySurface.get(normalizeSurface(surface)))
+                .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toMap(ReadingPracticeCandidate::vocabularyId, Function.identity(),
                         (firstCandidate, ignored) -> firstCandidate, LinkedHashMap::new)).values().stream()
                 .map(candidate -> new ReadingVocabularyUsage(

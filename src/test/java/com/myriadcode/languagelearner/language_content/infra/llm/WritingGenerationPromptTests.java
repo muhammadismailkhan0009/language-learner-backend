@@ -24,8 +24,9 @@ class WritingGenerationPromptTests {
         assertThat(prompt).contains("You do NOT need to use every eligible grammar rule");
         assertThat(prompt).contains("Never distort either paragraph merely to demonstrate a grammar rule");
         assertThat(prompt).contains("`usedVocabulary`");
-        assertThat(prompt).contains("return its original supplied German surface exactly");
-        assertThat(prompt).contains("inflected, declined, plural, conjugated");
+        assertThat(prompt).contains("Include items not supplied as generation targets");
+        assertThat(prompt).contains("canonical German vocabulary surface where possible");
+        assertThat(prompt).contains("Unmatched surfaces are allowed and will be ignored by the backend");
         assertThat(prompt).contains("kaufen - to buy");
         assertThat(prompt).doesNotContain("stable identifier");
     }

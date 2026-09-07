@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class WritingPracticeContentAssemblyBehaviorTests {
 
@@ -32,12 +31,13 @@ class WritingPracticeContentAssemblyBehaviorTests {
     }
 
     @Test
-    void findUsedVocabularySurfacesRejectsUnknownCanonicalSurface() {
-        assertThatThrownBy(() -> assembler.findUsedVocabularySurfaces(
+    void findUsedVocabularySurfacesIgnoresUnknownCanonicalSurface() {
+        var surfaces = assembler.findUsedVocabularySurfaces(
                 List.of(new WritingPracticeVocabularySeed("Haus", "house")),
-                List.of("Gebäude")
-        )).isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("gebäude");
+                List.of("Gebäude", "Haus")
+        );
+
+        assertThat(surfaces).containsExactly("haus");
     }
 
     @Test

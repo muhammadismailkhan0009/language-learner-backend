@@ -74,7 +74,7 @@ public class TestLlmConfigs {
                 return new ReadingContent(java.util.stream.IntStream.range(0, scenarioCount).mapToObj(index ->
                         new ReadingContent.Scenario("Test scenario " + index,
                                 List.of(new ReadingContent.Paragraph("Ein Testabsatz.", List.of("Ein Testabsatz."))),
-                                vocabulary.stream().map(seed -> new ReadingContent.UsedVocabulary(seed.id(), seed.surface())).toList())).toList());
+                                vocabulary.stream().map(ReadingPracticeVocabularySeed::surface).toList())).toList());
             }
 
             @Override

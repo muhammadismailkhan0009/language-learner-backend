@@ -455,8 +455,7 @@ class ReadingPracticeSessionFlowTests {
                             index == 0 ? "topic-1" : "topic-" + (index + 1),
                             List.of(new ReadingPracticeReadingContent.Paragraph("reading text",
                                     List.of("reading sentence 1", "reading sentence 2"))),
-                            vocabulary.stream().map(seed -> new ReadingPracticeReadingContent.UsedVocabulary(
-                                    seed.id(), seed.surface())).toList())).toList());
+                            vocabulary.stream().map(ReadingPracticeVocabularySeed::surface).toList())).toList());
         }
 
         @Override

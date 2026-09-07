@@ -27,7 +27,7 @@ class ReadingGenerationLlmBoundaryTests {
         when(llmPort.generateReadingContent(vocabulary, List.of("Old"), LanguageLevel.A2, grammarTitles, 3))
                 .thenReturn(new ReadingContent(List.of(new ReadingContent.Scenario("Daily walk", List.of(
                         new ReadingContent.Paragraph("Ich gehe heute.", List.of("Ich gehe heute."))),
-                        List.of(new ReadingContent.UsedVocabulary(null, "gehen"))))));
+                        List.of("gehen")))));
 
         var result = new ReadingPracticeLlmAdapter(llmPort)
                 .generateReadingContent(vocabulary, List.of("Old"), LanguageLevel.A2, grammarTitles, 3);
