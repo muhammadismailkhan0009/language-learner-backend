@@ -26,6 +26,7 @@ public interface WritingPracticeRepo {
                                             String scenarioId,
                                             String userId,
                                             String submittedAnswer,
+                                            String freeWritingText,
                                             java.time.Instant submittedAt,
                                             String feedbackText,
                                             WritingStructuredFeedback structuredFeedback,
@@ -35,10 +36,12 @@ public interface WritingPracticeRepo {
                                                     String scenarioId,
                                                     String userId,
                                                     String submittedAnswer,
+                                                    String freeWritingText,
                                                     java.time.Instant submittedAt,
                                                     String feedbackText,
                                                     java.time.Instant feedbackGeneratedAt) {
-        return updateSubmission(sessionId, scenarioId, userId, submittedAnswer, submittedAt, feedbackText, null, feedbackGeneratedAt);
+        return updateSubmission(sessionId, scenarioId, userId, submittedAnswer, freeWritingText,
+                submittedAt, feedbackText, null, feedbackGeneratedAt);
     }
 
     default void saveGrammarIssueAnalytics(List<WritingGrammarIssueAnalytics> analytics) {

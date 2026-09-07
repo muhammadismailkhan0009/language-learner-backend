@@ -104,6 +104,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                                                    String scenarioId,
                                                    String userId,
                                                    String submittedAnswer,
+                                                   String freeWritingText,
                                                    Instant submittedAt,
                                                    String feedbackText,
                                                    WritingStructuredFeedback structuredFeedback,
@@ -112,7 +113,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
         var scenario = entity.getScenarios().stream().filter(value -> value.getId().equals(scenarioId)).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Writing scenario not found"));
-        scenario.setSubmittedAnswer(submittedAnswer); scenario.setSubmittedAt(submittedAt);
+        scenario.setSubmittedAnswer(submittedAnswer); scenario.setFreeWritingText(freeWritingText); scenario.setSubmittedAt(submittedAt);
         scenario.setFeedbackText(feedbackText); scenario.setStructuredFeedbackJson(toJson(structuredFeedback));
         scenario.setFeedbackGeneratedAt(feedbackGeneratedAt);
         return toDomain(writingPracticeSessionJpaRepo.save(entity));

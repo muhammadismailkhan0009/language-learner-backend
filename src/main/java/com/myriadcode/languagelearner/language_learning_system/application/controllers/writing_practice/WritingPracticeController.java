@@ -55,7 +55,8 @@ public class WritingPracticeController {
                                              @PathVariable("scenarioId") String scenarioId,
                                              @RequestParam(value = "draft", defaultValue = "false") boolean draft,
                                              @RequestBody SubmitWritingPracticeAnswerRequest request) {
-        writingPracticeService.submitAnswer(request.userId(), sessionId, scenarioId, request.submittedAnswer(), draft);
+        writingPracticeService.submitAnswer(
+                request.userId(), sessionId, scenarioId, request.submittedAnswer(), request.freeWritingText(), draft);
         return ResponseEntity.ok().build();
     }
 

@@ -27,8 +27,9 @@ class WritingPracticeScenarioControllerTests {
     @Test
     void submissionTargetsOneScenario() {
         controller.submitAnswer("session-1", "scenario-2", true,
-                new SubmitWritingPracticeAnswerRequest("user-1", "draft answer"));
-        verify(practiceService).submitAnswer("user-1", "session-1", "scenario-2", "draft answer", true);
+                new SubmitWritingPracticeAnswerRequest("user-1", "draft answer", "Mein freier Text"));
+        verify(practiceService).submitAnswer(
+                "user-1", "session-1", "scenario-2", "draft answer", "Mein freier Text", true);
     }
 
     @Test

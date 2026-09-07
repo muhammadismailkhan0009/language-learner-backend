@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 public record SubmitWritingPracticeAnswerRequest(
         String userId,
-        String submittedAnswer
+        String submittedAnswer,
+        String freeWritingText
 ) {
 }

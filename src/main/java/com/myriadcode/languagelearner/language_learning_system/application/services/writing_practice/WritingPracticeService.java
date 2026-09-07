@@ -229,22 +229,29 @@ public class WritingPracticeService {
         writingPracticeRepo.detachFlashcard(normalizedUserId, sessionId, scenarioId, flashcardId);
     }
 
-    public void submitAnswer(String userId, String sessionId, String scenarioId, String submittedAnswer, boolean draft) {
+    public void submitAnswer(String userId, String sessionId, String scenarioId, String submittedAnswer,
+                             String freeWritingText, boolean draft) {
         var normalizedUserId = requireUserId(userId);
         var sanitizedAnswer = sanitizeSubmission(submittedAnswer);
-        if (sanitizedAnswer.isBlank()) {
-            throw new IllegalArgumentException("Submitted answer must not be blank");
-        }
+        var sanitizedFreeWritingText = sanitizeSubmission(freeWritingText);
         var session = writingPracticeRepo.findByIdAndUserId(sessionId, normalizedUserId)
                 .orElseThrow(() -> new IllegalArgumentException("Writing session not found"));
         requireScenario(session, scenarioId);
 
         if (draft) {
-            writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId, sanitizedAnswer, null, null, null);
+            writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId,
+                    sanitizedAnswer, sanitizedFreeWritingText, null, null, null, null);
             return;
         }
+        if (sanitizedAnswer.isBlank()) {
+            throw new IllegalArgumentException("Submitted answer must not be blank");
+        }
+        if (sanitizedFreeWritingText.isBlank()) {
+            throw new IllegalArgumentException("Free writing text must not be blank");
+        }
         var submittedAt = Instant.now();
-        writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId, sanitizedAnswer, submittedAt, null, null);
+        writingPracticeRepo.updateSubmission(sessionId, scenarioId, normalizedUserId,
+                sanitizedAnswer, sanitizedFreeWritingText, submittedAt, null, null, null);
     }
 
     @Transactional
@@ -278,6 +285,7 @@ public class WritingPracticeService {
                 scenarioId,
                 normalizedUserId,
                 submittedAnswer,
+                scenario.freeWritingText(),
                 scenario.submittedAt(),
                 feedback.feedbackText(),
                 feedback.structuredFeedback(),

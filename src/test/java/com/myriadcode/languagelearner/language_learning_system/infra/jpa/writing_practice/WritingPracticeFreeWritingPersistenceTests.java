@@ -49,6 +49,24 @@ class WritingPracticeFreeWritingPersistenceTests {
         assertThat(loaded.scenarios().get(1).freeWritingText()).isNull();
     }
 
+    @Test
+    void submissionUpdatePersistsFreeWritingTextWithTranslation() {
+        writingPracticeRepo.save(new WritingPracticeSession(
+                new WritingPracticeSession.WritingPracticeSessionId("session-submission"),
+                new UserId("user-1"), Instant.EPOCH,
+                List.of(scenario("scenario-1", 0, "Write about your day.", null))));
+
+        writingPracticeRepo.updateSubmission(
+                "session-submission", "scenario-1", "user-1",
+                "Meine Ubersetzung", "Mein freier Text", Instant.now(), null, null, null);
+
+        var scenario = writingPracticeRepo.findByIdAndUserId("session-submission", "user-1")
+                .orElseThrow().scenarios().getFirst();
+        assertThat(scenario.submittedAnswer()).isEqualTo("Meine Ubersetzung");
+        assertThat(scenario.freeWritingText()).isEqualTo("Mein freier Text");
+        assertThat(scenario.submittedAt()).isNotNull();
+    }
+
     private WritingPracticeScenario scenario(String id, int position, String instructions, String text) {
         return new WritingPracticeScenario(
                 new WritingPracticeScenario.WritingPracticeScenarioId(id), position, "Topic " + position,
