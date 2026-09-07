@@ -17,6 +17,8 @@ public class WritingPracticeScenarioEntity {
     @Column(name = "topic", nullable = false) private String topic;
     @Column(name = "english_paragraph", nullable = false, columnDefinition = "text") private String englishParagraph;
     @Column(name = "german_paragraph", nullable = false, columnDefinition = "text") private String germanParagraph;
+    @Column(name = "free_writing_instructions", columnDefinition = "text") private String freeWritingInstructions;
+    @Column(name = "free_writing_text", columnDefinition = "text") private String freeWritingText;
     @Column(name = "submitted_answer", columnDefinition = "text") private String submittedAnswer;
     @Column(name = "submitted_at") private Instant submittedAt;
     @Column(name = "feedback_text", columnDefinition = "text") private String feedbackText;
@@ -38,6 +40,8 @@ public class WritingPracticeScenarioEntity {
     public String getTopic() { return topic; } public void setTopic(String topic) { this.topic = topic; }
     public String getEnglishParagraph() { return englishParagraph; } public void setEnglishParagraph(String value) { englishParagraph = value; }
     public String getGermanParagraph() { return germanParagraph; } public void setGermanParagraph(String value) { germanParagraph = value; }
+    public String getFreeWritingInstructions() { return freeWritingInstructions; } public void setFreeWritingInstructions(String value) { freeWritingInstructions = value; }
+    public String getFreeWritingText() { return freeWritingText; } public void setFreeWritingText(String value) { freeWritingText = value; }
     public String getSubmittedAnswer() { return submittedAnswer; } public void setSubmittedAnswer(String value) { submittedAnswer = value; }
     public Instant getSubmittedAt() { return submittedAt; } public void setSubmittedAt(Instant value) { submittedAt = value; }
     public String getFeedbackText() { return feedbackText; } public void setFeedbackText(String value) { feedbackText = value; }

@@ -5,6 +5,7 @@ import java.util.List;
 
 public record WritingPracticeScenarioResponse(
         String scenarioId, int position, String topic, String englishParagraph, String germanParagraph,
+        String freeWritingInstructions, String freeWritingText,
         String submittedAnswer, Instant submittedAt, String feedbackText,
         WritingStructuredFeedbackResponse structuredFeedback, Instant feedbackGeneratedAt,
         List<WritingSentencePairResponse> sentencePairs, List<WritingVocabularyFlashCardView> vocabFlashcards

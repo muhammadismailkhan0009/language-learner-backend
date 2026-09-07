@@ -189,6 +189,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
         var entity = new WritingPracticeScenarioEntity();
         entity.setId(scenario.id().id()); entity.setSession(session); entity.setPosition(scenario.position());
         entity.setTopic(scenario.topic()); entity.setEnglishParagraph(scenario.englishParagraph()); entity.setGermanParagraph(scenario.germanParagraph());
+        entity.setFreeWritingInstructions(scenario.freeWritingInstructions()); entity.setFreeWritingText(scenario.freeWritingText());
         entity.setSubmittedAnswer(scenario.submittedAnswer()); entity.setSubmittedAt(scenario.submittedAt()); entity.setFeedbackText(scenario.feedbackText());
         entity.setStructuredFeedbackJson(toJson(scenario.structuredFeedback())); entity.setFeedbackGeneratedAt(scenario.feedbackGeneratedAt()); entity.setCreatedAt(Instant.now());
         scenario.sentencePairs().stream().sorted(Comparator.comparingInt(WritingSentencePair::position)).map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairEntity)
@@ -201,7 +202,7 @@ public class WritingPracticeJpaRepoImpl implements WritingPracticeRepo {
     private WritingPracticeScenario toScenarioDomain(WritingPracticeScenarioEntity entity) {
         return new WritingPracticeScenario(new WritingPracticeScenario.WritingPracticeScenarioId(entity.getId()), entity.getPosition(),
                 entity.getTopic(), entity.getEnglishParagraph(), entity.getGermanParagraph(),
-                null, null, entity.getSubmittedAnswer(), entity.getSubmittedAt(),
+                entity.getFreeWritingInstructions(), entity.getFreeWritingText(), entity.getSubmittedAnswer(), entity.getSubmittedAt(),
                 entity.getFeedbackText(), fromJson(entity.getStructuredFeedbackJson()), entity.getFeedbackGeneratedAt(),
                 entity.getSentencePairs().stream().sorted(Comparator.comparingInt(value -> value.getPosition())).map(WRITING_PRACTICE_JPA_MAPPER::toSentencePairDomain).toList(),
                 entity.getVocabularyUsages().stream().map(WRITING_PRACTICE_JPA_MAPPER::toUsageDomain).toList());

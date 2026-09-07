@@ -39,6 +39,7 @@ public interface WritingPracticeApiMapper {
                                                         java.util.List<WritingVocabularyFlashCardView> flashcards) {
         return new WritingPracticeScenarioResponse(
                 scenario.id().id(), scenario.position(), scenario.topic(), scenario.englishParagraph(), scenario.germanParagraph(),
+                scenario.freeWritingInstructions(), scenario.freeWritingText(),
                 scenario.submittedAnswer(), scenario.submittedAt(), scenario.feedbackText(), toFeedback(scenario.structuredFeedback()),
                 scenario.feedbackGeneratedAt(), scenario.sentencePairs().stream().map(this::toSentencePairResponse).toList(), flashcards);
     }

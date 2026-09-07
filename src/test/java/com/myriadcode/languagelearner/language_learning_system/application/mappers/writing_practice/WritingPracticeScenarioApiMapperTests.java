@@ -23,11 +23,15 @@ class WritingPracticeScenarioApiMapperTests {
                 .containsExactly("scenario-1", "scenario-2");
         assertThat(response.scenarios()).extracting(value -> value.topic())
                 .containsExactly("Topic one", "Topic two");
+        assertThat(response.scenarios()).allSatisfy(value -> {
+            assertThat(value.freeWritingInstructions()).isEqualTo("Write about your day.");
+            assertThat(value.freeWritingText()).isEqualTo("Mein Tag war gut.");
+        });
     }
 
     private WritingPracticeScenario scenario(String id, int position, String topic) {
         return new WritingPracticeScenario(new WritingPracticeScenario.WritingPracticeScenarioId(id), position, topic,
-                "English", "Deutsch", null, null,
+                "English", "Deutsch", "Write about your day.", "Mein Tag war gut.",
                 null, null, null, null, null, List.of(), List.of());
     }
 }
