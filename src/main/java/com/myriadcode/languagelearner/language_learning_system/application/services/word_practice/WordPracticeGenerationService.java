@@ -19,8 +19,8 @@ import java.time.Clock;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.function.Function;
-import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 
 import static com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType.WORD_PRACTICE;
@@ -36,7 +36,6 @@ public class WordPracticeGenerationService {
     private final ContentGenerationJobService jobService;
     private final UserDifficultyLevelApi userDifficultyLevelApi;
     private final Clock clock;
-    private final RandomGenerator random;
     private final int lowExposureThreshold;
     private final WordPracticeCapacityPolicy capacityPolicy = new WordPracticeCapacityPolicy();
     private final WordPracticeSelectionPolicy selectionPolicy = new WordPracticeSelectionPolicy();
@@ -48,8 +47,7 @@ public class WordPracticeGenerationService {
                                          ContentGenerationJobService jobService,
                                          UserDifficultyLevelApi userDifficultyLevelApi,
                                          @Value("${word-practice.low-exposure-count-exclusive-maximum:5}") int lowExposureThreshold) {
-        this(practiceRepo, candidateProvider, jobService, userDifficultyLevelApi, Clock.systemUTC(),
-                RandomGenerator.getDefault(), lowExposureThreshold);
+        this(practiceRepo, candidateProvider, jobService, userDifficultyLevelApi, Clock.systemUTC(), lowExposureThreshold);
     }
 
     WordPracticeGenerationService(WordPracticeRepo practiceRepo,
@@ -57,14 +55,12 @@ public class WordPracticeGenerationService {
                                   ContentGenerationJobService jobService,
                                   UserDifficultyLevelApi userDifficultyLevelApi,
                                   Clock clock,
-                                  RandomGenerator random,
                                   int lowExposureThreshold) {
         this.practiceRepo = practiceRepo;
         this.candidateProvider = candidateProvider;
         this.jobService = jobService;
         this.userDifficultyLevelApi = userDifficultyLevelApi;
         this.clock = clock;
-        this.random = random;
         this.lowExposureThreshold = lowExposureThreshold;
     }
 
@@ -82,7 +78,7 @@ public class WordPracticeGenerationService {
                 (first, ignored) -> first
         ));
         var selected = selectionPolicy.select(toSelections(candidatesByCategory),
-                practiceRepo.findActiveVocabularyIds(userId), random);
+                practiceRepo.findActiveVocabularyIds(userId), new Random());
         var selectedDetails = selected.stream().map(candidate -> detailsById.get(candidate.vocabularyId())).toList();
         return selectedDetails;
     }

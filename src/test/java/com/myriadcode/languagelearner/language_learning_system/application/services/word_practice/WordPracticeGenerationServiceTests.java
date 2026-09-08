@@ -25,7 +25,7 @@ class WordPracticeGenerationServiceTests {
     private final RecordingJobService jobService = new RecordingJobService();
     private final WordPracticeGenerationService service = new WordPracticeGenerationService(
             practiceRepo, candidateProvider, jobService, userId -> com.myriadcode.languagelearner.common.enums.LanguageLevel.B1,
-            Clock.fixed(NOW, ZoneOffset.UTC), new Random(1), 5
+            Clock.fixed(NOW, ZoneOffset.UTC), 5
     );
 
     @Test
