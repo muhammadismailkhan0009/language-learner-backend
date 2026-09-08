@@ -71,7 +71,7 @@ public class VocabularyController {
     public ResponseEntity<ApiResponse<List<VocabularyResponse>>> fetchVocabularies(
             @RequestParam String userId
     ) {
-        LOGGER.info("REST vocabulary fetch started: userId={}", userId);
+        LOGGER.warn("REST vocabulary fetch started: userId={}", userId);
         var response = vocabularyOrchestrationService.fetchVocabularies(userId);
         var countsByReverseFlashcardState = response.stream()
                 .map(VocabularyResponse::reverseFlashcardState)
@@ -84,7 +84,7 @@ public class VocabularyController {
         var attachedCount = countsByReverseFlashcardState.values().stream()
                 .mapToLong(Long::longValue)
                 .sum();
-        LOGGER.info(
+        LOGGER.warn(
                 "REST vocabulary response ready: userId={}, vocabularyCount={}, attachedCount={}, unattachedCount={}, countsByState={}",
                 userId,
                 response.size(),

@@ -229,7 +229,7 @@ public class VocabularyOrchestrationService {
         var attachedVocabularyCount = attachedVocabularyCountsByState.values().stream()
                 .mapToLong(Long::longValue)
                 .sum();
-        LOGGER.info(
+        LOGGER.warn(
                 "Fetched vocabularies with reverse flashcard states: userId={}, vocabularyCount={}, attachedCount={}, unattachedCount={}, countsByState={}",
                 userId,
                 vocabularies.size(),
