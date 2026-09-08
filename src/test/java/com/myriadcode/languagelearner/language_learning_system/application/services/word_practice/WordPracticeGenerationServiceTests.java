@@ -47,10 +47,10 @@ class WordPracticeGenerationServiceTests {
                 .contains("\"selection\":{\"vocabularyId\":")
                 .contains("\"german\":\"de-")
                 .contains("\"english\":\"en-")
-                .contains("exactly 10 groups")
+                .contains("normally contains 10 vocabulary items")
                 .contains("3 to 5 practices")
                 .contains("GERMAN_TO_ENGLISH", "ENGLISH_TO_GERMAN")
-                .contains("Echo supplied selection objects exactly")
+                .contains("Echo the supplied selection object exactly")
                 .contains("store_word_practice_generation");
     }
 
@@ -101,9 +101,7 @@ class WordPracticeGenerationServiceTests {
         public Map<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>> findRankedCandidates(String userId) {
             var candidates = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>>(
                     WordPracticeSelectionCategory.class);
-            candidates.put(WordPracticeSelectionCategory.NEW, candidates(WordPracticeSelectionCategory.NEW, 1, 5));
-            candidates.put(WordPracticeSelectionCategory.LEARNING,
-                    candidates(WordPracticeSelectionCategory.LEARNING, 1, 5));
+            candidates.put(WordPracticeSelectionCategory.NEW, candidates(WordPracticeSelectionCategory.NEW, 1, 10));
             return candidates;
         }
 

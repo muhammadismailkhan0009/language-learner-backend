@@ -19,14 +19,10 @@ public class WordPracticeSelectionPolicy {
     public static final int CANDIDATE_WINDOW_SIZE = 20;
 
     private static final Map<WordPracticeSelectionCategory, Integer> QUOTAS = Map.of(
-            WordPracticeSelectionCategory.NEW, 5,
-            WordPracticeSelectionCategory.LEARNING, 5
+            WordPracticeSelectionCategory.NEW, BATCH_SIZE
     );
     private static final List<WordPracticeSelectionCategory> SELECTION_ORDER = List.of(
-            WordPracticeSelectionCategory.NEW,
-            WordPracticeSelectionCategory.LEARNING,
-            WordPracticeSelectionCategory.RE_LEARNING,
-            WordPracticeSelectionCategory.REVIEW
+            WordPracticeSelectionCategory.NEW
     );
 
     public List<WordPracticeCandidate> select(
@@ -37,24 +33,13 @@ public class WordPracticeSelectionPolicy {
         Objects.requireNonNull(random, "random must not be null");
         var activeIds = activeVocabularyIds == null ? Set.<String>of() : Set.copyOf(activeVocabularyIds);
         var windows = createEligibleWindows(rankedCandidates, activeIds, random);
-        int availableCount = (int) windows.values().stream()
-                .flatMap(List::stream)
-                .map(WordPracticeCandidate::vocabularyId)
-                .distinct()
-                .count();
-        if (availableCount < BATCH_SIZE) {
-            throw new InsufficientWordPracticeCandidatesException(availableCount, BATCH_SIZE);
-        }
-
         var selected = new ArrayList<WordPracticeCandidate>(BATCH_SIZE);
         var selectedIds = new HashSet<String>();
-        for (var category : List.of(
-                WordPracticeSelectionCategory.NEW,
-                WordPracticeSelectionCategory.LEARNING)) {
+        for (var category : SELECTION_ORDER) {
             addRandom(selected, selectedIds, windows.get(category), QUOTAS.get(category), random);
         }
-        for (var category : SELECTION_ORDER) {
-            addRandom(selected, selectedIds, windows.get(category), BATCH_SIZE - selected.size(), random);
+        if (selected.size() < BATCH_SIZE) {
+            throw new InsufficientWordPracticeCandidatesException(selected.size(), BATCH_SIZE);
         }
         return List.copyOf(selected);
     }
