@@ -12,6 +12,7 @@ logging:
     org.testcontainers: ERROR
     com.zaxxer.hikari: ERROR
     org.flywaydb: ERROR
+    
 
 spring:
   main:

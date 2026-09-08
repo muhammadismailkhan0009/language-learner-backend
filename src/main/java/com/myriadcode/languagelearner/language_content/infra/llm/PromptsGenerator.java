@@ -9,6 +9,7 @@ import com.myriadcode.languagelearner.language_content.application.externals.Voc
 import com.myriadcode.languagelearner.language_content.application.externals.WritingPracticeVocabularySeed;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarRuleCatalogContext;
 import com.myriadcode.languagelearner.language_content.application.externals.GrammarLevelReassignmentInput;
+import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeGenerationCandidate;
 
 import java.util.List;
 
@@ -3586,6 +3587,368 @@ Grammar rules:
 %s
 """.formatted(rules);
   }
+
+  public static String wordPracticeGeneration(
+    List<WordPracticeGenerationCandidate> candidates,
+    LanguageLevel difficultyLevel
+) {
+  String vocabularyData = wordPracticeCandidatesAsJson(candidates);
+
+  return """
+      Act as an expert German language teacher.
+
+      Generate contextual Word Practice exercises for a learner at CEFR level %s.
+
+      PURPOSE
+
+      Word Practice provides repeated contextual exposure to individual vocabulary items.
+
+      Each supplied vocabulary item is the lexical target. The generated practices for that
+      item may be encountered separately over time, so each practice must provide a genuinely
+      useful and distinct context for retrieving or recognizing the same lexical item.
+
+      The primary question being tested is:
+
+      "Does the learner know this vocabulary item in context?"
+
+      Do not turn Word Practice into a grammar exercise.
+
+      Supporting vocabulary and grammar should make the target meaning clear while adding as
+      little unrelated difficulty as reasonably possible.
+
+      ==================================================
+      BATCH DESIGN
+      ==================================================
+
+      - Return exactly one group for every supplied vocabulary item.
+      - The supplied batch normally contains 10 vocabulary items.
+      - Generate 3 to 5 practices for every vocabulary item.
+      - Practices belonging to the same vocabulary item are intended as separate contextual
+        encounters that may be shown at different times.
+      - Therefore, make the 3 to 5 practices meaningfully different from one another.
+      - Do not create superficial variants of essentially the same sentence.
+      - Vary the realistic situation, surrounding words, and sentence structure where natural.
+      - Preserve the same intended lexical meaning unless the supplied vocabulary entry itself
+        clearly contains multiple useful meanings.
+      - Mix GERMAN_TO_ENGLISH and ENGLISH_TO_GERMAN practices within each group.
+      - Across the practices for one vocabulary item, include both directions whenever the
+        lexical item can naturally be tested in both directions.
+      - Keep sentences short, natural, contemporary, and semantically clear.
+      - Avoid unnecessary narrative context.
+      - Each individual practice must stand on its own.
+
+      ==================================================
+      CONTEXTUAL DIVERSITY
+      ==================================================
+
+      The multiple practices for one vocabulary item exist to create repeated exposure in
+      different contexts.
+
+      Good contextual variation changes things such as:
+      - person
+      - situation
+      - surrounding vocabulary
+      - object or complement
+      - time or place
+      - sentence structure
+
+      while preserving the intended lexical meaning.
+
+      Example target:
+      unterschreiben
+
+      Good distinct contexts:
+      - Ich muss den Vertrag heute _____.
+      - Sie möchte das Dokument noch _____.
+      - Vor dem Termin musst du hier _____.
+
+      Bad variation:
+      - Ich muss den Vertrag _____.
+      - Heute muss ich den Vertrag _____.
+      - Ich muss heute den Vertrag _____.
+
+      The bad examples are effectively the same retrieval cue and do not provide enough
+      contextual diversity.
+
+      ==================================================
+      LEXICAL TARGET ISOLATION
+      ==================================================
+
+      The blank should test the supplied lexical item rather than unrelated morphology or
+      grammar whenever natural German permits this.
+
+      For verbs:
+      - Prefer structures that allow the infinitive or another simple lexical form when this
+        avoids unnecessary conjugation difficulty.
+      - Modal constructions are often useful for this purpose.
+      - Do not force infinitives where natural German requires another form.
+
+      Example target:
+      unterschreiben
+
+      Prefer:
+      Ich muss den Vertrag _____.
+      Answer: unterschreiben
+
+      over:
+      Er _____ den Vertrag.
+      Answer: unterschreibt
+
+      when both contexts are equally natural.
+
+      For nouns:
+      - Prefer supplying articles, determiners, case markers, or surrounding grammar when the
+        purpose is simply to retrieve the noun.
+      - Do not unnecessarily make article gender or case ending part of the answer.
+
+      Example target:
+      der Vertrag
+
+      Prefer:
+      Ich muss den _____ heute unterschreiben.
+      Answer: Vertrag
+
+      rather than requiring:
+      den Vertrag
+
+      unless the complete lexical unit is naturally necessary for the exercise.
+
+      For chunks:
+      - Preserve the reusable lexical chunk as much as natural German permits.
+      - Prefer contexts where the chunk can be retrieved as one meaningful unit.
+      - Do not break the chunk apart merely to create grammatical difficulty.
+
+      ==================================================
+      SUPPORTING VOCABULARY
+      ==================================================
+
+      Supporting vocabulary should normally be easier than the lexical target.
+
+      - Prefer common, high-frequency words.
+      - Avoid introducing several unfamiliar content words around one target.
+      - Do not make understanding the sentence depend on obscure vocabulary.
+      - Keep enough context to make the intended answer reasonably inferable.
+      - Do not make the context so explicit that the answer becomes trivial from translation
+        alone without lexical knowledge.
+      - Supporting vocabulary and sentence complexity should remain appropriate to CEFR %s,
+        but the sentence does not need to demonstrate %s-level grammar.
+
+      The target vocabulary itself is the main difficulty.
+
+      ==================================================
+      DIRECTION RULES
+      ==================================================
+
+      GERMAN_TO_ENGLISH:
+
+      - sourceSentence is a complete natural German sentence containing the target vocabulary.
+      - clozeSentence is the corresponding natural English sentence with exactly one _____.
+      - completeSentence is the complete English sentence.
+      - exactAnswer is the intended English content of the blank.
+      - acceptedAnswers contains only genuinely interchangeable English answers that fit
+        grammatically and semantically into that exact blank.
+
+      ENGLISH_TO_GERMAN:
+
+      - sourceSentence is a complete natural English sentence expressing the intended meaning.
+      - clozeSentence is the corresponding natural German sentence with exactly one _____.
+      - completeSentence is the complete German sentence.
+      - exactAnswer is the intended German content of the blank.
+      - acceptedAnswers contains only genuinely valid German alternatives that fit naturally
+        into that exact blank.
+
+      ==================================================
+      BILINGUAL MEANING
+      ==================================================
+
+      sourceSentence and completeSentence must express the same meaning.
+
+      Do not:
+      - add information in one language
+      - omit information in the other language
+      - produce awkward literal translations
+      - change the target sense between languages
+
+      Both sentences must sound natural independently.
+
+      ==================================================
+      ANSWER DESIGN
+      ==================================================
+
+      - Every clozeSentence must contain the exact blank marker _____.
+      - Use exactly one blank.
+      - exactAnswer must fit naturally into that blank without changing any surrounding words.
+      - Every acceptedAnswers entry must also fit naturally into the exact same blank.
+      - acceptedAnswers must contain only additional valid alternatives, not paraphrases of the
+        entire sentence.
+      - Do not put an answer in acceptedAnswers if inserting it creates duplication or an
+        ungrammatical sentence.
+      - Do not include the exactAnswer again inside acceptedAnswers.
+      - An empty acceptedAnswers list is completely acceptable and often preferable.
+      - Rewrite contexts where several common unrelated lexical answers would remain equally
+        plausible.
+      - The intended supplied vocabulary item must genuinely be represented by the answer or
+        by the lexical expression being tested.
+
+      Example:
+
+      clozeSentence:
+      I have to _____ the contract.
+
+      exactAnswer:
+      sign
+
+      Valid accepted alternative:
+      ["sign off on"]
+
+      only if:
+      "I have to sign off on the contract."
+      remains natural and expresses the intended meaning.
+
+      Invalid accepted alternative:
+      ["sign the document"]
+
+      because inserting it would produce:
+      "I have to sign the document the contract."
+
+      ==================================================
+      GERMAN FORM SELECTION
+      ==================================================
+
+      A supplied German vocabulary surface may be:
+      - a noun
+      - a verb
+      - an adjective
+      - an adverb
+      - a phrase
+      - a reusable chunk
+
+      Use whatever grammatically correct contextual form is necessary.
+
+      However:
+      - minimize avoidable inflectional difficulty
+      - preserve lexical recognizability
+      - do not deliberately transform the item into a difficult form merely to increase
+        challenge
+      - do not distort natural German merely to preserve the dictionary form
+
+      Word Practice tests lexical knowledge first.
+
+      ==================================================
+      MULTIPLE MEANINGS
+      ==================================================
+
+      If the supplied English field contains several possible meanings:
+
+      - choose a common meaning that genuinely belongs to the German vocabulary item
+      - keep each individual exercise semantically unambiguous
+      - practices within one group may cover more than one supplied meaning only when those
+        meanings are genuinely useful and clearly represented by the supplied entry
+      - do not invent unsupported meanings
+
+      Prefer reinforcing the most common/useful meaning rather than maximizing sense coverage.
+
+      ==================================================
+      IDENTIFIERS AND SELECTION DATA
+      ==================================================
+
+      - Each practice vocabularyId must exactly match its containing group vocabularyId.
+      - Echo the supplied selection object exactly in the selected field.
+      - Preserve vocabularyId exactly.
+      - Preserve category exactly.
+      - Preserve weakEventId exactly, including null.
+      - Do not normalize, replace, infer, or regenerate identifiers.
+      - Do not move a practice into another vocabulary group.
+
+      ==================================================
+      FINAL QUALITY CHECK
+      ==================================================
+
+      Before returning the generated result, verify every vocabulary group:
+
+      - Are there 3 to 5 practices?
+      - Are both directions represented when naturally possible?
+      - Are the practices genuinely different contextual encounters rather than reordered
+        versions of the same sentence?
+      - Does every practice test the supplied lexical item?
+      - Is lexical knowledge the primary difficulty?
+      - Is avoidable grammar difficulty minimized?
+      - Is surrounding vocabulary simple and useful?
+      - Does every cloze contain exactly one _____?
+      - Does exactAnswer fit the blank exactly?
+      - Does every accepted answer fit the same blank exactly?
+      - Are sourceSentence and completeSentence semantically aligned?
+      - Is the German natural?
+      - Is the English natural?
+      - Is each sentence independently understandable?
+      - Are all supplied identifiers preserved exactly?
+
+      Revise any practice that fails these checks.
+
+      ==================================================
+      OUTPUT
+      ==================================================
+
+      - Use the store_word_practice_generation input schema exactly.
+      - Call store_word_practice_generation with the complete generated batch.
+      - Do not return explanatory prose.
+      - Do not return markdown.
+      - Do not omit any supplied vocabulary group.
+
+      Vocabulary data:
+      %s
+      """.formatted(
+          difficultyLevel,
+          difficultyLevel,
+          difficultyLevel,
+          vocabularyData
+      );
+}
+
+private static String wordPracticeCandidatesAsJson(
+    List<WordPracticeGenerationCandidate> candidates
+) {
+  return candidates.stream()
+      .map(candidate -> """
+          {"selection":{"vocabularyId":"%s","category":"%s","weakEventId":%s},"german":"%s","english":"%s"}"""
+          .formatted(
+              escapeJson(candidate.selection().vocabularyId()),
+              candidate.selection().category().name(),
+              candidate.selection().weakEventId() == null
+                  ? "null"
+                  : "\"" + escapeJson(candidate.selection().weakEventId()) + "\"",
+              escapeJson(candidate.german()),
+              escapeJson(candidate.english())
+          ))
+      .collect(java.util.stream.Collectors.joining(",\n", "[\n", "\n]"));
+}
+
+private static String escapeJson(String value) {
+  var escaped = new StringBuilder(value.length());
+
+  for (int index = 0; index < value.length(); index++) {
+    char character = value.charAt(index);
+
+    switch (character) {
+      case '"' -> escaped.append("\\\"");
+      case '\\' -> escaped.append("\\\\");
+      case '\b' -> escaped.append("\\b");
+      case '\f' -> escaped.append("\\f");
+      case '\n' -> escaped.append("\\n");
+      case '\r' -> escaped.append("\\r");
+      case '\t' -> escaped.append("\\t");
+      default -> {
+        if (character < 0x20) {
+          escaped.append("\\u%04x".formatted((int) character));
+        } else {
+          escaped.append(character);
+        }
+      }
+    }
+  }
+
+  return escaped.toString();
+}
 
   private static String formatGrammarExamples(List<GrammarLevelReassignmentInput.GrammarExample> examples) {
     if (examples == null || examples.isEmpty()) {
