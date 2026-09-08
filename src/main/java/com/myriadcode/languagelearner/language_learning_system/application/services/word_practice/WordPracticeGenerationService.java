@@ -10,6 +10,7 @@ import com.myriadcode.languagelearner.language_learning_system.domain.word_pract
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeSelectionCategory;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +42,7 @@ public class WordPracticeGenerationService {
     private final WordPracticeSelectionPolicy selectionPolicy = new WordPracticeSelectionPolicy();
     private final WordPracticeBatchValidator batchValidator = new WordPracticeBatchValidator();
 
+    @Autowired
     public WordPracticeGenerationService(WordPracticeRepo practiceRepo,
                                          WordPracticeCandidateProvider candidateProvider,
                                          ContentGenerationJobService jobService,
