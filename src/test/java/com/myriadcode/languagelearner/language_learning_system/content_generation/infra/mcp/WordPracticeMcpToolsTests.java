@@ -133,7 +133,7 @@ class WordPracticeMcpToolsTests {
         private RuntimeException storeFailure;
 
         private StubGenerationService() {
-            super(null, null, null, null, 5);
+            super(null, null, null, null);
         }
 
         @Override
