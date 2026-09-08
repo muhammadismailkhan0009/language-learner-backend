@@ -25,7 +25,7 @@ class WordPracticeGenerationServiceTests {
     private final RecordingJobService jobService = new RecordingJobService();
     private final WordPracticeGenerationService service = new WordPracticeGenerationService(
             practiceRepo, candidateProvider, jobService, userId -> com.myriadcode.languagelearner.common.enums.LanguageLevel.B1,
-            Clock.fixed(NOW, ZoneOffset.UTC), 5
+            Clock.fixed(NOW, ZoneOffset.UTC)
     );
 
     @Test
@@ -35,7 +35,6 @@ class WordPracticeGenerationServiceTests {
         assertThat(selected).hasSize(10);
         assertThat(selected).extracting(WordPracticeGenerationCandidate::vocabularyId)
                 .doesNotHaveDuplicates();
-        assertThat(candidateProvider.lowExposureMaximum).isEqualTo(5);
     }
 
     @Test
@@ -98,17 +97,13 @@ class WordPracticeGenerationServiceTests {
     }
 
     private static final class RecordingCandidateProvider implements WordPracticeCandidateProvider {
-        private int lowExposureMaximum;
-
         @Override
-        public Map<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>> findRankedCandidates(
-                String userId, int lowExposureMaximum) {
-            this.lowExposureMaximum = lowExposureMaximum;
+        public Map<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>> findRankedCandidates(String userId) {
             var candidates = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>>(
                     WordPracticeSelectionCategory.class);
             candidates.put(WordPracticeSelectionCategory.NEW, candidates(WordPracticeSelectionCategory.NEW, 1, 5));
-            candidates.put(WordPracticeSelectionCategory.LOW_EXPOSURE,
-                    candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, 1, 5));
+            candidates.put(WordPracticeSelectionCategory.LEARNING,
+                    candidates(WordPracticeSelectionCategory.LEARNING, 1, 5));
             return candidates;
         }
 

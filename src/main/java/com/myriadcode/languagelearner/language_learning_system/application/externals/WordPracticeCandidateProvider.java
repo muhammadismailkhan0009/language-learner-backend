@@ -7,8 +7,5 @@ import java.util.List;
 import java.util.Map;
 
 public interface WordPracticeCandidateProvider {
-    Map<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>> findRankedCandidates(
-            String userId,
-            int lowExposureCountExclusiveMaximum
-    );
+    Map<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>> findRankedCandidates(String userId);
 }

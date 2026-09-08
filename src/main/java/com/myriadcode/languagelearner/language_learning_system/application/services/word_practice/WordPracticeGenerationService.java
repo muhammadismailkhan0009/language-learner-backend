@@ -10,8 +10,6 @@ import com.myriadcode.languagelearner.language_learning_system.domain.word_pract
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeSelectionCategory;
 import com.myriadcode.languagelearner.user_management.application.externals.UserDifficultyLevelApi;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,49 +27,39 @@ import static com.myriadcode.languagelearner.language_content.infra.llm.PromptsG
 
 @Service
 public class WordPracticeGenerationService {
-    public static final int DEFAULT_LOW_EXPOSURE_COUNT_EXCLUSIVE_MAXIMUM = 5;
-
     private final WordPracticeRepo practiceRepo;
     private final WordPracticeCandidateProvider candidateProvider;
     private final ContentGenerationJobService jobService;
     private final UserDifficultyLevelApi userDifficultyLevelApi;
     private final Clock clock;
-    private final int lowExposureThreshold;
     private final WordPracticeCapacityPolicy capacityPolicy = new WordPracticeCapacityPolicy();
     private final WordPracticeSelectionPolicy selectionPolicy = new WordPracticeSelectionPolicy();
     private final WordPracticeBatchValidator batchValidator = new WordPracticeBatchValidator();
 
-    @Autowired
     public WordPracticeGenerationService(WordPracticeRepo practiceRepo,
                                          WordPracticeCandidateProvider candidateProvider,
                                          ContentGenerationJobService jobService,
-                                         UserDifficultyLevelApi userDifficultyLevelApi,
-                                         @Value("${word-practice.low-exposure-count-exclusive-maximum:5}") int lowExposureThreshold) {
-        this(practiceRepo, candidateProvider, jobService, userDifficultyLevelApi, Clock.systemUTC(), lowExposureThreshold);
+                                         UserDifficultyLevelApi userDifficultyLevelApi) {
+        this(practiceRepo, candidateProvider, jobService, userDifficultyLevelApi, Clock.systemUTC());
     }
 
     WordPracticeGenerationService(WordPracticeRepo practiceRepo,
                                   WordPracticeCandidateProvider candidateProvider,
                                   ContentGenerationJobService jobService,
                                   UserDifficultyLevelApi userDifficultyLevelApi,
-                                  Clock clock,
-                                  int lowExposureThreshold) {
+                                  Clock clock) {
         this.practiceRepo = practiceRepo;
         this.candidateProvider = candidateProvider;
         this.jobService = jobService;
         this.userDifficultyLevelApi = userDifficultyLevelApi;
         this.clock = clock;
-        this.lowExposureThreshold = lowExposureThreshold;
     }
 
     @Transactional
     public List<WordPracticeGenerationCandidate> prepare(String userId) {
         jobService.require(userId, WORD_PRACTICE);
         requireCapacity(userId);
-        var candidatesByCategory = candidateProvider.findRankedCandidates(
-                userId,
-                lowExposureThreshold
-        );
+        var candidatesByCategory = candidateProvider.findRankedCandidates(userId);
         var detailsById = flatten(candidatesByCategory).stream().collect(Collectors.toMap(
                 WordPracticeGenerationCandidate::vocabularyId,
                 Function.identity(),

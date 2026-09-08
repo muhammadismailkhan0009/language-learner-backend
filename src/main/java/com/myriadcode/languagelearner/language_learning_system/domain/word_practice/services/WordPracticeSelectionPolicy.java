@@ -20,13 +20,13 @@ public class WordPracticeSelectionPolicy {
 
     private static final Map<WordPracticeSelectionCategory, Integer> QUOTAS = Map.of(
             WordPracticeSelectionCategory.NEW, 5,
-            WordPracticeSelectionCategory.LOW_EXPOSURE, 5
+            WordPracticeSelectionCategory.LEARNING, 5
     );
     private static final List<WordPracticeSelectionCategory> SELECTION_ORDER = List.of(
             WordPracticeSelectionCategory.NEW,
-            WordPracticeSelectionCategory.LOW_EXPOSURE,
-            WordPracticeSelectionCategory.STALE,
-            WordPracticeSelectionCategory.RANDOM
+            WordPracticeSelectionCategory.LEARNING,
+            WordPracticeSelectionCategory.RE_LEARNING,
+            WordPracticeSelectionCategory.REVIEW
     );
 
     public List<WordPracticeCandidate> select(
@@ -36,7 +36,7 @@ public class WordPracticeSelectionPolicy {
     ) {
         Objects.requireNonNull(random, "random must not be null");
         var activeIds = activeVocabularyIds == null ? Set.<String>of() : Set.copyOf(activeVocabularyIds);
-        var windows = createEligibleWindows(rankedCandidates, activeIds);
+        var windows = createEligibleWindows(rankedCandidates, activeIds, random);
         int availableCount = (int) windows.values().stream()
                 .flatMap(List::stream)
                 .map(WordPracticeCandidate::vocabularyId)
@@ -50,7 +50,7 @@ public class WordPracticeSelectionPolicy {
         var selectedIds = new HashSet<String>();
         for (var category : List.of(
                 WordPracticeSelectionCategory.NEW,
-                WordPracticeSelectionCategory.LOW_EXPOSURE)) {
+                WordPracticeSelectionCategory.LEARNING)) {
             addRandom(selected, selectedIds, windows.get(category), QUOTAS.get(category), random);
         }
         for (var category : SELECTION_ORDER) {
@@ -61,7 +61,8 @@ public class WordPracticeSelectionPolicy {
 
     private Map<WordPracticeSelectionCategory, List<WordPracticeCandidate>> createEligibleWindows(
             Map<WordPracticeSelectionCategory, List<WordPracticeCandidate>> rankedCandidates,
-            Set<String> activeIds
+            Set<String> activeIds,
+            RandomGenerator random
     ) {
         var windows = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeCandidate>>(
                 WordPracticeSelectionCategory.class
@@ -70,15 +71,24 @@ public class WordPracticeSelectionPolicy {
                 ? Map.<WordPracticeSelectionCategory, List<WordPracticeCandidate>>of()
                 : rankedCandidates;
         for (var category : SELECTION_ORDER) {
-            var window = source.getOrDefault(category, List.of()).stream()
+            var eligible = new ArrayList<>(source.getOrDefault(category, List.of()).stream()
                     .filter(Objects::nonNull)
                     .filter(candidate -> candidate.category() == category)
                     .filter(candidate -> !activeIds.contains(candidate.vocabularyId()))
-                    .limit(CANDIDATE_WINDOW_SIZE)
-                    .toList();
-            windows.put(category, window);
+                    .toList());
+            shuffle(eligible, random);
+            windows.put(category, List.copyOf(eligible.subList(0, Math.min(CANDIDATE_WINDOW_SIZE, eligible.size()))));
         }
         return windows;
+    }
+
+    private void shuffle(List<WordPracticeCandidate> candidates, RandomGenerator random) {
+        for (int index = candidates.size() - 1; index > 0; index--) {
+            int replacement = random.nextInt(index + 1);
+            var value = candidates.get(index);
+            candidates.set(index, candidates.get(replacement));
+            candidates.set(replacement, value);
+        }
     }
 
     private void addRandom(List<WordPracticeCandidate> selected,

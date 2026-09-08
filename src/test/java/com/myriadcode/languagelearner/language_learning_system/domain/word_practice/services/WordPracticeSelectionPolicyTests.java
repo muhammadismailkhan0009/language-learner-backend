@@ -23,39 +23,39 @@ class WordPracticeSelectionPolicyTests {
     void selects_quota_mix_without_active_or_duplicate_vocabulary() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "new", 8),
-                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 8),
-                candidates(WordPracticeSelectionCategory.STALE, "stale", 3)
+                candidates(WordPracticeSelectionCategory.LEARNING, "learning", 8),
+                candidates(WordPracticeSelectionCategory.RE_LEARNING, "relearning", 3)
         );
 
-        var selected = policy.select(windows, Set.of("new-1", "low-1"), new Random(7));
+        var selected = policy.select(windows, Set.of("new-1", "learning-1"), new Random(7));
 
         assertThat(selected).hasSize(10);
         assertThat(selected).extracting(WordPracticeCandidate::vocabularyId).doesNotHaveDuplicates();
-        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "low-1").contains(candidate.vocabularyId()));
+        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "learning-1").contains(candidate.vocabularyId()));
         assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)).hasSize(5);
-        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.LOW_EXPOSURE)).hasSize(5);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.LEARNING)).hasSize(5);
     }
 
     @Test
     void fills_missing_quota_from_other_categories() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "new", 2),
-                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 2),
-                candidates(WordPracticeSelectionCategory.STALE, "stale", 8)
+                candidates(WordPracticeSelectionCategory.LEARNING, "learning", 2),
+                candidates(WordPracticeSelectionCategory.RE_LEARNING, "relearning", 8)
         );
 
         var selected = policy.select(windows, Set.of(), new Random(3));
 
         assertThat(selected).hasSize(10);
-        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.STALE)).hasSize(6);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.RE_LEARNING)).hasSize(6);
     }
 
     @Test
-    void never_selects_beyond_top_twenty_ranked_candidates() {
-        var rankedNew = candidates(WordPracticeSelectionCategory.NEW, "new", 25);
+    void builds_candidate_window_randomly_instead_of_always_using_first_twenty() {
+        var rankedNew = candidates(WordPracticeSelectionCategory.NEW, "new", 100);
         var windows = windows(
                 rankedNew,
-                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 5),
+                candidates(WordPracticeSelectionCategory.LEARNING, "learning", 5),
                 List.of()
         );
 
@@ -64,14 +64,14 @@ class WordPracticeSelectionPolicyTests {
         assertThat(selected)
                 .filteredOn(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)
                 .extracting(WordPracticeCandidate::vocabularyId)
-                .noneMatch(id -> Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)) > 20);
+                .anyMatch(id -> Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)) > 20);
     }
 
     @Test
     void rejects_when_fewer_than_ten_unique_eligible_words_exist() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "shared", 5),
-                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 4),
+                candidates(WordPracticeSelectionCategory.LEARNING, "learning", 4),
                 List.of()
         );
 
