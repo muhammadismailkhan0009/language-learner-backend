@@ -3,8 +3,6 @@ package com.myriadcode.languagelearner.language_learning_system.infra.jpa.word_p
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.aggregates.WordPractice;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.repo.WordPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.GeneratedWordPracticeGroup;
-import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
-import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeSelectionCategory;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
@@ -13,10 +11,9 @@ import java.util.*;
 @Repository
 class WordPracticeJpaAdapter implements WordPracticeRepo {
     private final WordPracticeJpaRepository practices;
-    private final ConsumedWeakEventJpaRepository weakEvents;
 
-    WordPracticeJpaAdapter(WordPracticeJpaRepository practices, ConsumedWeakEventJpaRepository weakEvents) {
-        this.practices = practices; this.weakEvents = weakEvents;
+    WordPracticeJpaAdapter(WordPracticeJpaRepository practices) {
+        this.practices = practices;
     }
 
     public int countDistinctActiveVocabulary(String userId) {
@@ -33,19 +30,12 @@ class WordPracticeJpaAdapter implements WordPracticeRepo {
     public void deleteByIdAndUserId(String practiceId, String userId) { practices.deleteByIdAndUserId(practiceId, userId); }
 
     @Transactional
-    public void saveGenerationAndConsumeWeakEvents(String userId, List<WordPracticeCandidate> selected,
-                                                    List<GeneratedWordPracticeGroup> groups, Instant createdAt) {
+    public void saveGeneration(String userId, List<GeneratedWordPracticeGroup> groups, Instant createdAt) {
         var rows = groups.stream().flatMap(group -> group.practices().stream()).map(generated ->
                 new WordPracticeEntity(UUID.randomUUID().toString(), userId, generated.vocabularyId(), generated.direction(),
                         generated.sourceSentence(), generated.clozeSentence(), generated.completeSentence(),
                         generated.exactAnswer(), generated.acceptedAnswers(), createdAt)).toList();
         practices.saveAll(rows);
-        for (var candidate : selected) {
-            if (candidate.category() == WordPracticeSelectionCategory.WEAK) {
-                weakEvents.save(new ConsumedWeakEventEntity(userId, candidate.weakEventId(),
-                        candidate.vocabularyId(), createdAt));
-            }
-        }
     }
 
     private WordPractice toDomain(WordPracticeEntity entity) {

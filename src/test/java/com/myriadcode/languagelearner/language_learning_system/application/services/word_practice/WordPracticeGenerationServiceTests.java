@@ -56,14 +56,13 @@ class WordPracticeGenerationServiceTests {
     }
 
     @Test
-    void storesGeneratedPracticesAndConsumesSelectedWeakEventsThroughAtomicRepoOperation() {
+    void storesGeneratedPracticesThroughAtomicRepoOperation() {
         var selected = service.prepare("user-1");
 
         int stored = service.store("user-1", selections(selected), generatedGroups(selected));
 
         assertThat(stored).isEqualTo(30);
-        assertThat(practiceRepo.savedCandidates).extracting(WordPracticeCandidate::weakEventId)
-                .filteredOn(Objects::nonNull).containsExactlyInAnyOrder("weak-event-1", "weak-event-2", "weak-event-3");
+        assertThat(practiceRepo.saved).isTrue();
         assertThat(jobService.deleted).isTrue();
     }
 
@@ -74,7 +73,7 @@ class WordPracticeGenerationServiceTests {
 
         assertThatThrownBy(() -> service.store("user-1", selections(selected), generatedGroups(selected)))
                 .hasMessage("Word Practice capacity exceeded");
-        assertThat(practiceRepo.savedCandidates).isNull();
+        assertThat(practiceRepo.saved).isFalse();
         assertThat(jobService.deleted).isFalse();
     }
 
@@ -108,9 +107,8 @@ class WordPracticeGenerationServiceTests {
             var candidates = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>>(
                     WordPracticeSelectionCategory.class);
             candidates.put(WordPracticeSelectionCategory.NEW, candidates(WordPracticeSelectionCategory.NEW, 1, 5));
-            candidates.put(WordPracticeSelectionCategory.WEAK, candidates(WordPracticeSelectionCategory.WEAK, 1, 3));
             candidates.put(WordPracticeSelectionCategory.LOW_EXPOSURE,
-                    candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, 1, 2));
+                    candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, 1, 5));
             return candidates;
         }
 
@@ -119,8 +117,7 @@ class WordPracticeGenerationServiceTests {
             var result = new ArrayList<WordPracticeGenerationCandidate>();
             for (int number = start; number < start + count; number++) {
                 String prefix = category.name().toLowerCase(Locale.ROOT);
-                String weakEvent = category == WordPracticeSelectionCategory.WEAK ? "weak-event-" + number : null;
-                var selection = new WordPracticeCandidate(prefix + "-" + number, category, weakEvent);
+                var selection = new WordPracticeCandidate(prefix + "-" + number, category);
                 result.add(new WordPracticeGenerationCandidate(selection, "de-" + prefix + number, "en-" + prefix + number));
             }
             return result;
@@ -138,15 +135,14 @@ class WordPracticeGenerationServiceTests {
 
     private static final class RecordingRepo implements WordPracticeRepo {
         private int activeCount;
-        private List<WordPracticeCandidate> savedCandidates;
+        private boolean saved;
         @Override public int countDistinctActiveVocabulary(String userId) { return activeCount; }
         @Override public Set<String> findActiveVocabularyIds(String userId) { return Set.of(); }
         @Override public List<WordPractice> findByUserId(String userId) { return List.of(); }
         @Override public Optional<WordPractice> findByIdAndUserId(String practiceId, String userId) { return Optional.empty(); }
         @Override public void deleteByIdAndUserId(String practiceId, String userId) { }
-        @Override public void saveGenerationAndConsumeWeakEvents(String userId, List<WordPracticeCandidate> selected,
-                                                                 List<GeneratedWordPracticeGroup> groups, Instant createdAt) {
-            savedCandidates = List.copyOf(selected);
+        @Override public void saveGeneration(String userId, List<GeneratedWordPracticeGroup> groups, Instant createdAt) {
+            saved = true;
         }
     }
 }

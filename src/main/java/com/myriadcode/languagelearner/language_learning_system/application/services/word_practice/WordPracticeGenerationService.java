@@ -94,7 +94,7 @@ public class WordPracticeGenerationService {
         jobService.require(userId, WORD_PRACTICE);
         requireCapacity(userId);
         batchValidator.validate(selected.stream().map(WordPracticeCandidate::vocabularyId).toList(), groups);
-        practiceRepo.saveGenerationAndConsumeWeakEvents(userId, selected, groups, clock.instant());
+        practiceRepo.saveGeneration(userId, groups, clock.instant());
         jobService.delete(userId, WORD_PRACTICE);
         return groups.stream().mapToInt(group -> group.practices().size()).sum();
     }

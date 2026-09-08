@@ -23,34 +23,31 @@ class WordPracticeSelectionPolicyTests {
     void selects_quota_mix_without_active_or_duplicate_vocabulary() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "new", 8),
-                candidates(WordPracticeSelectionCategory.WEAK, "weak", 6),
-                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 5),
+                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 8),
                 candidates(WordPracticeSelectionCategory.STALE, "stale", 3)
         );
 
-        var selected = policy.select(windows, Set.of("new-1", "weak-1"), new Random(7));
+        var selected = policy.select(windows, Set.of("new-1", "low-1"), new Random(7));
 
         assertThat(selected).hasSize(10);
         assertThat(selected).extracting(WordPracticeCandidate::vocabularyId).doesNotHaveDuplicates();
-        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "weak-1").contains(candidate.vocabularyId()));
+        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "low-1").contains(candidate.vocabularyId()));
         assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)).hasSize(5);
-        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.WEAK)).hasSize(3);
-        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.LOW_EXPOSURE)).hasSize(2);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.LOW_EXPOSURE)).hasSize(5);
     }
 
     @Test
     void fills_missing_quota_from_other_categories() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "new", 2),
-                candidates(WordPracticeSelectionCategory.WEAK, "weak", 2),
                 candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 2),
-                candidates(WordPracticeSelectionCategory.STALE, "stale", 6)
+                candidates(WordPracticeSelectionCategory.STALE, "stale", 8)
         );
 
         var selected = policy.select(windows, Set.of(), new Random(3));
 
         assertThat(selected).hasSize(10);
-        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.STALE)).hasSize(4);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.STALE)).hasSize(6);
     }
 
     @Test
@@ -58,7 +55,6 @@ class WordPracticeSelectionPolicyTests {
         var rankedNew = candidates(WordPracticeSelectionCategory.NEW, "new", 25);
         var windows = windows(
                 rankedNew,
-                candidates(WordPracticeSelectionCategory.WEAK, "weak", 5),
                 candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 5),
                 List.of()
         );
@@ -75,7 +71,6 @@ class WordPracticeSelectionPolicyTests {
     void rejects_when_fewer_than_ten_unique_eligible_words_exist() {
         var windows = windows(
                 candidates(WordPracticeSelectionCategory.NEW, "shared", 5),
-                candidates(WordPracticeSelectionCategory.WEAK, "shared", 5),
                 candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 4),
                 List.of()
         );
@@ -104,8 +99,7 @@ class WordPracticeSelectionPolicyTests {
     private List<WordPracticeCandidate> candidates(WordPracticeSelectionCategory category, String prefix, int count) {
         var candidates = new ArrayList<WordPracticeCandidate>();
         for (int index = 1; index <= count; index++) {
-            candidates.add(new WordPracticeCandidate(prefix + "-" + index, category,
-                    category == WordPracticeSelectionCategory.WEAK ? "event-" + index : null));
+            candidates.add(new WordPracticeCandidate(prefix + "-" + index, category));
         }
         return List.copyOf(candidates);
     }

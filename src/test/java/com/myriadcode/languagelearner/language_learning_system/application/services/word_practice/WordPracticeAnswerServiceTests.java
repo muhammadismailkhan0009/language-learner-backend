@@ -43,6 +43,6 @@ class WordPracticeAnswerServiceTests {
         @Override public List<WordPractice> findByUserId(String userId) { return List.of(practice); }
         @Override public Optional<WordPractice> findByIdAndUserId(String practiceId, String userId) { return Optional.of(practice); }
         @Override public void deleteByIdAndUserId(String practiceId, String userId) { deleted = true; }
-        @Override public void saveGenerationAndConsumeWeakEvents(String userId, List<WordPracticeCandidate> selected, List<GeneratedWordPracticeGroup> groups, Instant createdAt) { }
+        @Override public void saveGeneration(String userId, List<GeneratedWordPracticeGroup> groups, Instant createdAt) { }
     }
 }

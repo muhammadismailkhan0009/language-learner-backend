@@ -3856,7 +3856,6 @@ Grammar rules:
       - Echo the supplied selection object exactly in the selected field.
       - Preserve vocabularyId exactly.
       - Preserve category exactly.
-      - Preserve weakEventId exactly, including null.
       - Do not normalize, replace, infer, or regenerate identifiers.
       - Do not move a practice into another vocabulary group.
 
@@ -3910,13 +3909,10 @@ private static String wordPracticeCandidatesAsJson(
 ) {
   return candidates.stream()
       .map(candidate -> """
-          {"selection":{"vocabularyId":"%s","category":"%s","weakEventId":%s},"german":"%s","english":"%s"}"""
+          {"selection":{"vocabularyId":"%s","category":"%s"},"german":"%s","english":"%s"}"""
           .formatted(
               escapeJson(candidate.selection().vocabularyId()),
               candidate.selection().category().name(),
-              candidate.selection().weakEventId() == null
-                  ? "null"
-                  : "\"" + escapeJson(candidate.selection().weakEventId()) + "\"",
               escapeJson(candidate.german()),
               escapeJson(candidate.english())
           ))

@@ -59,6 +59,6 @@ class WordPracticeGenerationRequestServiceTests {
         @Override public List<WordPractice> findByUserId(String userId) { return List.of(); }
         @Override public Optional<WordPractice> findByIdAndUserId(String practiceId, String userId) { return Optional.empty(); }
         @Override public void deleteByIdAndUserId(String practiceId, String userId) { }
-        @Override public void saveGenerationAndConsumeWeakEvents(String userId, List<WordPracticeCandidate> selected, List<GeneratedWordPracticeGroup> groups, Instant createdAt) { }
+        @Override public void saveGeneration(String userId, List<GeneratedWordPracticeGroup> groups, Instant createdAt) { }
     }
 }

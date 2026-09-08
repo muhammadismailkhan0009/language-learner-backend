@@ -20,12 +20,10 @@ public class WordPracticeSelectionPolicy {
 
     private static final Map<WordPracticeSelectionCategory, Integer> QUOTAS = Map.of(
             WordPracticeSelectionCategory.NEW, 5,
-            WordPracticeSelectionCategory.WEAK, 3,
-            WordPracticeSelectionCategory.LOW_EXPOSURE, 2
+            WordPracticeSelectionCategory.LOW_EXPOSURE, 5
     );
     private static final List<WordPracticeSelectionCategory> SELECTION_ORDER = List.of(
             WordPracticeSelectionCategory.NEW,
-            WordPracticeSelectionCategory.WEAK,
             WordPracticeSelectionCategory.LOW_EXPOSURE,
             WordPracticeSelectionCategory.STALE,
             WordPracticeSelectionCategory.RANDOM
@@ -52,7 +50,6 @@ public class WordPracticeSelectionPolicy {
         var selectedIds = new HashSet<String>();
         for (var category : List.of(
                 WordPracticeSelectionCategory.NEW,
-                WordPracticeSelectionCategory.WEAK,
                 WordPracticeSelectionCategory.LOW_EXPOSURE)) {
             addRandom(selected, selectedIds, windows.get(category), QUOTAS.get(category), random);
         }

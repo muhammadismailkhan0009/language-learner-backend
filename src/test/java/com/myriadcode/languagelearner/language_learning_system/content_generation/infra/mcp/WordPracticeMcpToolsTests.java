@@ -78,7 +78,7 @@ class WordPracticeMcpToolsTests {
 
     private WordPracticeGenerationCandidate candidate() {
         return new WordPracticeGenerationCandidate(
-                new WordPracticeCandidate("vocabulary-1", WordPracticeSelectionCategory.NEW, null),
+                new WordPracticeCandidate("vocabulary-1", WordPracticeSelectionCategory.NEW),
                 "unterschreiben",
                 "to sign"
         );

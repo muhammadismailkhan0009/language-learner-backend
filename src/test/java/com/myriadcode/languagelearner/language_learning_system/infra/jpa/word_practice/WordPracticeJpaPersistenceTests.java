@@ -4,9 +4,7 @@ import com.myriadcode.languagelearner.configs.TestDbConfigs;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.repo.WordPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.GeneratedWordPractice;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.GeneratedWordPracticeGroup;
-import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeDirection;
-import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeSelectionCategory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,33 +46,25 @@ class WordPracticeJpaPersistenceTests {
 
     @AfterEach
     void clean() {
-        jdbc.sql("delete from word_practice_consumed_weak_events").update();
         jdbc.sql("delete from word_practices").update();
         jdbc.sql("delete from vocabulary_entries where id in ('v1', 'v2')").update();
     }
 
     @Test
-    void storesAllPracticesAndConsumesWeakEventWithoutHistoricalGenerationState() {
+    void storesAllPracticesWithoutHistoricalGenerationState() {
         var createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
-        var selected = List.of(
-                new WordPracticeCandidate("v1", WordPracticeSelectionCategory.WEAK, "weak-1"),
-                new WordPracticeCandidate("v2", WordPracticeSelectionCategory.NEW, null));
         var groups = List.of(group("v1", 3), group("v2", 4));
 
-        practices.saveGenerationAndConsumeWeakEvents("u1", selected, groups, createdAt);
+        practices.saveGeneration("u1", groups, createdAt);
 
         assertThat(practices.findByUserId("u1")).hasSize(7);
         assertThat(practices.countDistinctActiveVocabulary("u1")).isEqualTo(2);
         assertThat(practices.findActiveVocabularyIds("u1")).containsExactlyInAnyOrder("v1", "v2");
-        assertThat(jdbc.sql("select weak_event_id from word_practice_consumed_weak_events where user_id='u1'")
-                .query(String.class).single()).isEqualTo("weak-1");
     }
 
     @Test
     void deletingCorrectPracticeReleasesVocabularyOnlyAfterItsLastPractice() {
-        practices.saveGenerationAndConsumeWeakEvents("u1",
-                List.of(new WordPracticeCandidate("v1", WordPracticeSelectionCategory.NEW, null)),
-                List.of(group("v1", 3)), Instant.now());
+        practices.saveGeneration("u1", List.of(group("v1", 3)), Instant.now());
         var stored = practices.findByUserId("u1");
 
         practices.deleteByIdAndUserId(stored.get(0).id(), "u1");

@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.language_learning_system.domain.word_prac
 
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.aggregates.WordPractice;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.GeneratedWordPracticeGroup;
-import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
 
 import java.time.Instant;
 import java.util.List;
@@ -20,8 +19,5 @@ public interface WordPracticeRepo {
 
     void deleteByIdAndUserId(String practiceId, String userId);
 
-    void saveGenerationAndConsumeWeakEvents(String userId,
-                                            List<WordPracticeCandidate> selected,
-                                            List<GeneratedWordPracticeGroup> groups,
-                                            Instant createdAt);
+    void saveGeneration(String userId, List<GeneratedWordPracticeGroup> groups, Instant createdAt);
 }

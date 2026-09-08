@@ -2,7 +2,6 @@ package com.myriadcode.languagelearner.language_learning_system.domain.word_prac
 
 public enum WordPracticeSelectionCategory {
     NEW,
-    WEAK,
     LOW_EXPOSURE,
     STALE,
     RANDOM
