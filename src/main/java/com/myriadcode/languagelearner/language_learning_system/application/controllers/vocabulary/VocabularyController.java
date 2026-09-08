@@ -11,6 +11,8 @@ import com.myriadcode.languagelearner.language_learning_system.application.servi
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyExtractionService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.vocabulary.VocabularyOrchestrationService;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,12 +25,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.TreeMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @CrossOrigin("*")
 @RestController
 @RequestMapping("api/v1/vocabularies")
 public class VocabularyController {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(VocabularyController.class);
     private final VocabularyOrchestrationService vocabularyOrchestrationService;
     private final VocabularyClozeGenerationService vocabularyClozeGenerationService;
     private final VocabularyExtractionService vocabularyExtractionService;
@@ -64,7 +71,27 @@ public class VocabularyController {
     public ResponseEntity<ApiResponse<List<VocabularyResponse>>> fetchVocabularies(
             @RequestParam String userId
     ) {
+        LOGGER.info("REST vocabulary fetch started: userId={}", userId);
         var response = vocabularyOrchestrationService.fetchVocabularies(userId);
+        var countsByReverseFlashcardState = response.stream()
+                .map(VocabularyResponse::reverseFlashcardState)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(
+                        Function.identity(),
+                        TreeMap::new,
+                        Collectors.counting()
+                ));
+        var attachedCount = countsByReverseFlashcardState.values().stream()
+                .mapToLong(Long::longValue)
+                .sum();
+        LOGGER.info(
+                "REST vocabulary response ready: userId={}, vocabularyCount={}, attachedCount={}, unattachedCount={}, countsByState={}",
+                userId,
+                response.size(),
+                attachedCount,
+                response.size() - attachedCount,
+                countsByReverseFlashcardState
+        );
         return ResponseEntity.ok(new ApiResponse<>(response));
     }
 

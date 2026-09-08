@@ -13,6 +13,8 @@ import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.services.VocabularyDomainService;
 import com.myriadcode.fsrs.api.enums.State;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -29,6 +32,7 @@ import java.util.stream.Collectors;
 @Service
 public class VocabularyOrchestrationService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(VocabularyOrchestrationService.class);
     private static final VocabularyApiMapper VOCABULARY_API_MAPPER = VocabularyApiMapper.INSTANCE;
     private static final int DEFAULT_SONG_SELECTION_LIMIT = 50;
     private static final int MAX_SONG_SELECTION_LIMIT = 300;
@@ -214,6 +218,25 @@ public class VocabularyOrchestrationService {
                         review -> review.fsrsState().name(),
                         (first, ignored) -> first
                 ));
+        var attachedVocabularyCountsByState = vocabularies.stream()
+                .map(vocabulary -> reverseFlashcardStates.get(vocabulary.id().id()))
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.groupingBy(
+                        Function.identity(),
+                        TreeMap::new,
+                        Collectors.counting()
+                ));
+        var attachedVocabularyCount = attachedVocabularyCountsByState.values().stream()
+                .mapToLong(Long::longValue)
+                .sum();
+        LOGGER.info(
+                "Fetched vocabularies with reverse flashcard states: userId={}, vocabularyCount={}, attachedCount={}, unattachedCount={}, countsByState={}",
+                userId,
+                vocabularies.size(),
+                attachedVocabularyCount,
+                vocabularies.size() - attachedVocabularyCount,
+                attachedVocabularyCountsByState
+        );
         return VocabularyListingArranger.arrange(vocabularies, flashcardReviews, clock.instant()).stream()
                 .map(vocabulary -> VOCABULARY_API_MAPPER.toResponse(
                         vocabulary,
