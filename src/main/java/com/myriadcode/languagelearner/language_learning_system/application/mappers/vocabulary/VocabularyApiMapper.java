@@ -31,7 +31,23 @@ public interface VocabularyApiMapper {
 
     @Mapping(target = "id", source = "id.id")
     @Mapping(target = "userId", source = "userId.id")
+    @Mapping(target = "reverseFlashcardState", ignore = true)
     VocabularyResponse toResponse(Vocabulary vocabulary);
+
+    default VocabularyResponse toResponse(Vocabulary vocabulary, String reverseFlashcardState) {
+        var response = toResponse(vocabulary);
+        return new VocabularyResponse(
+                response.id(),
+                response.userId(),
+                response.surface(),
+                response.translation(),
+                response.entryKind(),
+                response.notes(),
+                response.exampleSentences(),
+                response.clozeSentence(),
+                reverseFlashcardState
+        );
+    }
 
     @Mapping(target = "id", source = "id.id")
     VocabularyResponse.ExampleSentenceResponse toSentenceResponse(VocabularyExampleSentence sentence);

@@ -123,6 +123,30 @@ class VocabularyListingOrderTests {
                 .containsExactly("vocab-4", "vocab-3", "vocab-2", "vocab-1");
     }
 
+    @Test
+    @DisplayName("fetchVocabularies: exposes only each vocabulary's reverse flashcard state")
+    void fetchVocabulariesExposesOnlyReverseFlashcardState() {
+        var service = new VocabularyOrchestrationService(
+                new InMemoryVocabularyRepo(seedVocabulary("user-a", 3)),
+                new VocabularyFlashCardPublisher(domainEvent -> {
+                }),
+                statsApi(List.of(
+                        review("card-1-front", "vocab-1", State.LEARNING, null, Double.NaN, 0.0, 0.0, 0, null),
+                        review("card-1-reverse", "vocab-1", State.REVIEW, null, Double.NaN, 0.0, 0.0, 0, null, true),
+                        review("card-2-reverse", "vocab-2", State.RE_LEARNING, null, Double.NaN, 0.0, 0.0, 0, null, true),
+                        review("card-3-front", "vocab-3", State.NEW, null, Double.NaN, 0.0, 0.0, 0, null)
+                )),
+                Clock.fixed(Instant.parse("2026-03-09T12:34:00Z"), ZoneOffset.UTC)
+        );
+
+        var responsesById = service.fetchVocabularies("user-a").stream()
+                .collect(java.util.stream.Collectors.toMap(VocabularyResponse::id, java.util.function.Function.identity()));
+
+        assertThat(responsesById.get("vocab-1").reverseFlashcardState()).isEqualTo("REVIEW");
+        assertThat(responsesById.get("vocab-2").reverseFlashcardState()).isEqualTo("RE_LEARNING");
+        assertThat(responsesById.get("vocab-3").reverseFlashcardState()).isNull();
+    }
+
     private static List<String> ids(List<VocabularyResponse> responses) {
         return responses.stream()
                 .map(VocabularyResponse::id)

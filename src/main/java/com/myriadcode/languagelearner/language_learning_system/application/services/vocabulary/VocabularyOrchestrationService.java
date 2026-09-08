@@ -207,8 +207,18 @@ public class VocabularyOrchestrationService {
     public List<VocabularyResponse> fetchVocabularies(String userId) {
         var vocabularies = vocabularyRepo.findByUserId(userId);
         var flashcardReviews = vocabularyFlashcardReviewsApi.getVocabularyFlashcardsByUser(userId);
+        var reverseFlashcardStates = flashcardReviews.stream()
+                .filter(review -> review != null && review.isReversed())
+                .collect(Collectors.toMap(
+                        review -> review.vocabularyId(),
+                        review -> review.fsrsState().name(),
+                        (first, ignored) -> first
+                ));
         return VocabularyListingArranger.arrange(vocabularies, flashcardReviews, clock.instant()).stream()
-                .map(VOCABULARY_API_MAPPER::toResponse)
+                .map(vocabulary -> VOCABULARY_API_MAPPER.toResponse(
+                        vocabulary,
+                        reverseFlashcardStates.get(vocabulary.id().id())
+                ))
                 .toList();
     }
 

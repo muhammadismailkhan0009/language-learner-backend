@@ -12,7 +12,8 @@ public record VocabularyResponse(
         Vocabulary.EntryKind entryKind,
         String notes,
         List<ExampleSentenceResponse> exampleSentences,
-        ClozeSentenceResponse clozeSentence
+        ClozeSentenceResponse clozeSentence,
+        String reverseFlashcardState
 ) {
 
     public record ExampleSentenceResponse(String id, String sentence, String translation) {
