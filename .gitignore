@@ -40,3 +40,6 @@ build/
 
 .codebase-memory
 .featureflow
+.codex/hooks.json
+.codex/hooks/project_map_hook.py
+.codex/hooks/project_map_runtime.md

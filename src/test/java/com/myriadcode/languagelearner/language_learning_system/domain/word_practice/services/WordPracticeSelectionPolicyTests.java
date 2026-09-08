@@ -1,0 +1,112 @@
+package com.myriadcode.languagelearner.language_learning_system.domain.word_practice.services;
+
+import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.exceptions.InsufficientWordPracticeCandidatesException;
+import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeCandidate;
+import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeSelectionCategory;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+class WordPracticeSelectionPolicyTests {
+
+    private final WordPracticeSelectionPolicy policy = new WordPracticeSelectionPolicy();
+
+    @Test
+    void selects_quota_mix_without_active_or_duplicate_vocabulary() {
+        var windows = windows(
+                candidates(WordPracticeSelectionCategory.NEW, "new", 8),
+                candidates(WordPracticeSelectionCategory.WEAK, "weak", 6),
+                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 5),
+                candidates(WordPracticeSelectionCategory.STALE, "stale", 3)
+        );
+
+        var selected = policy.select(windows, Set.of("new-1", "weak-1"), new Random(7));
+
+        assertThat(selected).hasSize(10);
+        assertThat(selected).extracting(WordPracticeCandidate::vocabularyId).doesNotHaveDuplicates();
+        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "weak-1").contains(candidate.vocabularyId()));
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)).hasSize(5);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.WEAK)).hasSize(3);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.LOW_EXPOSURE)).hasSize(2);
+    }
+
+    @Test
+    void fills_missing_quota_from_other_categories() {
+        var windows = windows(
+                candidates(WordPracticeSelectionCategory.NEW, "new", 2),
+                candidates(WordPracticeSelectionCategory.WEAK, "weak", 2),
+                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 2),
+                candidates(WordPracticeSelectionCategory.STALE, "stale", 6)
+        );
+
+        var selected = policy.select(windows, Set.of(), new Random(3));
+
+        assertThat(selected).hasSize(10);
+        assertThat(selected.stream().filter(candidate -> candidate.category() == WordPracticeSelectionCategory.STALE)).hasSize(4);
+    }
+
+    @Test
+    void never_selects_beyond_top_twenty_ranked_candidates() {
+        var rankedNew = candidates(WordPracticeSelectionCategory.NEW, "new", 25);
+        var windows = windows(
+                rankedNew,
+                candidates(WordPracticeSelectionCategory.WEAK, "weak", 5),
+                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 5),
+                List.of()
+        );
+
+        var selected = policy.select(windows, Set.of(), new Random(11));
+
+        assertThat(selected)
+                .filteredOn(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)
+                .extracting(WordPracticeCandidate::vocabularyId)
+                .noneMatch(id -> Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)) > 20);
+    }
+
+    @Test
+    void rejects_when_fewer_than_ten_unique_eligible_words_exist() {
+        var windows = windows(
+                candidates(WordPracticeSelectionCategory.NEW, "shared", 5),
+                candidates(WordPracticeSelectionCategory.WEAK, "shared", 5),
+                candidates(WordPracticeSelectionCategory.LOW_EXPOSURE, "low", 4),
+                List.of()
+        );
+
+        assertThatThrownBy(() -> policy.select(windows, Set.of(), new Random(1)))
+                .isInstanceOf(InsufficientWordPracticeCandidatesException.class)
+                .extracting("availableVocabularyCount", "requiredVocabularyCount")
+                .containsExactly(9, 10);
+    }
+
+    @SafeVarargs
+    private Map<WordPracticeSelectionCategory, List<WordPracticeCandidate>> windows(
+            List<WordPracticeCandidate>... lists
+    ) {
+        var windows = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeCandidate>>(
+                WordPracticeSelectionCategory.class
+        );
+        for (var list : lists) {
+            if (!list.isEmpty()) {
+                windows.put(list.getFirst().category(), list);
+            }
+        }
+        return windows;
+    }
+
+    private List<WordPracticeCandidate> candidates(WordPracticeSelectionCategory category, String prefix, int count) {
+        var candidates = new ArrayList<WordPracticeCandidate>();
+        for (int index = 1; index <= count; index++) {
+            candidates.add(new WordPracticeCandidate(prefix + "-" + index, category,
+                    category == WordPracticeSelectionCategory.WEAK ? "event-" + index : null));
+        }
+        return List.copyOf(candidates);
+    }
+}

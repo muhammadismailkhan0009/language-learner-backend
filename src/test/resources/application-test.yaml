@@ -1,9 +1,29 @@
+debug: false
+
+logging:
+  level:
+    root: ERROR
+    org.springframework: ERROR
+    org.springframework.test: ERROR
+    org.springframework.boot: ERROR
+    org.springframework.security: ERROR
+    org.hibernate: ERROR
+    org.hibernate.SQL: OFF
+    org.testcontainers: ERROR
+    com.zaxxer.hikari: ERROR
+    org.flywaydb: ERROR
+
 spring:
+  main:
+    banner-mode: off
   jpa:
     open-in-view: false #using it is bad idea bcz it initializes proxy
     hibernate.ddl-auto: validate
     generate-ddl: false # Flyway manages schema changes
-    show-sql: true
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
   ai:
     deepseek:
       base-url: https://api.deepseek.com
