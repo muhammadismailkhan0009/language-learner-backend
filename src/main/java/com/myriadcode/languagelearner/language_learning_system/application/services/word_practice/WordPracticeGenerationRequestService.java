@@ -6,7 +6,6 @@ import com.myriadcode.languagelearner.language_learning_system.domain.word_pract
 import org.springframework.stereotype.Service;
 
 import static com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType.WORD_PRACTICE;
-import static com.myriadcode.languagelearner.language_learning_system.domain.word_practice.services.WordPracticeCapacityPolicy.GENERATION_VOCABULARY_COUNT;
 
 @Service
 public class WordPracticeGenerationRequestService {
@@ -24,7 +23,7 @@ public class WordPracticeGenerationRequestService {
         requireUserId(userId);
         capacityPolicy.requireCapacity(
                 practiceRepo.countDistinctActiveVocabulary(userId),
-                GENERATION_VOCABULARY_COUNT
+                1
         );
         jobService.createOrReplace(userId, WORD_PRACTICE);
         return "Word Practice generation requested. Run your MCP tool.";

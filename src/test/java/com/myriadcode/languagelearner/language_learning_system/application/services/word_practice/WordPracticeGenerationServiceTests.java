@@ -76,6 +76,15 @@ class WordPracticeGenerationServiceTests {
         assertThat(jobService.deleted).isFalse();
     }
 
+    @Test
+    void prepares_only_the_remaining_capacity() {
+        practiceRepo.activeCount = 14;
+
+        var selected = service.prepare("user-1");
+
+        assertThat(selected).hasSize(1);
+    }
+
     private List<WordPracticeCandidate> selections(List<WordPracticeGenerationCandidate> selected) {
         return selected.stream().map(WordPracticeGenerationCandidate::selection).toList();
     }
@@ -102,6 +111,8 @@ class WordPracticeGenerationServiceTests {
             var candidates = new EnumMap<WordPracticeSelectionCategory, List<WordPracticeGenerationCandidate>>(
                     WordPracticeSelectionCategory.class);
             candidates.put(WordPracticeSelectionCategory.NEW, candidates(WordPracticeSelectionCategory.NEW, 1, 10));
+            candidates.put(WordPracticeSelectionCategory.LEARNING,
+                    candidates(WordPracticeSelectionCategory.LEARNING, 1, 10));
             return candidates;
         }
 

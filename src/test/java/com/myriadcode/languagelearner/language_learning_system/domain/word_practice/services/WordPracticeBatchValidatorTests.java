@@ -25,6 +25,14 @@ class WordPracticeBatchValidatorTests {
     }
 
     @Test
+    void accepts_one_authoritative_word() {
+        var vocabularyIds = ids(1);
+
+        assertThatCode(() -> validator.validate(vocabularyIds, groups(vocabularyIds, 3)))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
     void rejects_missing_or_replaced_authoritative_vocabulary() {
         var vocabularyIds = ids(10);
         var groups = new ArrayList<>(groups(vocabularyIds, 3));

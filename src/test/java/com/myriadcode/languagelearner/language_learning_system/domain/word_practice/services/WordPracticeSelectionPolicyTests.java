@@ -20,17 +20,18 @@ class WordPracticeSelectionPolicyTests {
     private final WordPracticeSelectionPolicy policy = new WordPracticeSelectionPolicy();
 
     @Test
-    void selects_ten_new_words_without_active_or_duplicate_vocabulary() {
+    void selects_seven_learning_and_three_new_words() {
         var windows = windows(
-                candidates(WordPracticeSelectionCategory.NEW, "new", 12)
+                candidates(WordPracticeSelectionCategory.LEARNING, "learning", 10),
+                candidates(WordPracticeSelectionCategory.NEW, "new", 10)
         );
 
-        var selected = policy.select(windows, Set.of("new-1", "new-2"), new Random(7));
+        var selected = policy.select(windows, Set.of(), 10, new Random(7));
 
         assertThat(selected).hasSize(10);
         assertThat(selected).extracting(WordPracticeCandidate::vocabularyId).doesNotHaveDuplicates();
-        assertThat(selected).noneMatch(candidate -> Set.of("new-1", "new-2").contains(candidate.vocabularyId()));
-        assertThat(selected).allMatch(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW);
+        assertThat(selected).filteredOn(candidate -> candidate.category() == WordPracticeSelectionCategory.LEARNING).hasSize(7);
+        assertThat(selected).filteredOn(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW).hasSize(3);
     }
 
     @Test
@@ -38,7 +39,7 @@ class WordPracticeSelectionPolicyTests {
         var rankedNew = candidates(WordPracticeSelectionCategory.NEW, "new", 100);
         var windows = windows(rankedNew);
 
-        var selected = policy.select(windows, Set.of(), new Random(11));
+        var selected = policy.select(windows, Set.of(), 10, new Random(11));
 
         assertThat(selected)
                 .filteredOn(candidate -> candidate.category() == WordPracticeSelectionCategory.NEW)
@@ -47,15 +48,23 @@ class WordPracticeSelectionPolicyTests {
     }
 
     @Test
-    void rejects_when_fewer_than_ten_unique_eligible_words_exist() {
+    void accepts_one_eligible_word() {
         var windows = windows(
-                candidates(WordPracticeSelectionCategory.NEW, "new", 9)
+                candidates(WordPracticeSelectionCategory.NEW, "new", 1)
         );
 
-        assertThatThrownBy(() -> policy.select(windows, Set.of(), new Random(1)))
+        assertThat(policy.select(windows, Set.of(), 10, new Random(1)))
+                .singleElement()
+                .extracting(WordPracticeCandidate::vocabularyId)
+                .isEqualTo("new-1");
+    }
+
+    @Test
+    void rejects_when_no_eligible_word_exists() {
+        assertThatThrownBy(() -> policy.select(Map.of(), Set.of(), 10, new Random(1)))
                 .isInstanceOf(InsufficientWordPracticeCandidatesException.class)
                 .extracting("availableVocabularyCount", "requiredVocabularyCount")
-                .containsExactly(9, 10);
+                .containsExactly(0, 1);
     }
 
     @SafeVarargs

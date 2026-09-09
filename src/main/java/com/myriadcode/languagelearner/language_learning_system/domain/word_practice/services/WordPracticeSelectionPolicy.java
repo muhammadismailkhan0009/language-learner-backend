@@ -18,28 +18,41 @@ public class WordPracticeSelectionPolicy {
     public static final int BATCH_SIZE = 10;
     public static final int CANDIDATE_WINDOW_SIZE = 20;
 
-    private static final Map<WordPracticeSelectionCategory, Integer> QUOTAS = Map.of(
-            WordPracticeSelectionCategory.NEW, BATCH_SIZE
-    );
     private static final List<WordPracticeSelectionCategory> SELECTION_ORDER = List.of(
+            WordPracticeSelectionCategory.LEARNING,
             WordPracticeSelectionCategory.NEW
     );
 
     public List<WordPracticeCandidate> select(
             Map<WordPracticeSelectionCategory, List<WordPracticeCandidate>> rankedCandidates,
             Set<String> activeVocabularyIds,
+            int maximumSelectionCount,
             RandomGenerator random
     ) {
         Objects.requireNonNull(random, "random must not be null");
+        if (maximumSelectionCount < 1 || maximumSelectionCount > BATCH_SIZE) {
+            throw new IllegalArgumentException("maximumSelectionCount must be between 1 and 10");
+        }
         var activeIds = activeVocabularyIds == null ? Set.<String>of() : Set.copyOf(activeVocabularyIds);
         var windows = createEligibleWindows(rankedCandidates, activeIds, random);
-        var selected = new ArrayList<WordPracticeCandidate>(BATCH_SIZE);
-        var selectedIds = new HashSet<String>();
-        for (var category : SELECTION_ORDER) {
-            addRandom(selected, selectedIds, windows.get(category), QUOTAS.get(category), random);
+        var eligibleCount = windows.values().stream()
+                .flatMap(List::stream)
+                .map(WordPracticeCandidate::vocabularyId)
+                .distinct()
+                .count();
+        var targetCount = (int) Math.min(maximumSelectionCount, eligibleCount);
+        if (targetCount == 0) {
+            throw new InsufficientWordPracticeCandidatesException(0, 1);
         }
-        if (selected.size() < BATCH_SIZE) {
-            throw new InsufficientWordPracticeCandidatesException(selected.size(), BATCH_SIZE);
+        var selected = new ArrayList<WordPracticeCandidate>(targetCount);
+        var selectedIds = new HashSet<String>();
+        int learningQuota = (int) Math.ceil(targetCount * 0.7);
+        addRandom(selected, selectedIds, windows.get(WordPracticeSelectionCategory.LEARNING), learningQuota,
+                targetCount, random);
+        addRandom(selected, selectedIds, windows.get(WordPracticeSelectionCategory.NEW), targetCount - learningQuota,
+                targetCount, random);
+        for (var category : SELECTION_ORDER) {
+            addRandom(selected, selectedIds, windows.get(category), targetCount - selected.size(), targetCount, random);
         }
         return List.copyOf(selected);
     }
@@ -80,6 +93,7 @@ public class WordPracticeSelectionPolicy {
                            Set<String> selectedIds,
                            List<WordPracticeCandidate> candidates,
                            int requested,
+                           int targetCount,
                            RandomGenerator random) {
         if (requested <= 0 || candidates == null || candidates.isEmpty()) {
             return;
@@ -88,7 +102,7 @@ public class WordPracticeSelectionPolicy {
                 .filter(candidate -> !selectedIds.contains(candidate.vocabularyId()))
                 .toList());
         int added = 0;
-        while (added < requested && !available.isEmpty() && selected.size() < BATCH_SIZE) {
+        while (added < requested && !available.isEmpty() && selected.size() < targetCount) {
             var candidate = available.remove(random.nextInt(available.size()));
             if (selectedIds.add(candidate.vocabularyId())) {
                 selected.add(candidate);

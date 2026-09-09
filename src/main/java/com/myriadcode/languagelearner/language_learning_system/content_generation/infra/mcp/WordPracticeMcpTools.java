@@ -46,7 +46,7 @@ public class WordPracticeMcpTools {
     )
     public WordPracticeStoreResponse storeWordPracticeGeneration(
             @McpToolParam(
-                    description = "Echoed selected candidates and generated groups for exactly 10 vocabulary targets",
+                    description = "Echoed selected candidates and generated groups for 1 to 10 vocabulary targets",
                     required = true
             ) WordPracticeGeneration generation
     ) {

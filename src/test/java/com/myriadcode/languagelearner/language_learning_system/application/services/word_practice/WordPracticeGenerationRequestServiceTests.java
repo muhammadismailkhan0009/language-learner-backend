@@ -19,18 +19,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class WordPracticeGenerationRequestServiceTests {
 
     @Test
-    void createsJobWhenFiveVocabularyWordsAreActive() {
+    void createsJobWhenFourteenVocabularyWordsAreActive() {
         var jobs = new RecordingJobService();
-        var service = new WordPracticeGenerationRequestService(new StubRepo(5), jobs);
+        var service = new WordPracticeGenerationRequestService(new StubRepo(14), jobs);
 
         assertThat(service.request("user-1")).contains("Run your MCP tool");
         assertThat(jobs.createdType).isEqualTo(WORD_PRACTICE);
     }
 
     @Test
-    void rejectsRequestWhenSixVocabularyWordsAreActive() {
+    void rejectsRequestWhenFifteenVocabularyWordsAreActive() {
         var jobs = new RecordingJobService();
-        var service = new WordPracticeGenerationRequestService(new StubRepo(6), jobs);
+        var service = new WordPracticeGenerationRequestService(new StubRepo(15), jobs);
 
         assertThatThrownBy(() -> service.request("user-1"))
                 .hasMessage("Word Practice capacity exceeded");

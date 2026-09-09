@@ -23,7 +23,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.myriadcode.languagelearner.language_learning_system.content_generation.domain.model.ContentGenerationJobType.WORD_PRACTICE;
-import static com.myriadcode.languagelearner.language_learning_system.domain.word_practice.services.WordPracticeCapacityPolicy.GENERATION_VOCABULARY_COUNT;
+import static com.myriadcode.languagelearner.language_learning_system.domain.word_practice.services.WordPracticeCapacityPolicy.MAXIMUM_ACTIVE_VOCABULARY;
 import static com.myriadcode.languagelearner.language_content.infra.llm.PromptsGenerator.wordPracticeGeneration;
 
 @Service
@@ -60,7 +60,7 @@ public class WordPracticeGenerationService {
     @Transactional
     public List<WordPracticeGenerationCandidate> prepare(String userId) {
         jobService.require(userId, WORD_PRACTICE);
-        requireCapacity(userId);
+        int availableCapacity = requireAvailableCapacity(userId);
         var candidatesByCategory = candidateProvider.findRankedCandidates(userId);
         var detailsById = flatten(candidatesByCategory).stream().collect(Collectors.toMap(
                 WordPracticeGenerationCandidate::vocabularyId,
@@ -68,7 +68,8 @@ public class WordPracticeGenerationService {
                 (first, ignored) -> first
         ));
         var selected = selectionPolicy.select(toSelections(candidatesByCategory),
-                practiceRepo.findActiveVocabularyIds(userId), new Random());
+                practiceRepo.findActiveVocabularyIds(userId),
+                Math.min(WordPracticeSelectionPolicy.BATCH_SIZE, availableCapacity), new Random());
         var selectedDetails = selected.stream().map(candidate -> detailsById.get(candidate.vocabularyId())).toList();
         return selectedDetails;
     }
@@ -82,15 +83,17 @@ public class WordPracticeGenerationService {
     public int store(String userId, List<WordPracticeCandidate> selected,
                      List<GeneratedWordPracticeGroup> groups) {
         jobService.require(userId, WORD_PRACTICE);
-        requireCapacity(userId);
+        capacityPolicy.requireCapacity(practiceRepo.countDistinctActiveVocabulary(userId), selected.size());
         batchValidator.validate(selected.stream().map(WordPracticeCandidate::vocabularyId).toList(), groups);
         practiceRepo.saveGeneration(userId, groups, clock.instant());
         jobService.delete(userId, WORD_PRACTICE);
         return groups.stream().mapToInt(group -> group.practices().size()).sum();
     }
 
-    private void requireCapacity(String userId) {
-        capacityPolicy.requireCapacity(practiceRepo.countDistinctActiveVocabulary(userId), GENERATION_VOCABULARY_COUNT);
+    private int requireAvailableCapacity(String userId) {
+        int activeCount = practiceRepo.countDistinctActiveVocabulary(userId);
+        capacityPolicy.requireCapacity(activeCount, 1);
+        return MAXIMUM_ACTIVE_VOCABULARY - activeCount;
     }
 
     private List<WordPracticeGenerationCandidate> flatten(

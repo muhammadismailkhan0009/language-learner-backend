@@ -16,8 +16,8 @@ public class WordPracticeBatchValidator {
 
     public void validate(List<String> selectedVocabularyIds, List<GeneratedWordPracticeGroup> groups) {
         var selectedIds = requireAuthoritativeSelection(selectedVocabularyIds);
-        if (groups == null || groups.size() != WordPracticeSelectionPolicy.BATCH_SIZE) {
-            reject("Generated batch must contain exactly 10 vocabulary groups");
+        if (groups == null || groups.size() != selectedIds.size()) {
+            reject("Generated batch must contain exactly one group per selected vocabulary ID");
         }
         var generatedIds = new HashSet<String>();
         var directions = new HashSet<WordPracticeDirection>();
@@ -36,13 +36,14 @@ public class WordPracticeBatchValidator {
     }
 
     private Set<String> requireAuthoritativeSelection(List<String> selectedVocabularyIds) {
-        if (selectedVocabularyIds == null || selectedVocabularyIds.size() != WordPracticeSelectionPolicy.BATCH_SIZE) {
-            reject("Selection must contain exactly 10 vocabulary IDs");
+        if (selectedVocabularyIds == null || selectedVocabularyIds.isEmpty()
+                || selectedVocabularyIds.size() > WordPracticeSelectionPolicy.BATCH_SIZE) {
+            reject("Selection must contain 1 to 10 vocabulary IDs");
         }
         var selectedIds = new HashSet<String>();
         for (var vocabularyId : selectedVocabularyIds) {
             if (isBlank(vocabularyId) || !selectedIds.add(vocabularyId)) {
-                reject("Selection must contain 10 unique nonblank vocabulary IDs");
+                reject("Selection must contain unique nonblank vocabulary IDs");
             }
         }
         return selectedIds;
