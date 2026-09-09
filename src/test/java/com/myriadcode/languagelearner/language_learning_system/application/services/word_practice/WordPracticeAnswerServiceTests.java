@@ -57,6 +57,15 @@ class WordPracticeAnswerServiceTests {
         assertThat(reviewApi.rating).isEqualTo(Rating.AGAIN);
     }
 
+    @Test
+    void vocabularySurfaceIsAcceptedWhenItDiffersFromExpectedAnswer() {
+        var result = service.submit("user-1", "practice-1", " ETWAS UNTERSCHREIBEN ");
+
+        assertThat(result.correct()).isTrue();
+        assertThat(repo.deleted).isTrue();
+        assertThat(reviewApi.rating).isEqualTo(Rating.HARD);
+    }
+
     private static final class StubVocabularyRepo implements VocabularyRepo {
         private final Vocabulary vocabulary = new Vocabulary(
                 new Vocabulary.VocabularyId("vocabulary-1"), new UserId("user-1"),

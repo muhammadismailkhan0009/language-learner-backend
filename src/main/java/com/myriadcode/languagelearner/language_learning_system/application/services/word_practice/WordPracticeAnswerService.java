@@ -37,12 +37,18 @@ public class WordPracticeAnswerService {
                 .filter(value -> value.isReversed() && practice.vocabularyId().equals(value.vocabularyId()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Vocabulary flashcard not found for user"));
-        boolean correct = practice.isCorrect(answer);
+        boolean correct = practice.isCorrect(answer) || matchesVocabularySurface(answer, vocabulary.surface());
         reviewApi.reviewVocabularyFlashcard(flashcard.flashcardId(), correct ? Rating.HARD : Rating.AGAIN);
         if (correct) {
             practiceRepo.deleteByIdAndUserId(practiceId, userId);
         }
         return new WordPracticeAnswerResult(correct, vocabulary.surface());
+    }
+
+    private boolean matchesVocabularySurface(String submittedAnswer, String vocabularySurface) {
+        return submittedAnswer != null
+                && !submittedAnswer.isBlank()
+                && vocabularySurface.equalsIgnoreCase(submittedAnswer.strip());
     }
 
     private void requireNonblank(String value, String name) {
