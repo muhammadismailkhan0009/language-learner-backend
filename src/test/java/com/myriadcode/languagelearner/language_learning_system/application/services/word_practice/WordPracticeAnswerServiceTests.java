@@ -4,6 +4,9 @@ import com.myriadcode.fsrs.api.enums.Rating;
 import com.myriadcode.fsrs.api.enums.State;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.ReviewVocabularyFlashcardApi;
 import com.myriadcode.languagelearner.language_learning_system.application.externals.VocabularyFlashcardReviewRecord;
+import com.myriadcode.languagelearner.common.ids.UserId;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.model.Vocabulary;
+import com.myriadcode.languagelearner.language_learning_system.domain.vocabulary.repo.VocabularyRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.aggregates.WordPractice;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.repo.WordPracticeRepo;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.GeneratedWordPracticeGroup;
@@ -23,6 +26,7 @@ class WordPracticeAnswerServiceTests {
     private final RecordingReviewApi reviewApi = new RecordingReviewApi();
     private final WordPracticeAnswerService service = new WordPracticeAnswerService(
             repo,
+            new StubVocabularyRepo(),
             userId -> List.of(
                     new VocabularyFlashcardReviewRecord("other-flashcard", "other-vocabulary", State.NEW, true),
                     new VocabularyFlashcardReviewRecord("forward-flashcard", "vocabulary-1", State.NEW, false),
@@ -33,7 +37,10 @@ class WordPracticeAnswerServiceTests {
 
     @Test
     void correctAnswerDeletesPractice() {
-        assertThat(service.submit("user-1", "practice-1", " unterschreiben ")).isTrue();
+        var result = service.submit("user-1", "practice-1", " unterschreiben ");
+
+        assertThat(result.correct()).isTrue();
+        assertThat(result.vocabularySurface()).isEqualTo("etwas unterschreiben");
         assertThat(repo.deleted).isTrue();
         assertThat(reviewApi.flashcardId).isEqualTo("flashcard-1");
         assertThat(reviewApi.rating).isEqualTo(Rating.HARD);
@@ -41,10 +48,28 @@ class WordPracticeAnswerServiceTests {
 
     @Test
     void wrongAnswerKeepsPractice() {
-        assertThat(service.submit("user-1", "practice-1", "zeichnen")).isFalse();
+        var result = service.submit("user-1", "practice-1", "zeichnen");
+
+        assertThat(result.correct()).isFalse();
+        assertThat(result.vocabularySurface()).isEqualTo("etwas unterschreiben");
         assertThat(repo.deleted).isFalse();
         assertThat(reviewApi.flashcardId).isEqualTo("flashcard-1");
         assertThat(reviewApi.rating).isEqualTo(Rating.AGAIN);
+    }
+
+    private static final class StubVocabularyRepo implements VocabularyRepo {
+        private final Vocabulary vocabulary = new Vocabulary(
+                new Vocabulary.VocabularyId("vocabulary-1"), new UserId("user-1"),
+                "etwas unterschreiben", "to sign something", Vocabulary.EntryKind.CHUNK,
+                null, List.of(), null, Instant.EPOCH
+        );
+
+        @Override public Vocabulary save(Vocabulary vocabulary) { return vocabulary; }
+        @Override public Optional<Vocabulary> findByIdAndUserId(String vocabularyId, String userId) { return Optional.of(vocabulary); }
+        @Override public Optional<Vocabulary> findById(String vocabularyId) { return Optional.of(vocabulary); }
+        @Override public List<Vocabulary> findByUserId(String userId) { return List.of(vocabulary); }
+        @Override public List<Vocabulary> findByIds(List<String> vocabularyIds) { return List.of(vocabulary); }
+        @Override public Vocabulary replaceClozeSentence(String vocabularyId, String userId, Vocabulary vocabularyWithUpdatedCloze) { return vocabularyWithUpdatedCloze; }
     }
 
     private static final class RecordingReviewApi implements ReviewVocabularyFlashcardApi {

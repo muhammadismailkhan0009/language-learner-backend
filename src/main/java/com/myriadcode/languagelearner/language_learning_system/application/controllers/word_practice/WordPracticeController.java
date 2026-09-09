@@ -4,6 +4,7 @@ import com.myriadcode.languagelearner.common.dtos.ApiResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.word_practice.request.CreateWordPracticeGenerationRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.word_practice.request.SubmitWordPracticeAnswerRequest;
 import com.myriadcode.languagelearner.language_learning_system.application.controllers.word_practice.response.WordPracticeQueueResponse;
+import com.myriadcode.languagelearner.language_learning_system.application.controllers.word_practice.response.SubmitWordPracticeAnswerResponse;
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeAnswerService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeQueryService;
@@ -54,8 +55,9 @@ public class WordPracticeController {
     }
 
     @PostMapping("{practiceId}/answer")
-    public ApiResponse<Boolean> submitAnswer(@PathVariable String practiceId,
-                                             @RequestBody SubmitWordPracticeAnswerRequest request) {
-        return new ApiResponse<>(answerService.submit(request.userId(), practiceId, request.answer()));
+    public ApiResponse<SubmitWordPracticeAnswerResponse> submitAnswer(@PathVariable String practiceId,
+                                                                      @RequestBody SubmitWordPracticeAnswerRequest request) {
+        var result = answerService.submit(request.userId(), practiceId, request.answer());
+        return new ApiResponse<>(new SubmitWordPracticeAnswerResponse(result.correct(), result.vocabularySurface()));
     }
 }

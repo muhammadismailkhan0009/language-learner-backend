@@ -2,6 +2,7 @@ package com.myriadcode.languagelearner.language_learning_system.application.cont
 
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeGenerationRequestService;
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeAnswerService;
+import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeAnswerResult;
 import com.myriadcode.languagelearner.language_learning_system.application.services.word_practice.WordPracticeQueryService;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.aggregates.WordPractice;
 import com.myriadcode.languagelearner.language_learning_system.domain.word_practice.value_objects.WordPracticeDirection;
@@ -57,7 +58,8 @@ class WordPracticeControllerTests {
                                 {"userId":"user-1","answer":"house"}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.response").value(true));
+                .andExpect(jsonPath("$.response.correct").value(true))
+                .andExpect(jsonPath("$.response.vocabularySurface").value("sich bei jemandem melden"));
     }
 
     private static final class StubRequestService extends WordPracticeGenerationRequestService {
@@ -88,12 +90,12 @@ class WordPracticeControllerTests {
 
     private static final class StubAnswerService extends WordPracticeAnswerService {
         private StubAnswerService() {
-            super(null, null, null);
+            super(null, null, null, null);
         }
 
         @Override
-        public boolean submit(String userId, String practiceId, String answer) {
-            return true;
+        public WordPracticeAnswerResult submit(String userId, String practiceId, String answer) {
+            return new WordPracticeAnswerResult(true, "sich bei jemandem melden");
         }
     }
 }
