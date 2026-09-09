@@ -88,7 +88,7 @@ class WordPracticeControllerTests {
 
     private static final class StubAnswerService extends WordPracticeAnswerService {
         private StubAnswerService() {
-            super(null);
+            super(null, null, null);
         }
 
         @Override
